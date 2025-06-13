@@ -111,7 +111,6 @@ const Results = () => {
 
       // Apply filters only if they have values
       if (filters.municipality.trim()) {
-        // We need to join with municipalities table for name filtering
         const { data: municipalityData } = await supabase
           .from('municipalities')
           .select('id')
@@ -121,7 +120,6 @@ const Results = () => {
           const municipalityIds = municipalityData.map(m => m.id);
           query = query.in('municipality_id', municipalityIds);
         } else {
-          // No municipalities found, return empty result
           setElectoralActs([]);
           setLoading(false);
           return;
@@ -153,7 +151,17 @@ const Results = () => {
         setElectoralActs([]);
       } else {
         console.log('Electoral acts fetched:', data?.length || 0);
-        setElectoralActs(data || []);
+        
+        // Transform the data to match the ElectoralAct interface
+        const transformedData = data?.map(act => ({
+          ...act,
+          party_votes: act.party_votes?.map((pv: any) => ({
+            party: pv.political_parties,
+            votes: pv.votes
+          })) || []
+        })) || [];
+        
+        setElectoralActs(transformedData);
       }
     } catch (error) {
       console.error('Error fetching electoral acts:', error);
