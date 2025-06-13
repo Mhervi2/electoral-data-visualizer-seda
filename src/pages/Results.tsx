@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -102,9 +100,6 @@ const Results = () => {
               autonomous_communities (
                 name
               )
-            ),
-            autonomous_communities (
-              name
             )
           ),
           party_votes (
@@ -162,9 +157,6 @@ const Results = () => {
               autonomous_communities: act.municipalities.provinces.autonomous_communities ? {
                 name: act.municipalities.provinces.autonomous_communities.name || 'N/A'
               } : undefined
-            } : undefined,
-            autonomous_communities: act.municipalities.autonomous_communities ? {
-              name: act.municipalities.autonomous_communities.name || 'N/A'
             } : undefined
           } : undefined
         })) || [];
@@ -227,8 +219,7 @@ const Results = () => {
   const getLocationDisplay = (act: ElectoralAct) => {
     const municipality = act.municipalities?.name || 'N/A';
     const province = act.municipalities?.provinces?.name;
-    const autonomousCommunity = act.municipalities?.autonomous_communities?.name || 
-                                act.municipalities?.provinces?.autonomous_communities?.name;
+    const autonomousCommunity = act.municipalities?.provinces?.autonomous_communities?.name;
     
     let location = municipality;
     if (province && province !== municipality) {
