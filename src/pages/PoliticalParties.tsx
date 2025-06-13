@@ -33,20 +33,32 @@ const PoliticalParties = () => {
 
   const fetchParties = async () => {
     try {
+      console.log('Fetching political parties...');
       const { data, error } = await supabase
         .from('political_parties')
         .select('*')
         .order('siglas');
 
-      if (error) throw error;
-      setParties(data || []);
+      if (error) {
+        console.error('Error fetching parties:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudieron cargar los partidos políticos.",
+        });
+        setParties([]);
+      } else {
+        console.log('Political parties fetched:', data?.length || 0);
+        setParties(data || []);
+      }
     } catch (error) {
       console.error('Error fetching parties:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudieron cargar los partidos políticos.",
+        description: "Ocurrió un error al cargar los partidos políticos.",
       });
+      setParties([]);
     } finally {
       setLoading(false);
     }
@@ -92,12 +104,20 @@ const PoliticalParties = () => {
       const { error } = await supabase
         .from('party_suggestions')
         .insert({
-          name: newPartyName,
-          siglas: newPartySiglas,
+          name: newPartyName.trim(),
+          siglas: newPartySiglas.trim(),
           suggested_by: authUser.id
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error submitting suggestion:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo enviar la sugerencia. Inténtalo de nuevo.",
+        });
+        return;
+      }
 
       toast({
         title: "Sugerencia enviada",
@@ -118,7 +138,11 @@ const PoliticalParties = () => {
   };
 
   if (loading) {
-    return <div>Cargando partidos políticos...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (
@@ -229,7 +253,10 @@ const PoliticalParties = () => {
         <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-muted-foreground">
-              No se encontraron partidos que coincidan con tu búsqueda.
+              {searchTerm ? 
+                "No se encontraron partidos que coincidan con tu búsqueda." :
+                "No hay partidos políticos disponibles."
+              }
             </p>
           </CardContent>
         </Card>

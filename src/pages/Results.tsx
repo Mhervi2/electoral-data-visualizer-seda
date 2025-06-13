@@ -11,10 +11,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { BarChart3, Search, Eye, Image, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface ElectoralAct {
   id: string;
-  municipality: { name: string; province: { name: string; autonomous_community: { name: string } } };
+  municipality_id: string;
   district: string;
   section: string;
   table_letter: string;
@@ -25,7 +26,23 @@ interface ElectoralAct {
   source_type: string;
   image_url?: string;
   created_at: string;
-  party_votes: { party: { name: string; siglas: string; color: string }; votes: number }[];
+  municipalities?: {
+    name: string;
+    provinces?: {
+      name: string;
+      autonomous_communities?: {
+        name: string;
+      };
+    };
+  };
+  party_votes?: { 
+    party: { 
+      name: string; 
+      siglas: string; 
+      color: string; 
+    }; 
+    votes: number; 
+  }[];
 }
 
 interface Discrepancy {
@@ -39,6 +56,7 @@ interface Discrepancy {
 
 const Results = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [electoralActs, setElectoralActs] = useState<ElectoralAct[]>([]);
   const [discrepancies, setDiscrepancies] = useState<Discrepancy[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,33 +67,41 @@ const Results = () => {
     table: '',
     sourceType: ''
   });
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchElectoralActs();
     if (user?.isAdmin) {
       fetchDiscrepancies();
     }
-  }, [user, filters]);
+  }, [user?.isAdmin]);
+
+  // Separate useEffect for filters to avoid infinite loops
+  useEffect(() => {
+    if (!loading) {
+      fetchElectoralActs();
+    }
+  }, [filters.municipality, filters.district, filters.section, filters.table, filters.sourceType]);
 
   const fetchElectoralActs = async () => {
     try {
+      console.log('Fetching electoral acts with filters:', filters);
+      
       let query = supabase
         .from('electoral_acts')
         .select(`
           *,
-          municipality:municipalities (
+          municipalities (
             name,
-            province:provinces (
+            provinces (
               name,
-              autonomous_community:autonomous_communities (
+              autonomous_communities (
                 name
               )
             )
           ),
           party_votes (
             votes,
-            party:political_parties (
+            political_parties (
               name,
               siglas,
               color
@@ -83,29 +109,60 @@ const Results = () => {
           )
         `);
 
-      // Apply filters
-      if (filters.municipality) {
-        query = query.ilike('municipality.name', `%${filters.municipality}%`);
+      // Apply filters only if they have values
+      if (filters.municipality.trim()) {
+        // We need to join with municipalities table for name filtering
+        const { data: municipalityData } = await supabase
+          .from('municipalities')
+          .select('id')
+          .ilike('name', `%${filters.municipality.trim()}%`);
+        
+        if (municipalityData && municipalityData.length > 0) {
+          const municipalityIds = municipalityData.map(m => m.id);
+          query = query.in('municipality_id', municipalityIds);
+        } else {
+          // No municipalities found, return empty result
+          setElectoralActs([]);
+          setLoading(false);
+          return;
+        }
       }
-      if (filters.district) {
-        query = query.eq('district', filters.district);
+      
+      if (filters.district.trim()) {
+        query = query.eq('district', filters.district.trim());
       }
-      if (filters.section) {
-        query = query.eq('section', filters.section);
+      if (filters.section.trim()) {
+        query = query.eq('section', filters.section.trim());
       }
-      if (filters.table) {
-        query = query.eq('table_letter', filters.table);
+      if (filters.table.trim()) {
+        query = query.eq('table_letter', filters.table.trim());
       }
-      if (filters.sourceType) {
-        query = query.eq('source_type', filters.sourceType);
+      if (filters.sourceType.trim()) {
+        query = query.eq('source_type', filters.sourceType.trim());
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setElectoralActs(data || []);
+      if (error) {
+        console.error('Error fetching electoral acts:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudieron cargar las actas electorales.",
+        });
+        setElectoralActs([]);
+      } else {
+        console.log('Electoral acts fetched:', data?.length || 0);
+        setElectoralActs(data || []);
+      }
     } catch (error) {
       console.error('Error fetching electoral acts:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Ocurrió un error al cargar las actas electorales.",
+      });
+      setElectoralActs([]);
     } finally {
       setLoading(false);
     }
@@ -113,16 +170,16 @@ const Results = () => {
 
   const fetchDiscrepancies = async () => {
     try {
-      // This is a complex query to find discrepancies between different sources
-      // For now, we'll simulate finding discrepancies
+      // This is a simplified mock for discrepancies
+      // In a real implementation, you would query for actual discrepancies
       const mockDiscrepancies: Discrepancy[] = [
         {
           municipality: 'Madrid',
           district: '01',
           section: '001',
           table_letter: 'A',
-          sources: ['user', 'indra'],
-          differences: ['Total de votantes no coincide: Usuario: 850, INDRA: 845']
+          sources: ['indra', 'escrutinio'],
+          differences: ['Total de votantes: INDRA: 745, Escrutinio: 747']
         }
       ];
       setDiscrepancies(mockDiscrepancies);
@@ -152,7 +209,11 @@ const Results = () => {
   };
 
   if (loading) {
-    return <div>Cargando resultados...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (
@@ -279,77 +340,85 @@ const Results = () => {
       {/* Electoral Acts Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Actas Electorales</CardTitle>
+          <CardTitle>Actas Electorales ({electoralActs.length})</CardTitle>
           <CardDescription>
             Resultados detallados por mesa electoral
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ubicación</TableHead>
-                <TableHead>Mesa</TableHead>
-                <TableHead>Censo</TableHead>
-                <TableHead>Votantes</TableHead>
-                <TableHead>Fuente</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {electoralActs.map((act) => (
-                <TableRow key={act.id}>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div className="font-medium">{act.municipality?.name || 'N/A'}</div>
-                      <div className="text-muted-foreground">
-                        D:{act.district} S:{act.section}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{act.table_letter}</TableCell>
-                  <TableCell>{act.census_total}</TableCell>
-                  <TableCell>{act.total_voters}</TableCell>
-                  <TableCell>
-                    <Badge variant={getSourceTypeBadgeVariant(act.source_type) as any}>
-                      {getSourceTypeLabel(act.source_type)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{new Date(act.created_at).toLocaleDateString('es-ES')}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      {act.image_url && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button size="sm" variant="outline">
-                              <Image className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-3xl">
-                            <DialogHeader>
-                              <DialogTitle>Imagen del Acta</DialogTitle>
-                              <DialogDescription>
-                                Mesa {act.table_letter} - {act.municipality?.name} D:{act.district} S:{act.section}
-                              </DialogDescription>
-                            </DialogHeader>
-                            <img 
-                              src={act.image_url} 
-                              alt="Acta electoral" 
-                              className="w-full h-auto rounded-lg"
-                            />
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                      <Button size="sm" variant="outline">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {electoralActs.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                No se encontraron actas electorales que coincidan con los filtros aplicados.
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ubicación</TableHead>
+                  <TableHead>Mesa</TableHead>
+                  <TableHead>Censo</TableHead>
+                  <TableHead>Votantes</TableHead>
+                  <TableHead>Fuente</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {electoralActs.map((act) => (
+                  <TableRow key={act.id}>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className="font-medium">{act.municipalities?.name || 'N/A'}</div>
+                        <div className="text-muted-foreground">
+                          D:{act.district} S:{act.section}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{act.table_letter}</TableCell>
+                    <TableCell>{act.census_total}</TableCell>
+                    <TableCell>{act.total_voters}</TableCell>
+                    <TableCell>
+                      <Badge variant={getSourceTypeBadgeVariant(act.source_type) as any}>
+                        {getSourceTypeLabel(act.source_type)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(act.created_at).toLocaleDateString('es-ES')}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        {act.image_url && (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button size="sm" variant="outline">
+                                <Image className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-3xl">
+                              <DialogHeader>
+                                <DialogTitle>Imagen del Acta</DialogTitle>
+                                <DialogDescription>
+                                  Mesa {act.table_letter} - {act.municipalities?.name} D:{act.district} S:{act.section}
+                                </DialogDescription>
+                              </DialogHeader>
+                              <img 
+                                src={act.image_url} 
+                                alt="Acta electoral" 
+                                className="w-full h-auto rounded-lg"
+                              />
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                        <Button size="sm" variant="outline">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
