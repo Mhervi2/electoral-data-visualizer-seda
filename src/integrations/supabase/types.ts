@@ -9,7 +9,283 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      autonomous_communities: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      elections: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      electoral_acts: {
+        Row: {
+          blank_votes: number
+          census_total: number
+          created_at: string | null
+          district: string
+          election_id: string | null
+          id: string
+          image_url: string | null
+          municipality_id: string | null
+          null_votes: number
+          section: string
+          source_type: string
+          submitted_by: string | null
+          table_letter: string
+          total_voters: number
+        }
+        Insert: {
+          blank_votes?: number
+          census_total: number
+          created_at?: string | null
+          district: string
+          election_id?: string | null
+          id?: string
+          image_url?: string | null
+          municipality_id?: string | null
+          null_votes?: number
+          section: string
+          source_type: string
+          submitted_by?: string | null
+          table_letter: string
+          total_voters: number
+        }
+        Update: {
+          blank_votes?: number
+          census_total?: number
+          created_at?: string | null
+          district?: string
+          election_id?: string | null
+          id?: string
+          image_url?: string | null
+          municipality_id?: string | null
+          null_votes?: number
+          section?: string
+          source_type?: string
+          submitted_by?: string | null
+          table_letter?: string
+          total_voters?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "electoral_acts_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "elections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "electoral_acts_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      municipalities: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          province_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          province_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          province_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "municipalities_province_id_fkey"
+            columns: ["province_id"]
+            isOneToOne: false
+            referencedRelation: "provinces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_suggestions: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          reviewed_at: string | null
+          siglas: string
+          status: string
+          suggested_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          reviewed_at?: string | null
+          siglas: string
+          status?: string
+          suggested_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          reviewed_at?: string | null
+          siglas?: string
+          status?: string
+          suggested_by?: string | null
+        }
+        Relationships: []
+      }
+      party_votes: {
+        Row: {
+          created_at: string | null
+          electoral_act_id: string | null
+          id: string
+          party_id: string | null
+          votes: number
+        }
+        Insert: {
+          created_at?: string | null
+          electoral_act_id?: string | null
+          id?: string
+          party_id?: string | null
+          votes?: number
+        }
+        Update: {
+          created_at?: string | null
+          electoral_act_id?: string | null
+          id?: string
+          party_id?: string | null
+          votes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_votes_electoral_act_id_fkey"
+            columns: ["electoral_act_id"]
+            isOneToOne: false
+            referencedRelation: "electoral_acts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_votes_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "political_parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      political_parties: {
+        Row: {
+          color: string
+          created_at: string | null
+          id: string
+          name: string
+          siglas: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          id: string
+          name: string
+          siglas: string
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          siglas?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          is_admin: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id: string
+          is_admin?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_admin?: boolean | null
+        }
+        Relationships: []
+      }
+      provinces: {
+        Row: {
+          autonomous_community_id: string | null
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          autonomous_community_id?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          autonomous_community_id?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provinces_autonomous_community_id_fkey"
+            columns: ["autonomous_community_id"]
+            isOneToOne: false
+            referencedRelation: "autonomous_communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
