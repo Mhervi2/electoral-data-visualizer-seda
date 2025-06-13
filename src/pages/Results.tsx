@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,7 +69,7 @@ const Results = () => {
     district: '',
     section: '',
     table: '',
-    sourceType: ''
+    sourceType: 'all'
   });
 
   useEffect(() => {
@@ -130,7 +131,7 @@ const Results = () => {
       if (filters.table.trim()) {
         query = query.eq('table_letter', filters.table.trim());
       }
-      if (filters.sourceType.trim()) {
+      if (filters.sourceType.trim() && filters.sourceType !== 'all') {
         query = query.eq('source_type', filters.sourceType.trim());
       }
 
@@ -300,7 +301,7 @@ const Results = () => {
                   <SelectValue placeholder="Todas las fuentes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las fuentes</SelectItem>
+                  <SelectItem value="all">Todas las fuentes</SelectItem>
                   <SelectItem value="user">Acta de Usuario</SelectItem>
                   <SelectItem value="indra">INDRA</SelectItem>
                   <SelectItem value="escrutinio">Escrutinio General</SelectItem>
@@ -446,3 +447,4 @@ const Results = () => {
 };
 
 export default Results;
+
