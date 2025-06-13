@@ -34,6 +34,8 @@ const PoliticalParties = () => {
   const fetchParties = async () => {
     try {
       console.log('Fetching political parties...');
+      setLoading(true);
+      
       const { data, error } = await supabase
         .from('political_parties')
         .select('*')

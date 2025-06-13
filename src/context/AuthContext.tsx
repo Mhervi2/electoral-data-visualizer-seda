@@ -55,7 +55,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               });
             } else {
               console.error('Error fetching profile:', error);
-              setUser(null);
+              // If no profile exists, create one
+              if (error?.code === 'PGRST116') {
+                console.log('Creating new profile for user:', session.user.email);
+                const { error: insertError } = await supabase
+                  .from('profiles')
+                  .insert({
+                    id: session.user.id,
+                    email: session.user.email || '',
+                    is_admin: session.user.email === 'admin@seda.es'
+                  });
+                
+                if (!insertError) {
+                  setUser({
+                    email: session.user.email || '',
+                    isAdmin: session.user.email === 'admin@seda.es'
+                  });
+                } else {
+                  console.error('Error creating profile:', insertError);
+                  setUser(null);
+                }
+              } else {
+                setUser(null);
+              }
             }
           } catch (error) {
             console.error('Error in profile fetch:', error);
@@ -96,33 +118,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
-        console.log('Login successful, checking admin status...');
-        
-        // Check if user is admin
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('is_admin, email')
-          .eq('id', data.user.id)
-          .single();
-
-        console.log('Profile data:', profile, 'Error:', profileError);
-
-        if (profileError) {
-          console.error('Profile error:', profileError);
-          await supabase.auth.signOut();
-          setIsLoading(false);
-          return false;
-        }
-
-        if (!profile?.is_admin) {
-          console.error('User is not admin');
-          await supabase.auth.signOut();
-          setIsLoading(false);
-          return false;
-        }
-
-        console.log('Admin login successful');
-        // Success - the onAuthStateChange will handle setting the user
+        console.log('Login successful for:', email);
+        // The onAuthStateChange will handle setting the user
         return true;
       }
     } catch (error) {

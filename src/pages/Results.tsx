@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -85,12 +84,13 @@ const Results = () => {
   const fetchElectoralActs = async () => {
     try {
       console.log('Fetching electoral acts with filters:', filters);
+      setLoading(true);
       
       let query = supabase
         .from('electoral_acts')
         .select(`
           *,
-          municipalities (
+          municipalities!inner (
             name,
             provinces (
               name,
@@ -111,19 +111,7 @@ const Results = () => {
 
       // Apply filters only if they have values
       if (filters.municipality.trim()) {
-        const { data: municipalityData } = await supabase
-          .from('municipalities')
-          .select('id')
-          .ilike('name', `%${filters.municipality.trim()}%`);
-        
-        if (municipalityData && municipalityData.length > 0) {
-          const municipalityIds = municipalityData.map(m => m.id);
-          query = query.in('municipality_id', municipalityIds);
-        } else {
-          setElectoralActs([]);
-          setLoading(false);
-          return;
-        }
+        query = query.ilike('municipalities.name', `%${filters.municipality.trim()}%`);
       }
       
       if (filters.district.trim()) {
