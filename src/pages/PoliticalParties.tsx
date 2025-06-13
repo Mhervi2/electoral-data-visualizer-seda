@@ -77,12 +77,24 @@ const PoliticalParties = () => {
     }
 
     try {
+      // Get the current user's auth ID
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo verificar la sesión del usuario.",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('party_suggestions')
         .insert({
           name: newPartyName,
           siglas: newPartySiglas,
-          suggested_by: user.id
+          suggested_by: authUser.id
         });
 
       if (error) throw error;

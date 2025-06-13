@@ -225,7 +225,7 @@ const SubmitActa = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
+    if (!user)  {
       toast({
         variant: "destructive",
         title: "Error",
@@ -243,6 +243,18 @@ const SubmitActa = () => {
     setIsSubmitting(true);
     
     try {
+      // Get the current user's auth ID
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo verificar la sesión del usuario.",
+        });
+        return;
+      }
+
       // Insert electoral act
       const { data: actData, error: actError } = await supabase
         .from('electoral_acts')
@@ -257,7 +269,7 @@ const SubmitActa = () => {
           blank_votes: parseInt(actaData.blancos),
           null_votes: parseInt(actaData.nulos),
           source_type: 'user',
-          submitted_by: user.id
+          submitted_by: authUser.id
         })
         .select()
         .single();

@@ -14,7 +14,7 @@ interface Election {
   name: string;
   date: string;
   type: string;
-  status: 'active' | 'closed';
+  status: string;
   created_at: string;
 }
 

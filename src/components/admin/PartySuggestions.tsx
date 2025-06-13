@@ -12,7 +12,7 @@ interface PartySuggestion {
   id: string;
   name: string;
   siglas: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: string;
   created_at: string;
   suggested_by: string;
 }
