@@ -29,8 +29,8 @@ const mockPartyData = [
 ];
 
 const Results = () => {
-  const [selectedProvince, setSelectedProvince] = useState<string>('');
-  const [selectedMunicipality, setSelectedMunicipality] = useState<string>('');
+  const [selectedProvince, setSelectedProvince] = useState<string>('all');
+  const [selectedMunicipality, setSelectedMunicipality] = useState<string>('all');
   const [selectedSources, setSelectedSources] = useState<string[]>(['user']);
 
   const dataSources = [
@@ -49,11 +49,11 @@ const Results = () => {
   };
 
   const getTitle = () => {
-    if (selectedMunicipality) {
+    if (selectedMunicipality && selectedMunicipality !== 'all') {
       const municipality = mockMunicipalities[selectedProvince as keyof typeof mockMunicipalities]?.find(m => m.id === selectedMunicipality);
       return `Resultados - ${municipality?.name}`;
     }
-    if (selectedProvince) {
+    if (selectedProvince && selectedProvince !== 'all') {
       const province = mockProvinces.find(p => p.id === selectedProvince);
       return `Resultados - ${province?.name}`;
     }
@@ -86,7 +86,7 @@ const Results = () => {
                   <SelectValue placeholder="Seleccionar provincia" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las provincias</SelectItem>
+                  <SelectItem value="all">Todas las provincias</SelectItem>
                   {mockProvinces.map(province => (
                     <SelectItem key={province.id} value={province.id}>
                       {province.name}
@@ -101,14 +101,14 @@ const Results = () => {
               <Select 
                 value={selectedMunicipality} 
                 onValueChange={setSelectedMunicipality}
-                disabled={!selectedProvince}
+                disabled={!selectedProvince || selectedProvince === 'all'}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar municipio" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los municipios</SelectItem>
-                  {selectedProvince && mockMunicipalities[selectedProvince as keyof typeof mockMunicipalities]?.map(municipality => (
+                  <SelectItem value="all">Todos los municipios</SelectItem>
+                  {selectedProvince && selectedProvince !== 'all' && mockMunicipalities[selectedProvince as keyof typeof mockMunicipalities]?.map(municipality => (
                     <SelectItem key={municipality.id} value={municipality.id}>
                       {municipality.name}
                     </SelectItem>
