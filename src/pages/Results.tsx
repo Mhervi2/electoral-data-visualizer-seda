@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,9 @@ interface ElectoralAct {
       autonomous_communities?: {
         name: string;
       };
+    };
+    autonomous_communities?: {
+      name: string;
     };
   };
   party_votes?: { 
@@ -97,6 +101,9 @@ const Results = () => {
               autonomous_communities (
                 name
               )
+            ),
+            autonomous_communities (
+              name
             )
           ),
           party_votes (
@@ -202,6 +209,23 @@ const Results = () => {
       'oficial': 'destructive'
     };
     return variants[sourceType as keyof typeof variants] || 'outline';
+  };
+
+  const getLocationDisplay = (act: ElectoralAct) => {
+    const municipality = act.municipalities?.name || 'N/A';
+    const province = act.municipalities?.provinces?.name;
+    const autonomousCommunity = act.municipalities?.autonomous_communities?.name || 
+                                act.municipalities?.provinces?.autonomous_communities?.name;
+    
+    let location = municipality;
+    if (province && province !== municipality) {
+      location += ` (${province})`;
+    }
+    if (autonomousCommunity) {
+      location += ` - ${autonomousCommunity}`;
+    }
+    
+    return location;
   };
 
   if (loading) {
@@ -366,7 +390,7 @@ const Results = () => {
                   <TableRow key={act.id}>
                     <TableCell>
                       <div className="text-sm">
-                        <div className="font-medium">{act.municipalities?.name || 'N/A'}</div>
+                        <div className="font-medium">{getLocationDisplay(act)}</div>
                         <div className="text-muted-foreground">
                           D:{act.district} S:{act.section}
                         </div>
@@ -394,7 +418,7 @@ const Results = () => {
                               <DialogHeader>
                                 <DialogTitle>Imagen del Acta</DialogTitle>
                                 <DialogDescription>
-                                  Mesa {act.table_letter} - {act.municipalities?.name} D:{act.district} S:{act.section}
+                                  Mesa {act.table_letter} - {getLocationDisplay(act)} D:{act.district} S:{act.section}
                                 </DialogDescription>
                               </DialogHeader>
                               <img 
