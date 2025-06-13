@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,8 +13,6 @@ import { supabase } from '@/integrations/supabase/client';
 interface Election {
   id: string;
   name: string;
-  date: string;
-  type: string;
   status: string;
   created_at: string;
 }
@@ -35,7 +34,16 @@ const AdminElections = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setElections(data || []);
+      
+      // Transform the data to match the Election interface
+      const transformedData: Election[] = data?.map(election => ({
+        id: election.id,
+        name: election.name,
+        status: election.status,
+        created_at: election.created_at || new Date().toISOString()
+      })) || [];
+      
+      setElections(transformedData);
     } catch (error) {
       console.error('Error fetching elections:', error);
       toast({
@@ -153,8 +161,7 @@ const AdminElections = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Tipo</TableHead>
+                <TableHead>Fecha de Creación</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -163,8 +170,7 @@ const AdminElections = () => {
               {elections.map((election) => (
                 <TableRow key={election.id}>
                   <TableCell className="font-medium">{election.name}</TableCell>
-                  <TableCell>{new Date(election.date).toLocaleDateString('es-ES')}</TableCell>
-                  <TableCell>{election.type}</TableCell>
+                  <TableCell>{new Date(election.created_at).toLocaleDateString('es-ES')}</TableCell>
                   <TableCell>
                     <Badge variant={election.status === 'active' ? 'default' : 'secondary'}>
                       {election.status === 'active' ? 'Activa' : 'Cerrada'}

@@ -148,13 +148,25 @@ const Results = () => {
       } else {
         console.log('Electoral acts fetched:', data?.length || 0);
         
-        // Transform the data to match the ElectoralAct interface
-        const transformedData = data?.map(act => ({
+        // Transform the data to match the ElectoralAct interface with proper null handling
+        const transformedData: ElectoralAct[] = data?.map(act => ({
           ...act,
           party_votes: act.party_votes?.map((pv: any) => ({
-            party: pv.political_parties,
-            votes: pv.votes
-          })) || []
+            party: pv.political_parties || { name: 'N/A', siglas: 'N/A', color: '#6B7280' },
+            votes: pv.votes || 0
+          })) || [],
+          municipalities: act.municipalities ? {
+            name: act.municipalities.name || 'N/A',
+            provinces: act.municipalities.provinces ? {
+              name: act.municipalities.provinces.name || 'N/A',
+              autonomous_communities: act.municipalities.provinces.autonomous_communities ? {
+                name: act.municipalities.provinces.autonomous_communities.name || 'N/A'
+              } : undefined
+            } : undefined,
+            autonomous_communities: act.municipalities.autonomous_communities ? {
+              name: act.municipalities.autonomous_communities.name || 'N/A'
+            } : undefined
+          } : undefined
         })) || [];
         
         setElectoralActs(transformedData);
@@ -447,4 +459,3 @@ const Results = () => {
 };
 
 export default Results;
-
