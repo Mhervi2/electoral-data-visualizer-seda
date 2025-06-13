@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,81 +7,57 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Plus, Users } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
-// Mock data
-const initialParties = [
-  {
-    id: 'psoe',
-    name: 'Partido Socialista Obrero Español',
-    siglas: 'PSOE',
-    color: '#E53E3E',
-    logo: 'https://placehold.co/60x60/E53E3E/FFFFFF.png?text=PSOE'
-  },
-  {
-    id: 'pp',
-    name: 'Partido Popular',
-    siglas: 'PP',
-    color: '#3182CE',
-    logo: 'https://placehold.co/60x60/3182CE/FFFFFF.png?text=PP'
-  },
-  {
-    id: 'podemos',
-    name: 'Podemos',
-    siglas: 'UP',
-    color: '#805AD5',
-    logo: 'https://placehold.co/60x60/805AD5/FFFFFF.png?text=UP'
-  },
-  {
-    id: 'vox',
-    name: 'Vox',
-    siglas: 'VOX',
-    color: '#38A169',
-    logo: 'https://placehold.co/60x60/38A169/FFFFFF.png?text=VOX'
-  },
-  {
-    id: 'cs',
-    name: 'Ciudadanos',
-    siglas: 'Cs',
-    color: '#D69E2E',
-    logo: 'https://placehold.co/60x60/D69E2E/FFFFFF.png?text=Cs'
-  },
-  {
-    id: 'erc',
-    name: 'Esquerra Republicana de Catalunya',
-    siglas: 'ERC',
-    color: '#F56565',
-    logo: 'https://placehold.co/60x60/F56565/FFFFFF.png?text=ERC'
-  },
-  {
-    id: 'pnv',
-    name: 'Partido Nacionalista Vasco',
-    siglas: 'PNV',
-    color: '#48BB78',
-    logo: 'https://placehold.co/60x60/48BB78/FFFFFF.png?text=PNV'
-  },
-  {
-    id: 'bildu',
-    name: 'EH Bildu',
-    siglas: 'Bildu',
-    color: '#4FD1C7',
-    logo: 'https://placehold.co/60x60/4FD1C7/FFFFFF.png?text=Bildu'
-  },
-];
+interface PoliticalParty {
+  id: string;
+  name: string;
+  siglas: string;
+  color: string;
+}
 
 const PoliticalParties = () => {
-  const [parties] = useState(initialParties);
+  const { user } = useAuth();
+  const [parties, setParties] = useState<PoliticalParty[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newPartyName, setNewPartyName] = useState('');
   const [newPartySiglas, setNewPartySiglas] = useState('');
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchParties();
+  }, []);
+
+  const fetchParties = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('political_parties')
+        .select('*')
+        .order('siglas');
+
+      if (error) throw error;
+      setParties(data || []);
+    } catch (error) {
+      console.error('Error fetching parties:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudieron cargar los partidos políticos.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredParties = parties.filter(party =>
     party.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     party.siglas.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSuggestParty = () => {
+  const handleSuggestParty = async () => {
     if (!newPartyName.trim() || !newPartySiglas.trim()) {
       toast({
         variant: "destructive",
@@ -91,15 +67,47 @@ const PoliticalParties = () => {
       return;
     }
 
-    toast({
-      title: "Sugerencia enviada",
-      description: `Hemos recibido tu sugerencia para añadir "${newPartyName} (${newPartySiglas})". Los administradores la revisarán pronto.`,
-    });
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Debes iniciar sesión para sugerir un partido.",
+      });
+      return;
+    }
 
-    setNewPartyName('');
-    setNewPartySiglas('');
-    setIsDialogOpen(false);
+    try {
+      const { error } = await supabase
+        .from('party_suggestions')
+        .insert({
+          name: newPartyName,
+          siglas: newPartySiglas,
+          suggested_by: user.id
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sugerencia enviada",
+        description: `Hemos recibido tu sugerencia para añadir "${newPartyName} (${newPartySiglas})". Los administradores la revisarán pronto.`,
+      });
+
+      setNewPartyName('');
+      setNewPartySiglas('');
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Error submitting suggestion:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo enviar la sugerencia. Inténtalo de nuevo.",
+      });
+    }
   };
+
+  if (loading) {
+    return <div>Cargando partidos políticos...</div>;
+  }
 
   return (
     <div className="space-y-6">

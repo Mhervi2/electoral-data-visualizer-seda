@@ -1,224 +1,355 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Download } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { BarChart3, Search, Eye, Image, AlertTriangle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
-// Mock data
-const mockProvinces = [
-  { id: '28', name: 'Madrid' },
-  { id: '08', name: 'Barcelona' },
-  { id: '41', name: 'Sevilla' },
-  { id: '46', name: 'Valencia' },
-];
+interface ElectoralAct {
+  id: string;
+  municipality: { name: string; province: { name: string; autonomous_community: { name: string } } };
+  district: string;
+  section: string;
+  table_letter: string;
+  census_total: number;
+  total_voters: number;
+  blank_votes: number;
+  null_votes: number;
+  source_type: string;
+  image_url?: string;
+  created_at: string;
+  party_votes: { party: { name: string; siglas: string; color: string }; votes: number }[];
+}
 
-const mockMunicipalities = {
-  '28': [{ id: '28079', name: 'Madrid' }, { id: '28080', name: 'Alcalá de Henares' }],
-  '08': [{ id: '08019', name: 'Barcelona' }, { id: '08020', name: 'Badalona' }],
-};
-
-const mockPartyData = [
-  { name: 'PSOE', votes: 6700000, seats: 123, color: '#E53E3E' },
-  { name: 'PP', votes: 5000000, seats: 89, color: '#3182CE' },
-  { name: 'Podemos', votes: 3100000, seats: 35, color: '#805AD5' },
-  { name: 'Vox', votes: 3600000, seats: 52, color: '#38A169' },
-  { name: 'ERC', votes: 870000, seats: 13, color: '#D69E2E' },
-];
+interface Discrepancy {
+  municipality: string;
+  district: string;
+  section: string;
+  table_letter: string;
+  sources: string[];
+  differences: string[];
+}
 
 const Results = () => {
-  const [selectedProvince, setSelectedProvince] = useState<string>('all');
-  const [selectedMunicipality, setSelectedMunicipality] = useState<string>('all');
-  const [selectedSources, setSelectedSources] = useState<string[]>(['user']);
+  const { user } = useAuth();
+  const [electoralActs, setElectoralActs] = useState<ElectoralAct[]>([]);
+  const [discrepancies, setDiscrepancies] = useState<Discrepancy[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    municipality: '',
+    district: '',
+    section: '',
+    table: '',
+    sourceType: ''
+  });
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const dataSources = [
-    { id: 'user', label: 'Actas de Usuario' },
-    { id: 'indra', label: 'Datos INDRA' },
-    { id: 'escrutinio', label: 'Escrutinio General' },
-    { id: 'oficial', label: 'Resultado Oficial' },
-  ];
+  useEffect(() => {
+    fetchElectoralActs();
+    if (user?.isAdmin) {
+      fetchDiscrepancies();
+    }
+  }, [user, filters]);
 
-  const handleSourceChange = (sourceId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedSources([...selectedSources, sourceId]);
-    } else {
-      setSelectedSources(selectedSources.filter(id => id !== sourceId));
+  const fetchElectoralActs = async () => {
+    try {
+      let query = supabase
+        .from('electoral_acts')
+        .select(`
+          *,
+          municipality:municipalities (
+            name,
+            province:provinces (
+              name,
+              autonomous_community:autonomous_communities (
+                name
+              )
+            )
+          ),
+          party_votes (
+            votes,
+            party:political_parties (
+              name,
+              siglas,
+              color
+            )
+          )
+        `);
+
+      // Apply filters
+      if (filters.municipality) {
+        query = query.ilike('municipality.name', `%${filters.municipality}%`);
+      }
+      if (filters.district) {
+        query = query.eq('district', filters.district);
+      }
+      if (filters.section) {
+        query = query.eq('section', filters.section);
+      }
+      if (filters.table) {
+        query = query.eq('table_letter', filters.table);
+      }
+      if (filters.sourceType) {
+        query = query.eq('source_type', filters.sourceType);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setElectoralActs(data || []);
+    } catch (error) {
+      console.error('Error fetching electoral acts:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getTitle = () => {
-    if (selectedMunicipality && selectedMunicipality !== 'all') {
-      const municipality = mockMunicipalities[selectedProvince as keyof typeof mockMunicipalities]?.find(m => m.id === selectedMunicipality);
-      return `Resultados - ${municipality?.name}`;
+  const fetchDiscrepancies = async () => {
+    try {
+      // This is a complex query to find discrepancies between different sources
+      // For now, we'll simulate finding discrepancies
+      const mockDiscrepancies: Discrepancy[] = [
+        {
+          municipality: 'Madrid',
+          district: '01',
+          section: '001',
+          table_letter: 'A',
+          sources: ['user', 'indra'],
+          differences: ['Total de votantes no coincide: Usuario: 850, INDRA: 845']
+        }
+      ];
+      setDiscrepancies(mockDiscrepancies);
+    } catch (error) {
+      console.error('Error fetching discrepancies:', error);
     }
-    if (selectedProvince && selectedProvince !== 'all') {
-      const province = mockProvinces.find(p => p.id === selectedProvince);
-      return `Resultados - ${province?.name}`;
-    }
-    return 'Resultados Electorales - Nacional';
   };
+
+  const getSourceTypeLabel = (sourceType: string) => {
+    const labels = {
+      'user': 'Acta de Usuario',
+      'indra': 'INDRA',
+      'escrutinio': 'Escrutinio General',
+      'oficial': 'Resultado Oficial'
+    };
+    return labels[sourceType as keyof typeof labels] || sourceType;
+  };
+
+  const getSourceTypeBadgeVariant = (sourceType: string) => {
+    const variants = {
+      'user': 'default',
+      'indra': 'secondary',
+      'escrutinio': 'outline',
+      'oficial': 'destructive'
+    };
+    return variants[sourceType as keyof typeof variants] || 'outline';
+  };
+
+  if (loading) {
+    return <div>Cargando resultados...</div>;
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground font-space-grotesk">
-          Resultados Electorales
-        </h1>
-        <Button variant="outline">
-          <Download className="h-4 w-4 mr-2" />
-          Exportar Datos
-        </Button>
+      <div className="flex items-center space-x-3">
+        <BarChart3 className="h-8 w-8 text-primary" />
+        <div>
+          <h1 className="text-3xl font-bold text-foreground font-space-grotesk">
+            Resultados Electorales
+          </h1>
+          <p className="text-muted-foreground">
+            Visualiza los resultados detallados por mesa electoral
+          </p>
+        </div>
       </div>
 
-      {/* Filtros */}
+      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle>Filtros de Búsqueda</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Provincia</label>
-              <Select value={selectedProvince} onValueChange={setSelectedProvince}>
+              <Label htmlFor="municipality-filter">Municipio</Label>
+              <Input
+                id="municipality-filter"
+                placeholder="Buscar municipio..."
+                value={filters.municipality}
+                onChange={(e) => setFilters(prev => ({ ...prev, municipality: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="district-filter">Distrito</Label>
+              <Input
+                id="district-filter"
+                placeholder="Ej: 01"
+                value={filters.district}
+                onChange={(e) => setFilters(prev => ({ ...prev, district: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="section-filter">Sección</Label>
+              <Input
+                id="section-filter"
+                placeholder="Ej: 001"
+                value={filters.section}
+                onChange={(e) => setFilters(prev => ({ ...prev, section: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="table-filter">Mesa</Label>
+              <Input
+                id="table-filter"
+                placeholder="Ej: A"
+                value={filters.table}
+                onChange={(e) => setFilters(prev => ({ ...prev, table: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="source-filter">Fuente</Label>
+              <Select value={filters.sourceType} onValueChange={(value) => setFilters(prev => ({ ...prev, sourceType: value }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar provincia" />
+                  <SelectValue placeholder="Todas las fuentes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las provincias</SelectItem>
-                  {mockProvinces.map(province => (
-                    <SelectItem key={province.id} value={province.id}>
-                      {province.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="">Todas las fuentes</SelectItem>
+                  <SelectItem value="user">Acta de Usuario</SelectItem>
+                  <SelectItem value="indra">INDRA</SelectItem>
+                  <SelectItem value="escrutinio">Escrutinio General</SelectItem>
+                  <SelectItem value="oficial">Resultado Oficial</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Municipio</label>
-              <Select 
-                value={selectedMunicipality} 
-                onValueChange={setSelectedMunicipality}
-                disabled={!selectedProvince || selectedProvince === 'all'}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar municipio" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los municipios</SelectItem>
-                  {selectedProvince && selectedProvince !== 'all' && mockMunicipalities[selectedProvince as keyof typeof mockMunicipalities]?.map(municipality => (
-                    <SelectItem key={municipality.id} value={municipality.id}>
-                      {municipality.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-3 block">Fuentes de Datos</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {dataSources.map(source => (
-                <div key={source.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={source.id}
-                    checked={selectedSources.includes(source.id)}
-                    onCheckedChange={(checked) => handleSourceChange(source.id, !!checked)}
-                  />
-                  <label htmlFor={source.id} className="text-sm">
-                    {source.label}
-                  </label>
-                </div>
-              ))}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Resumen y Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      {/* Discrepancies Section (Admin Only) */}
+      {user?.isAdmin && discrepancies.length > 0 && (
+        <Card className="border-destructive/20">
           <CardHeader>
-            <CardTitle>{getTitle()}</CardTitle>
-            <CardDescription>Distribución de Votos</CardDescription>
+            <CardTitle className="flex items-center">
+              <AlertTriangle className="h-5 w-5 mr-2 text-destructive" />
+              Discrepancias Detectadas
+            </CardTitle>
+            <CardDescription>
+              Actas donde los datos no coinciden entre diferentes fuentes
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={mockPartyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip formatter={(value) => value.toLocaleString()} />
-                <Legend />
-                <Bar dataKey="votes" fill="#A80000" />
-              </BarChart>
-            </ResponsiveContainer>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ubicación</TableHead>
+                  <TableHead>Fuentes</TableHead>
+                  <TableHead>Diferencias</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {discrepancies.map((discrepancy, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      {discrepancy.municipality} - D:{discrepancy.district} S:{discrepancy.section} M:{discrepancy.table_letter}
+                    </TableCell>
+                    <TableCell>
+                      {discrepancy.sources.map(source => (
+                        <Badge key={source} variant="outline" className="mr-1">
+                          {getSourceTypeLabel(source)}
+                        </Badge>
+                      ))}
+                    </TableCell>
+                    <TableCell className="text-sm text-destructive">
+                      {discrepancy.differences.join(', ')}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
+      )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribución de Escaños</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={mockPartyData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, seats }) => `${name}: ${seats}`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="seats"
-                >
-                  {mockPartyData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabla Detallada */}
+      {/* Electoral Acts Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Resultados Detallados</CardTitle>
+          <CardTitle>Actas Electorales</CardTitle>
+          <CardDescription>
+            Resultados detallados por mesa electoral
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Partido</th>
-                  {selectedSources.includes('user') && <th className="text-right p-2">Votos Usuario</th>}
-                  {selectedSources.includes('indra') && <th className="text-right p-2">Votos INDRA</th>}
-                  {selectedSources.includes('escrutinio') && <th className="text-right p-2">Escrutinio</th>}
-                  {selectedSources.includes('oficial') && <th className="text-right p-2">Oficial</th>}
-                  <th className="text-right p-2">Escaños</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockPartyData.map((party, index) => (
-                  <tr key={index} className="border-b hover:bg-accent/20">
-                    <td className="p-2 font-medium">{party.name}</td>
-                    {selectedSources.includes('user') && <td className="text-right p-2">{party.votes.toLocaleString()}</td>}
-                    {selectedSources.includes('indra') && <td className="text-right p-2">{(party.votes * 0.98).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>}
-                    {selectedSources.includes('escrutinio') && <td className="text-right p-2">{(party.votes * 1.02).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>}
-                    {selectedSources.includes('oficial') && <td className="text-right p-2">{party.votes.toLocaleString()}</td>}
-                    <td className="text-right p-2 font-bold">{party.seats}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Ubicación</TableHead>
+                <TableHead>Mesa</TableHead>
+                <TableHead>Censo</TableHead>
+                <TableHead>Votantes</TableHead>
+                <TableHead>Fuente</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {electoralActs.map((act) => (
+                <TableRow key={act.id}>
+                  <TableCell>
+                    <div className="text-sm">
+                      <div className="font-medium">{act.municipality?.name || 'N/A'}</div>
+                      <div className="text-muted-foreground">
+                        D:{act.district} S:{act.section}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium">{act.table_letter}</TableCell>
+                  <TableCell>{act.census_total}</TableCell>
+                  <TableCell>{act.total_voters}</TableCell>
+                  <TableCell>
+                    <Badge variant={getSourceTypeBadgeVariant(act.source_type) as any}>
+                      {getSourceTypeLabel(act.source_type)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{new Date(act.created_at).toLocaleDateString('es-ES')}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end space-x-2">
+                      {act.image_url && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="outline">
+                              <Image className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>Imagen del Acta</DialogTitle>
+                              <DialogDescription>
+                                Mesa {act.table_letter} - {act.municipality?.name} D:{act.district} S:{act.section}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <img 
+                              src={act.image_url} 
+                              alt="Acta electoral" 
+                              className="w-full h-auto rounded-lg"
+                            />
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                      <Button size="sm" variant="outline">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

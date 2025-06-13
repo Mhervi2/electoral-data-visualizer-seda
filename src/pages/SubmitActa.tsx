@@ -1,29 +1,45 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Camera, Eye, Plus } from 'lucide-react';
+import { Upload, Camera, Eye, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
-// Mock data
-const mockMunicipalities = [
-  { id: '28079', name: 'Madrid', province: 'Madrid', region: 'Comunidad de Madrid' },
-  { id: '08019', name: 'Barcelona', province: 'Barcelona', region: 'Cataluña' },
-  { id: '41091', name: 'Sevilla', province: 'Sevilla', region: 'Andalucía' },
-];
+interface Municipality {
+  id: string;
+  name: string;
+  province: { name: string; autonomous_community: { name: string } };
+}
 
-const mockPartidos = [
-  { id: 'psoe', name: 'PSOE', siglas: 'PSOE' },
-  { id: 'pp', name: 'Partido Popular', siglas: 'PP' },
-  { id: 'podemos', name: 'Podemos', siglas: 'UP' },
-  { id: 'vox', name: 'Vox', siglas: 'VOX' },
-  { id: 'cs', name: 'Ciudadanos', siglas: 'Cs' },
-];
+interface PoliticalParty {
+  id: string;
+  name: string;
+  siglas: string;
+}
+
+interface Election {
+  id: string;
+  name: string;
+  status: string;
+}
+
+interface ExistingAct {
+  id: string;
+  municipality: { name: string };
+  district: string;
+  section: string;
+  table_letter: string;
+  source_type: string;
+  created_at: string;
+}
 
 interface ActaData {
+  electionId: string;
   municipio: string;
   distrito: string;
   seccion: string;
@@ -37,7 +53,15 @@ interface ActaData {
 }
 
 const SubmitActa = () => {
+  const { user } = useAuth();
+  const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
+  const [politicalParties, setPoliticalParties] = useState<PoliticalParty[]>([]);
+  const [elections, setElections] = useState<Election[]>([]);
+  const [existingAct, setExistingAct] = useState<ExistingAct | null>(null);
+  const [showExistingActDialog, setShowExistingActDialog] = useState(false);
+  
   const [actaData, setActaData] = useState<ActaData>({
+    electionId: '',
     municipio: '',
     distrito: '',
     seccion: '',
@@ -48,11 +72,107 @@ const SubmitActa = () => {
     nulos: '',
     votos: {},
   });
-  const [submittedActas, setSubmittedActas] = useState<ActaData[]>([]);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const selectedMunicipality = mockMunicipalities.find(m => m.id === actaData.municipio);
+  useEffect(() => {
+    fetchMunicipalities();
+    fetchPoliticalParties();
+    fetchElections();
+  }, []);
+
+  const fetchMunicipalities = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('municipalities')
+        .select(`
+          id,
+          name,
+          province:provinces (
+            name,
+            autonomous_community:autonomous_communities (
+              name
+            )
+          )
+        `)
+        .order('name');
+
+      if (error) throw error;
+      setMunicipalities(data || []);
+    } catch (error) {
+      console.error('Error fetching municipalities:', error);
+    }
+  };
+
+  const fetchPoliticalParties = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('political_parties')
+        .select('*')
+        .order('siglas');
+
+      if (error) throw error;
+      setPoliticalParties(data || []);
+    } catch (error) {
+      console.error('Error fetching political parties:', error);
+    }
+  };
+
+  const fetchElections = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('elections')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setElections(data || []);
+    } catch (error) {
+      console.error('Error fetching elections:', error);
+    }
+  };
+
+  const checkExistingAct = async () => {
+    if (!actaData.electionId || !actaData.municipio || !actaData.distrito || !actaData.seccion || !actaData.mesa) {
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('electoral_acts')
+        .select(`
+          id,
+          district,
+          section,
+          table_letter,
+          source_type,
+          created_at,
+          municipality:municipalities (
+            name
+          )
+        `)
+        .eq('election_id', actaData.electionId)
+        .eq('municipality_id', actaData.municipio)
+        .eq('district', actaData.distrito)
+        .eq('section', actaData.seccion)
+        .eq('table_letter', actaData.mesa)
+        .single();
+
+      if (data && !error) {
+        setExistingAct(data);
+        setShowExistingActDialog(true);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      // No existing act found, which is expected
+      return false;
+    }
+  };
+
+  const selectedMunicipality = municipalities.find(m => m.id === actaData.municipio);
 
   const handleInputChange = (field: keyof ActaData, value: string) => {
     setActaData(prev => ({ ...prev, [field]: value }));
@@ -70,30 +190,6 @@ const SubmitActa = () => {
     if (file) {
       setActaData(prev => ({ ...prev, imagen: file }));
     }
-  };
-
-  const processWithOCR = () => {
-    // Simulated OCR processing
-    toast({
-      title: "OCR Procesado",
-      description: "Los datos han sido extraídos de la imagen (simulado).",
-    });
-    
-    // Mock OCR results
-    setActaData(prev => ({
-      ...prev,
-      censo: '1000',
-      votantes: '850',
-      blancos: '25',
-      nulos: '15',
-      votos: {
-        psoe: '320',
-        pp: '280',
-        podemos: '150',
-        vox: '75',
-        cs: '5'
-      }
-    }));
   };
 
   const validateData = (): boolean => {
@@ -129,51 +225,101 @@ const SubmitActa = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateData()) return;
-
-    // Check if acta already exists
-    const existingActa = submittedActas.find(acta => 
-      acta.municipio === actaData.municipio &&
-      acta.distrito === actaData.distrito &&
-      acta.seccion === actaData.seccion &&
-      acta.mesa === actaData.mesa
-    );
-
-    if (existingActa) {
+    if (!user) {
       toast({
         variant: "destructive",
-        title: "Acta ya existe",
-        description: "Ya existe un acta para esta mesa electoral.",
+        title: "Error",
+        description: "Debes iniciar sesión para enviar un acta.",
       });
       return;
     }
 
+    if (!validateData()) return;
+
+    // Check for existing act
+    const hasExisting = await checkExistingAct();
+    if (hasExisting) return;
+
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      // Insert electoral act
+      const { data: actData, error: actError } = await supabase
+        .from('electoral_acts')
+        .insert({
+          election_id: actaData.electionId,
+          municipality_id: actaData.municipio,
+          district: actaData.distrito,
+          section: actaData.seccion,
+          table_letter: actaData.mesa,
+          census_total: parseInt(actaData.censo),
+          total_voters: parseInt(actaData.votantes),
+          blank_votes: parseInt(actaData.blancos),
+          null_votes: parseInt(actaData.nulos),
+          source_type: 'user',
+          submitted_by: user.id
+        })
+        .select()
+        .single();
 
-    setSubmittedActas(prev => [...prev, { ...actaData }]);
-    
-    toast({
-      title: "Acta enviada",
-      description: "El acta electoral ha sido enviada correctamente.",
-    });
+      if (actError) throw actError;
 
-    // Reset form
-    setActaData({
-      municipio: '',
-      distrito: '',
-      seccion: '',
-      mesa: '',
-      censo: '',
-      votantes: '',
-      blancos: '',
-      nulos: '',
-      votos: {},
-    });
+      // Insert party votes
+      const partyVotesData = Object.entries(actaData.votos)
+        .filter(([_, votes]) => votes && parseInt(votes) > 0)
+        .map(([partyId, votes]) => ({
+          electoral_act_id: actData.id,
+          party_id: partyId,
+          votes: parseInt(votes)
+        }));
 
-    setIsSubmitting(false);
+      if (partyVotesData.length > 0) {
+        const { error: votesError } = await supabase
+          .from('party_votes')
+          .insert(partyVotesData);
+
+        if (votesError) throw votesError;
+      }
+
+      toast({
+        title: "Acta enviada",
+        description: "El acta electoral ha sido enviada correctamente.",
+      });
+
+      // Reset form
+      setActaData({
+        electionId: '',
+        municipio: '',
+        distrito: '',
+        seccion: '',
+        mesa: '',
+        censo: '',
+        votantes: '',
+        blancos: '',
+        nulos: '',
+        votos: {},
+      });
+
+    } catch (error) {
+      console.error('Error submitting act:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo enviar el acta. Inténtalo de nuevo.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getSourceTypeLabel = (sourceType: string) => {
+    const labels = {
+      'user': 'Acta de Usuario',
+      'indra': 'INDRA',
+      'escrutinio': 'Escrutinio General',
+      'oficial': 'Resultado Oficial'
+    };
+    return labels[sourceType as keyof typeof labels] || sourceType;
   };
 
   return (
@@ -182,7 +328,69 @@ const SubmitActa = () => {
         Enviar Acta Electoral
       </h1>
 
+      {/* Existing Act Dialog */}
+      <Dialog open={showExistingActDialog} onOpenChange={setShowExistingActDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <AlertTriangle className="h-5 w-5 mr-2 text-destructive" />
+              Acta Ya Existente
+            </DialogTitle>
+            <DialogDescription>
+              Ya existe un acta para esta mesa electoral.
+            </DialogDescription>
+          </DialogHeader>
+          {existingAct && (
+            <div className="space-y-4">
+              <div className="p-4 bg-accent/20 rounded-lg">
+                <h4 className="font-medium mb-2">Detalles del Acta Existente:</h4>
+                <div className="text-sm space-y-1">
+                  <p><strong>Municipio:</strong> {existingAct.municipality?.name}</p>
+                  <p><strong>Distrito:</strong> {existingAct.district}</p>
+                  <p><strong>Sección:</strong> {existingAct.section}</p>
+                  <p><strong>Mesa:</strong> {existingAct.table_letter}</p>
+                  <p><strong>Fuente:</strong> {getSourceTypeLabel(existingAct.source_type)}</p>
+                  <p><strong>Fecha:</strong> {new Date(existingAct.created_at).toLocaleDateString('es-ES')}</p>
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setShowExistingActDialog(false)}>
+                  Cerrar
+                </Button>
+                <Button onClick={() => setShowExistingActDialog(false)}>
+                  Entendido
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Election Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Selección de Elección</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <Label htmlFor="election">Elección *</Label>
+              <Select value={actaData.electionId} onValueChange={(value) => handleInputChange('electionId', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar elección" />
+                </SelectTrigger>
+                <SelectContent>
+                  {elections.map(election => (
+                    <SelectItem key={election.id} value={election.id}>
+                      {election.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Identificación */}
         <Card>
           <CardHeader>
@@ -197,7 +405,7 @@ const SubmitActa = () => {
                     <SelectValue placeholder="Seleccionar municipio" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockMunicipalities.map(municipality => (
+                    {municipalities.map(municipality => (
                       <SelectItem key={municipality.id} value={municipality.id}>
                         {municipality.name}
                       </SelectItem>
@@ -210,11 +418,11 @@ const SubmitActa = () => {
                 <div className="space-y-2">
                   <div>
                     <Label>Provincia</Label>
-                    <Input value={selectedMunicipality.province} disabled />
+                    <Input value={selectedMunicipality.province.name} disabled />
                   </div>
                   <div>
                     <Label>Comunidad Autónoma</Label>
-                    <Input value={selectedMunicipality.region} disabled />
+                    <Input value={selectedMunicipality.province.autonomous_community.name} disabled />
                   </div>
                 </div>
               )}
@@ -227,6 +435,7 @@ const SubmitActa = () => {
                   id="distrito"
                   value={actaData.distrito}
                   onChange={(e) => handleInputChange('distrito', e.target.value)}
+                  onBlur={checkExistingAct}
                   placeholder="Ej: 01"
                   required
                 />
@@ -237,6 +446,7 @@ const SubmitActa = () => {
                   id="seccion"
                   value={actaData.seccion}
                   onChange={(e) => handleInputChange('seccion', e.target.value)}
+                  onBlur={checkExistingAct}
                   placeholder="Ej: 001"
                   required
                 />
@@ -247,6 +457,7 @@ const SubmitActa = () => {
                   id="mesa"
                   value={actaData.mesa}
                   onChange={(e) => handleInputChange('mesa', e.target.value)}
+                  onBlur={checkExistingAct}
                   placeholder="Ej: A"
                   required
                 />
@@ -284,9 +495,6 @@ const SubmitActa = () => {
                 <p className="text-sm text-muted-foreground">
                   Archivo seleccionado: {actaData.imagen.name}
                 </p>
-                <Button type="button" onClick={processWithOCR} variant="secondary">
-                  Procesar con OCR
-                </Button>
               </div>
             )}
           </CardContent>
@@ -350,7 +558,7 @@ const SubmitActa = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {mockPartidos.map(partido => (
+              {politicalParties.map(partido => (
                 <div key={partido.id} className="flex items-center space-x-4">
                   <div className="w-20 text-sm font-medium">{partido.siglas}</div>
                   <div className="flex-1 text-sm">{partido.name}</div>
@@ -371,37 +579,6 @@ const SubmitActa = () => {
           {isSubmitting ? 'Enviando...' : 'Enviar Acta Electoral'}
         </Button>
       </form>
-
-      {/* Mis Actas Enviadas */}
-      {submittedActas.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Mis Actas Enviadas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {submittedActas.map((acta, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">
-                        Mesa {acta.mesa} - Sección {acta.seccion} - Distrito {acta.distrito}
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        {mockMunicipalities.find(m => m.id === acta.municipio)?.name}
-                      </p>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      <Eye className="h-4 w-4 mr-2" />
-                      Ver Detalles
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
