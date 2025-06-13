@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -17,16 +18,33 @@ const ForgotPassword = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
 
-    toast({
-      title: "Instrucciones enviadas",
-      description: "Si el email existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña.",
-    });
-
-    setIsSubmitted(true);
-    setIsSubmitting(false);
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message,
+        });
+      } else {
+        toast({
+          title: "Instrucciones enviadas",
+          description: "Si el email existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña.",
+        });
+        setIsSubmitted(true);
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Ha ocurrido un error inesperado.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

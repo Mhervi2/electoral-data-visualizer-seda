@@ -34,7 +34,7 @@ const Login = () => {
         toast({
           variant: "destructive",
           title: "Error de autenticación",
-          description: "Credenciales inválidas. Verifica tu email y contraseña.",
+          description: "Credenciales inválidas o no tienes permisos de administrador.",
         });
       }
     } catch (error) {
@@ -106,12 +106,6 @@ const Login = () => {
           </form>
           
           <div className="mt-6 text-center space-y-2">
-            <Link 
-              to="/forgot-password" 
-              className="text-sm text-primary hover:text-primary/80 transition-colors"
-            >
-              ¿Olvidaste tu contraseña?
-            </Link>
             <div className="text-sm text-muted-foreground">
               <Link 
                 to="/" 
@@ -124,9 +118,10 @@ const Login = () => {
           
           <div className="mt-6 p-4 bg-accent/20 rounded-md">
             <p className="text-sm text-muted-foreground">
-              <strong>Credenciales de prueba:</strong><br />
-              Email: admin@seda.es<br />
-              Contraseña: S3gUr4P4$$wOrd!
+              <strong>Para acceder como administrador:</strong><br />
+              1. Primero regístrate con el email: admin@seda.es<br />
+              2. Verifica tu email en Supabase<br />
+              3. Luego podrás iniciar sesión aquí
             </p>
           </div>
         </CardContent>
