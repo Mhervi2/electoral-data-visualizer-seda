@@ -19,6 +19,7 @@ const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Siempre se pedirá login si no hay usuario autenticado.
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -28,8 +29,8 @@ const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
       if (!success) {
         toast({
           variant: "destructive",
-          title: "Error de autenticación",
-          description: "Credenciales inválidas. Solo administradores pueden acceder.",
+          title: "Acceso denegado",
+          description: "Las credenciales no corresponden a un administrador o son incorrectas.",
         });
       }
     } catch (error) {
@@ -57,21 +58,26 @@ const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <Lock className="h-8 w-8 mx-auto mb-2 text-primary" />
-            <CardTitle>Acceso Administrativo</CardTitle>
+            <CardTitle>Panel exclusivo para administradores</CardTitle>
             <CardDescription>
-              Ingrese sus credenciales de administrador para continuar
+              Este acceso está restringido.<br/>
+              Introduce el <b>usuario y contraseña de administrador</b> para poder acceder al panel.
+              <br/>
+              <span className="block mt-2 text-yellow-700 font-semibold">
+                Si NO eres administrador, deja esta página.
+              </span>
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Correo de administrador</Label>
                 <Input
                   id="email"
                   type="email"
                   value={credentials.email}
                   onChange={(e) => setCredentials(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="admin@seda.es"
+                  placeholder="admin@seda.es o superadmin@seda.es"
                   required
                 />
               </div>
@@ -86,8 +92,14 @@ const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Verificando...' : 'Acceder al Panel'}
+                {isSubmitting ? 'Verificando...' : 'Entrar como Administrador'}
               </Button>
+              <div className="mt-2 text-xs text-center text-muted-foreground">
+                Sólo el usuario administrador puede entrar a este panel.
+                <br/>
+                Usuario recomendado: <b>superadmin@seda.es</b><br/>
+                Contraseña: <b>AdminFuerte#2024</b>
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -96,10 +108,29 @@ const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
   }
 
   if (!user.isAdmin) {
-    return <Navigate to="/" replace />;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-muted/20">
+        <Card className="max-w-md">
+          <CardHeader className="text-center">
+            <Lock className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <CardTitle>Acceso denegado</CardTitle>
+            <CardDescription>
+              Tu usuario no tiene permisos de administrador.<br/>
+              El panel de administración es exclusivo para administradores autorizados.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={() => window.location.href = "/"}>
+              Volver a la página principal
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return <>{children}</>;
 };
 
 export default AdminProtectedRoute;
+
