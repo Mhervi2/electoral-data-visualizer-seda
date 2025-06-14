@@ -2,8 +2,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MpcaData } from '@/types/acta';
+import { MunicipalityCombobox } from './MunicipalityCombobox';
 
 interface MesaIdentificationProps {
   mpcaData: MpcaData[];
@@ -40,25 +40,15 @@ export const MesaIdentification = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="municipio">Municipio *</Label>
-            <Select value={municipio} onValueChange={onMunicipalityChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar municipio" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border border-border z-50">
-                {mpcaData.length === 0 ? (
-                  <SelectItem value="loading" disabled>Cargando municipios...</SelectItem>
-                ) : (
-                  mpcaData.map(mpca => (
-                    <SelectItem key={mpca.idm} value={mpca.idm.toString()}>
-                      {mpca.municipio}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <MunicipalityCombobox 
+              mpcaData={mpcaData}
+              selectedValue={municipio}
+              onSelect={onMunicipalityChange}
+              placeholder="Buscar municipio..."
+            />
             {mpcaData.length === 0 && (
               <p className="text-sm text-muted-foreground mt-1">
-                {mpcaData.length === 0 ? 'Cargando municipios...' : `${mpcaData.length} municipios disponibles`}
+                Cargando municipios...
               </p>
             )}
           </div>
