@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Camera, Eye, AlertTriangle } from 'lucide-react';
+import { Upload, Camera, Eye, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { useSecureFileUpload } from '@/hooks/useSecureFileUpload';
 
 interface Municipality {
   id: string;
@@ -50,10 +51,12 @@ interface ActaData {
   nulos: string;
   votos: { [key: string]: string };
   imagen?: File;
+  imageUrl?: string;
 }
 
 const SubmitActa = () => {
   const { user } = useAuth();
+  const { uploadFile, uploading } = useSecureFileUpload();
   const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
   const [politicalParties, setPoliticalParties] = useState<PoliticalParty[]>([]);
   const [elections, setElections] = useState<Election[]>([]);
@@ -140,6 +143,7 @@ const SubmitActa = () => {
     }
 
     try {
+      console.log('Checking for existing act...');
       const { data, error } = await supabase
         .from('electoral_acts')
         .select(`
@@ -149,25 +153,31 @@ const SubmitActa = () => {
           table_letter,
           source_type,
           created_at,
-          municipality:municipalities (
-            name
+          census_total,
+          total_voters,
+          blank_votes,
+          null_votes,
+          municipality:municipalities (name),
+          party_votes (
+            votes,
+            political_parties (name, siglas)
           )
         `)
         .eq('election_id', actaData.electionId)
         .eq('municipality_id', actaData.municipio)
         .eq('district', actaData.distrito)
         .eq('section', actaData.seccion)
-        .eq('table_letter', actaData.mesa)
-        .single();
+        .eq('table_letter', actaData.mesa);
 
-      if (data && !error) {
-        setExistingAct(data);
+      if (data && data.length > 0) {
+        console.log('Found existing acts:', data.length);
+        setExistingAct(data[0]); // Show details of first act found
         setShowExistingActDialog(true);
         return true;
       }
       return false;
     } catch (error) {
-      // No existing act found, which is expected
+      console.error('Error checking existing act:', error);
       return false;
     }
   };
@@ -185,10 +195,20 @@ const SubmitActa = () => {
     }));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setActaData(prev => ({ ...prev, imagen: file }));
+      console.log('File selected:', file.name, file.size, file.type);
+      
+      const imageUrl = await uploadFile(file, 'electoral-acts', {
+        maxSizeInMB: 5,
+        allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+        folder: 'acts'
+      });
+
+      if (imageUrl) {
+        setActaData(prev => ({ ...prev, imagen: file, imageUrl }));
+      }
     }
   };
 
@@ -255,7 +275,7 @@ const SubmitActa = () => {
         return;
       }
 
-      // Insert electoral act
+      // Insert electoral act with image URL if available
       const { data: actData, error: actError } = await supabase
         .from('electoral_acts')
         .insert({
@@ -269,6 +289,7 @@ const SubmitActa = () => {
           blank_votes: parseInt(actaData.blancos),
           null_votes: parseInt(actaData.nulos),
           source_type: 'user',
+          image_url: actaData.imageUrl,
           submitted_by: authUser.id
         })
         .select()
@@ -292,6 +313,19 @@ const SubmitActa = () => {
 
         if (votesError) throw votesError;
       }
+
+      // Log audit action
+      await supabase.rpc('log_audit_action', {
+        p_action: 'CREATE_ELECTORAL_ACT',
+        p_table_name: 'electoral_acts',
+        p_record_id: actData.id,
+        p_new_values: {
+          municipality_id: actaData.municipio,
+          district: actaData.distrito,
+          section: actaData.seccion,
+          table_letter: actaData.mesa
+        }
+      });
 
       toast({
         title: "Acta enviada",
@@ -340,36 +374,58 @@ const SubmitActa = () => {
         Enviar Acta Electoral
       </h1>
 
-      {/* Existing Act Dialog */}
+      {/* Existing Act Dialog with enhanced information */}
       <Dialog open={showExistingActDialog} onOpenChange={setShowExistingActDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <AlertTriangle className="h-5 w-5 mr-2 text-destructive" />
-              Acta Ya Existente
+              Acta Ya Registrada
             </DialogTitle>
             <DialogDescription>
-              Ya existe un acta para esta mesa electoral.
+              Ya existe un acta registrada para esta mesa electoral. Revise los detalles a continuación.
             </DialogDescription>
           </DialogHeader>
           {existingAct && (
             <div className="space-y-4">
               <div className="p-4 bg-accent/20 rounded-lg">
-                <h4 className="font-medium mb-2">Detalles del Acta Existente:</h4>
-                <div className="text-sm space-y-1">
-                  <p><strong>Municipio:</strong> {existingAct.municipality?.name}</p>
-                  <p><strong>Distrito:</strong> {existingAct.district}</p>
-                  <p><strong>Sección:</strong> {existingAct.section}</p>
-                  <p><strong>Mesa:</strong> {existingAct.table_letter}</p>
-                  <p><strong>Fuente:</strong> {getSourceTypeLabel(existingAct.source_type)}</p>
-                  <p><strong>Fecha:</strong> {new Date(existingAct.created_at).toLocaleDateString('es-ES')}</p>
+                <h4 className="font-medium mb-3">Detalles del Acta Existente:</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p><strong>Municipio:</strong> {existingAct.municipality?.name}</p>
+                    <p><strong>Distrito:</strong> {existingAct.district}</p>
+                    <p><strong>Sección:</strong> {existingAct.section}</p>
+                    <p><strong>Mesa:</strong> {existingAct.table_letter}</p>
+                  </div>
+                  <div>
+                    <p><strong>Fuente:</strong> {getSourceTypeLabel(existingAct.source_type)}</p>
+                    <p><strong>Fecha:</strong> {new Date(existingAct.created_at).toLocaleDateString('es-ES')}</p>
+                    <p><strong>Censo:</strong> {existingAct.census_total}</p>
+                    <p><strong>Votantes:</strong> {existingAct.total_voters}</p>
+                  </div>
                 </div>
+                
+                {existingAct.party_votes && existingAct.party_votes.length > 0 && (
+                  <div className="mt-3">
+                    <p className="font-medium mb-2">Votos por partido:</p>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      {existingAct.party_votes.map((pv: any, index: number) => (
+                        <div key={index} className="flex justify-between">
+                          <span>{pv.political_parties?.siglas}:</span>
+                          <span>{pv.votes}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
+              
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setShowExistingActDialog(false)}>
                   Cerrar
                 </Button>
                 <Button onClick={() => setShowExistingActDialog(false)}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
                   Entendido
                 </Button>
               </div>
@@ -478,25 +534,33 @@ const SubmitActa = () => {
           </CardContent>
         </Card>
 
-        {/* Imagen del Acta */}
+        {/* Enhanced Image Upload Section */}
         <Card>
           <CardHeader>
             <CardTitle>Imagen del Acta *</CardTitle>
+            <CardDescription>
+              Suba una imagen clara del acta electoral (máximo 5MB, formatos: JPG, PNG, WebP)
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
-              <Button type="button" variant="outline" onClick={() => document.getElementById('file-upload')?.click()}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => document.getElementById('file-upload')?.click()}
+                disabled={uploading}
+              >
                 <Upload className="h-4 w-4 mr-2" />
-                Subir Imagen
+                {uploading ? 'Subiendo...' : 'Subir Imagen'}
               </Button>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" disabled>
                 <Camera className="h-4 w-4 mr-2" />
-                Tomar Foto
+                Tomar Foto (Próximamente)
               </Button>
               <input
                 id="file-upload"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={handleImageUpload}
                 className="hidden"
               />
@@ -505,8 +569,17 @@ const SubmitActa = () => {
             {actaData.imagen && (
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Archivo seleccionado: {actaData.imagen.name}
+                  ✓ Archivo seleccionado: {actaData.imagen.name}
                 </p>
+                {actaData.imageUrl && (
+                  <div className="mt-2">
+                    <img 
+                      src={actaData.imageUrl} 
+                      alt="Vista previa del acta" 
+                      className="max-w-xs rounded-lg border"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -587,7 +660,7 @@ const SubmitActa = () => {
           </CardContent>
         </Card>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" className="w-full" disabled={isSubmitting || uploading}>
           {isSubmitting ? 'Enviando...' : 'Enviar Acta Electoral'}
         </Button>
       </form>

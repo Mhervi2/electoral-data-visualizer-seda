@@ -11,6 +11,7 @@ import { BarChart3, Search, Eye, Image, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import DiscrepancyDetector from '@/components/results/DiscrepancyDetector';
 
 interface ElectoralAct {
   id: string;
@@ -316,49 +317,9 @@ const Results = () => {
         </CardContent>
       </Card>
 
-      {/* Discrepancies Section (Admin Only) */}
-      {user?.isAdmin && discrepancies.length > 0 && (
-        <Card className="border-destructive/20">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <AlertTriangle className="h-5 w-5 mr-2 text-destructive" />
-              Discrepancias Detectadas
-            </CardTitle>
-            <CardDescription>
-              Actas donde los datos no coinciden entre diferentes fuentes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ubicación</TableHead>
-                  <TableHead>Fuentes</TableHead>
-                  <TableHead>Diferencias</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {discrepancies.map((discrepancy, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      {discrepancy.municipality} - D:{discrepancy.district} S:{discrepancy.section} M:{discrepancy.table_letter}
-                    </TableCell>
-                    <TableCell>
-                      {discrepancy.sources.map(source => (
-                        <Badge key={source} variant="outline" className="mr-1">
-                          {getSourceTypeLabel(source)}
-                        </Badge>
-                      ))}
-                    </TableCell>
-                    <TableCell className="text-sm text-destructive">
-                      {discrepancy.differences.join(', ')}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+      {/* Discrepancy Detection Section (Admin Only) */}
+      {user?.isAdmin && (
+        <DiscrepancyDetector />
       )}
 
       {/* Electoral Acts Table */}

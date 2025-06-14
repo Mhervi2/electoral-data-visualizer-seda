@@ -1,20 +1,20 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { BarChart3, Plus, Edit, Trash2, ArrowLeft, Power, PowerOff } from 'lucide-react';
+import { Vote, Plus, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import ElectionStatusManager from '@/components/admin/ElectionStatusManager';
 
 interface Election {
   id: string;
   name: string;
   status: string;
   created_at: string;
+  updated_at?: string;
 }
 
 const AdminElections = () => {
@@ -28,22 +28,19 @@ const AdminElections = () => {
 
   const fetchElections = async () => {
     try {
+      console.log('Fetching elections...');
       const { data, error } = await supabase
         .from('elections')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      
-      // Transform the data to match the Election interface
-      const transformedData: Election[] = data?.map(election => ({
-        id: election.id,
-        name: election.name,
-        status: election.status,
-        created_at: election.created_at || new Date().toISOString()
-      })) || [];
-      
-      setElections(transformedData);
+      if (error) {
+        console.error('Error fetching elections:', error);
+        throw error;
+      }
+
+      console.log('Elections fetched:', data?.length || 0);
+      setElections(data || []);
     } catch (error) {
       console.error('Error fetching elections:', error);
       toast({
@@ -56,67 +53,12 @@ const AdminElections = () => {
     }
   };
 
-  const toggleElectionStatus = async (electionId: string, currentStatus: string, electionName: string) => {
-    const newStatus = currentStatus === 'active' ? 'closed' : 'active';
-    
-    try {
-      const { error } = await supabase
-        .from('elections')
-        .update({ 
-          status: newStatus, 
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', electionId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Estado actualizado",
-        description: `La elección "${electionName}" ha sido ${newStatus === 'active' ? 'activada' : 'cerrada'}.`,
-      });
-
-      fetchElections();
-    } catch (error) {
-      console.error('Error updating election status:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No se pudo actualizar el estado de la elección.",
-      });
-    }
-  };
-
-  const handleDelete = async (electionId: string, electionName: string) => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar la elección "${electionName}"?`)) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('elections')
-        .delete()
-        .eq('id', electionId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Elección eliminada",
-        description: `La elección "${electionName}" ha sido eliminada.`,
-      });
-
-      fetchElections();
-    } catch (error) {
-      console.error('Error deleting election:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No se pudo eliminar la elección.",
-      });
-    }
-  };
-
   if (loading) {
-    return <div>Cargando elecciones...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (
@@ -124,11 +66,11 @@ const AdminElections = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <BarChart3 className="h-8 w-8 text-primary" />
+          <Vote className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold font-space-grotesk">Gestionar Elecciones</h1>
+            <h1 className="text-3xl font-bold font-space-grotesk">Gestión de Elecciones</h1>
             <p className="text-muted-foreground">
-              Administra todos los procesos electorales del sistema.
+              Administra las elecciones del sistema y controla su estado.
             </p>
           </div>
         </div>
@@ -151,66 +93,58 @@ const AdminElections = () => {
       {/* Elections Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Elecciones</CardTitle>
+          <CardTitle>Elecciones Registradas</CardTitle>
           <CardDescription>
-            Todas las elecciones configuradas en el sistema.
+            Administra el estado y configuración de todas las elecciones.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Fecha de Creación</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {elections.map((election) => (
-                <TableRow key={election.id}>
-                  <TableCell className="font-medium">{election.name}</TableCell>
-                  <TableCell>{new Date(election.created_at).toLocaleDateString('es-ES')}</TableCell>
-                  <TableCell>
-                    <Badge variant={election.status === 'active' ? 'default' : 'secondary'}>
-                      {election.status === 'active' ? 'Activa' : 'Cerrada'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => toggleElectionStatus(election.id, election.status, election.name)}
-                      >
-                        {election.status === 'active' ? (
-                          <>
-                            <PowerOff className="h-4 w-4 mr-1" />
-                            Cerrar
-                          </>
-                        ) : (
-                          <>
-                            <Power className="h-4 w-4 mr-1" />
-                            Activar
-                          </>
-                        )}
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleDelete(election.id, election.name)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {elections.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                No hay elecciones registradas en el sistema.
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Fecha de Creación</TableHead>
+                  <TableHead>Última Actualización</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {elections.map((election) => (
+                  <TableRow key={election.id}>
+                    <TableCell className="font-medium">{election.name}</TableCell>
+                    <TableCell>
+                      <ElectionStatusManager 
+                        election={election} 
+                        onStatusChange={fetchElections}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {new Date(election.created_at).toLocaleDateString('es-ES')}
+                    </TableCell>
+                    <TableCell>
+                      {election.updated_at 
+                        ? new Date(election.updated_at).toLocaleDateString('es-ES')
+                        : 'Sin actualizaciones'
+                      }
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="outline">
+                        Ver Detalles
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
