@@ -21,14 +21,12 @@ export const MunicipalityCombobox = ({
   placeholder = "Buscar municipio..." 
 }: MunicipalityComboboxProps) => {
   const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
+
+  console.log('MunicipalityCombobox - mpcaData:', mpcaData.length, 'items');
+  console.log('MunicipalityCombobox - first few items:', mpcaData.slice(0, 3));
 
   const selectedMunicipality = mpcaData.find(
     (mpca) => mpca.idm.toString() === selectedValue
-  );
-
-  const filteredMunicipalities = mpcaData.filter((mpca) =>
-    mpca.municipio.toLowerCase().includes(searchValue.toLowerCase())
   );
 
   return (
@@ -46,24 +44,23 @@ export const MunicipalityCombobox = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
-        <Command>
+      <PopoverContent className="w-full p-0" align="start">
+        <Command shouldFilter={false}>
           <CommandInput 
             placeholder="Escribir nombre del municipio..." 
-            value={searchValue}
-            onValueChange={setSearchValue}
           />
           <CommandList>
             <CommandEmpty>No se encontraron municipios.</CommandEmpty>
             <CommandGroup>
-              {filteredMunicipalities.map((mpca) => (
+              {mpcaData.map((mpca) => (
                 <CommandItem
                   key={mpca.idm}
                   value={mpca.municipio}
+                  keywords={[mpca.municipio.toLowerCase(), mpca.provincia.toLowerCase()]}
                   onSelect={() => {
+                    console.log('Selected municipality:', mpca);
                     onSelect(mpca.idm.toString());
                     setOpen(false);
-                    setSearchValue('');
                   }}
                 >
                   <Check
@@ -72,7 +69,12 @@ export const MunicipalityCombobox = ({
                       selectedValue === mpca.idm.toString() ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {mpca.municipio}
+                  <div className="flex flex-col">
+                    <span>{mpca.municipio}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {mpca.provincia}, {mpca.ca}
+                    </span>
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>

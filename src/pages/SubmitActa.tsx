@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -17,7 +16,7 @@ import { ActaData, ExistingAct, MpcaData } from '@/types/acta';
 const SubmitActa = () => {
   const { user } = useAuth();
   const { uploadFile, uploading } = useSecureFileUpload();
-  const { mpcaData, politicalParties, elections } = useActaData();
+  const { mpcaData, politicalParties, elections, loading } = useActaData();
   const [existingAct, setExistingAct] = useState<ExistingAct | null>(null);
   const [showExistingActDialog, setShowExistingActDialog] = useState(false);
   const [selectedMpcaRecord, setSelectedMpcaRecord] = useState<MpcaData | null>(null);
@@ -293,6 +292,7 @@ const SubmitActa = () => {
           onMunicipalityChange={handleMunicipalityChange}
           onInputChange={handleInputChange}
           onBlur={checkExistingAct}
+          loading={loading}
         />
 
         <ImageUploadSection 

@@ -15,6 +15,7 @@ interface MesaIdentificationProps {
   onMunicipalityChange: (value: string) => void;
   onInputChange: (field: string, value: string) => void;
   onBlur: () => void;
+  loading?: boolean;
 }
 
 export const MesaIdentification = ({
@@ -26,10 +27,12 @@ export const MesaIdentification = ({
   mesa,
   onMunicipalityChange,
   onInputChange,
-  onBlur
+  onBlur,
+  loading = false
 }: MesaIdentificationProps) => {
   console.log('MesaIdentification - mpcaData length:', mpcaData.length);
   console.log('MesaIdentification - selected municipio:', municipio);
+  console.log('MesaIdentification - loading:', loading);
   
   return (
     <Card>
@@ -44,11 +47,16 @@ export const MesaIdentification = ({
               mpcaData={mpcaData}
               selectedValue={municipio}
               onSelect={onMunicipalityChange}
-              placeholder="Buscar municipio..."
+              placeholder={loading ? "Cargando municipios..." : "Buscar municipio..."}
             />
-            {mpcaData.length === 0 && (
+            {loading && (
               <p className="text-sm text-muted-foreground mt-1">
                 Cargando municipios...
+              </p>
+            )}
+            {!loading && mpcaData.length === 0 && (
+              <p className="text-sm text-destructive mt-1">
+                Error al cargar municipios. Revisa la conexión.
               </p>
             )}
           </div>

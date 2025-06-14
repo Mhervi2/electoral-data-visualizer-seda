@@ -7,11 +7,20 @@ export const useActaData = () => {
   const [mpcaData, setMpcaData] = useState<MpcaData[]>([]);
   const [politicalParties, setPoliticalParties] = useState<PoliticalParty[]>([]);
   const [elections, setElections] = useState<Election[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchMpcaData();
-    fetchPoliticalParties();
-    fetchElections();
+    const fetchAllData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchMpcaData(),
+        fetchPoliticalParties(),
+        fetchElections()
+      ]);
+      setLoading(false);
+    };
+    
+    fetchAllData();
   }, []);
 
   const fetchMpcaData = async () => {
@@ -27,10 +36,12 @@ export const useActaData = () => {
         throw error;
       }
       
-      console.log('MPCA data fetched:', data?.length, 'municipalities');
+      console.log('MPCA data fetched successfully:', data?.length, 'municipalities');
+      console.log('Sample data:', data?.slice(0, 3));
       setMpcaData(data || []);
     } catch (error) {
       console.error('Error fetching MPCA data:', error);
+      setMpcaData([]);
     }
   };
 
@@ -51,6 +62,7 @@ export const useActaData = () => {
       setPoliticalParties(data || []);
     } catch (error) {
       console.error('Error fetching political parties:', error);
+      setPoliticalParties([]);
     }
   };
 
@@ -72,12 +84,14 @@ export const useActaData = () => {
       setElections(data || []);
     } catch (error) {
       console.error('Error fetching elections:', error);
+      setElections([]);
     }
   };
 
   return {
     mpcaData,
     politicalParties,
-    elections
+    elections,
+    loading
   };
 };
