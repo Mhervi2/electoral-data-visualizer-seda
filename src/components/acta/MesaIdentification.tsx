@@ -28,6 +28,9 @@ export const MesaIdentification = ({
   onInputChange,
   onBlur
 }: MesaIdentificationProps) => {
+  console.log('MesaIdentification - mpcaData length:', mpcaData.length);
+  console.log('MesaIdentification - selected municipio:', municipio);
+  
   return (
     <Card>
       <CardHeader>
@@ -41,25 +44,34 @@ export const MesaIdentification = ({
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar municipio" />
               </SelectTrigger>
-              <SelectContent>
-                {mpcaData.map(mpca => (
-                  <SelectItem key={mpca.idm} value={mpca.idm.toString()}>
-                    {mpca.municipio}
-                  </SelectItem>
-                ))}
+              <SelectContent className="bg-background border border-border z-50">
+                {mpcaData.length === 0 ? (
+                  <SelectItem value="loading" disabled>Cargando municipios...</SelectItem>
+                ) : (
+                  mpcaData.map(mpca => (
+                    <SelectItem key={mpca.idm} value={mpca.idm.toString()}>
+                      {mpca.municipio}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
+            {mpcaData.length === 0 && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {mpcaData.length === 0 ? 'Cargando municipios...' : `${mpcaData.length} municipios disponibles`}
+              </p>
+            )}
           </div>
           
           {selectedMpcaRecord && (
             <div className="space-y-2">
               <div>
                 <Label>Provincia</Label>
-                <Input value={selectedMpcaRecord.provincia} disabled />
+                <Input value={selectedMpcaRecord.provincia} disabled className="bg-muted" />
               </div>
               <div>
                 <Label>Comunidad Autónoma</Label>
-                <Input value={selectedMpcaRecord.ca} disabled />
+                <Input value={selectedMpcaRecord.ca} disabled className="bg-muted" />
               </div>
             </div>
           )}
