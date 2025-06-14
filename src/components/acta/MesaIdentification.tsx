@@ -30,6 +30,7 @@ export const MesaIdentification = ({
   onBlur,
   loading = false
 }: MesaIdentificationProps) => {
+  console.log('=== MESA IDENTIFICATION RENDER ===');
   console.log('MesaIdentification - mpcaData length:', mpcaData.length);
   console.log('MesaIdentification - selected municipio:', municipio);
   console.log('MesaIdentification - loading:', loading);
@@ -38,6 +39,23 @@ export const MesaIdentification = ({
   // Check if Barcelona exists in the data
   const barcelonaTest = mpcaData.find(m => m.municipio?.toLowerCase().includes('barcelona'));
   console.log('Barcelona test in MesaIdentification:', barcelonaTest);
+  
+  // Show detailed status
+  const getStatusMessage = () => {
+    if (loading) {
+      return "Cargando municipios...";
+    }
+    if (mpcaData.length === 0) {
+      return "Error al cargar municipios. Revisa la conexión.";
+    }
+    return `${mpcaData.length} municipios cargados`;
+  };
+  
+  const getStatusColor = () => {
+    if (loading) return "text-blue-600";
+    if (mpcaData.length === 0) return "text-red-600";
+    return "text-green-600";
+  };
   
   return (
     <Card>
@@ -54,19 +72,12 @@ export const MesaIdentification = ({
               onSelect={onMunicipalityChange}
               placeholder={loading ? "Cargando municipios..." : "Buscar municipio..."}
             />
-            {loading && (
-              <p className="text-sm text-muted-foreground mt-1">
-                Cargando municipios...
-              </p>
-            )}
-            {!loading && mpcaData.length === 0 && (
-              <p className="text-sm text-destructive mt-1">
-                Error al cargar municipios. Revisa la conexión.
-              </p>
-            )}
-            {!loading && mpcaData.length > 0 && (
-              <p className="text-sm text-muted-foreground mt-1">
-                {mpcaData.length} municipios cargados
+            <p className={`text-sm mt-1 ${getStatusColor()}`}>
+              {getStatusMessage()}
+            </p>
+            {mpcaData.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                Escribe para buscar municipios (ej: "barcelona", "madrid")
               </p>
             )}
           </div>

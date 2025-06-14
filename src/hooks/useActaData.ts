@@ -13,13 +13,18 @@ export const useActaData = () => {
     const fetchAllData = async () => {
       console.log('Starting to fetch all data...');
       setLoading(true);
-      await Promise.all([
-        fetchMpcaData(),
-        fetchPoliticalParties(),
-        fetchElections()
-      ]);
-      setLoading(false);
-      console.log('Finished fetching all data');
+      try {
+        await Promise.all([
+          fetchMpcaData(),
+          fetchPoliticalParties(),
+          fetchElections()
+        ]);
+      } catch (error) {
+        console.error('Error in fetchAllData:', error);
+      } finally {
+        setLoading(false);
+        console.log('Finished fetching all data');
+      }
     };
     
     fetchAllData();
@@ -27,14 +32,25 @@ export const useActaData = () => {
 
   const fetchMpcaData = async () => {
     try {
-      console.log('Fetching MPCA data...');
+      console.log('=== STARTING MPCA DATA FETCH ===');
+      console.log('Supabase client:', supabase);
+      
       const { data, error } = await supabase
         .from('mpca')
         .select('*')
         .order('municipio');
 
+      console.log('MPCA Query result - error:', error);
+      console.log('MPCA Query result - data:', data);
+
       if (error) {
         console.error('Error fetching MPCA data:', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         throw error;
       }
       
@@ -47,7 +63,7 @@ export const useActaData = () => {
       
       setMpcaData(data || []);
     } catch (error) {
-      console.error('Error fetching MPCA data:', error);
+      console.error('Exception in fetchMpcaData:', error);
       setMpcaData([]);
     }
   };
