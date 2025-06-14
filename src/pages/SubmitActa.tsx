@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,17 @@ interface ExistingAct {
   table_letter: string;
   source_type: string;
   created_at: string;
+  census_total: number;
+  total_voters: number;
+  blank_votes: number;
+  null_votes: number;
+  party_votes: Array<{
+    votes: number;
+    political_parties: {
+      name: string;
+      siglas: string;
+    };
+  }>;
 }
 
 interface ActaData {
