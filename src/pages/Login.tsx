@@ -119,9 +119,9 @@ const Login = () => {
           <div className="mt-6 p-4 bg-accent/20 rounded-md">
             <p className="text-sm text-muted-foreground">
               <strong>Para acceder como administrador:</strong><br />
-              1. Primero regístrate con el email: admin@seda.es<br />
-              2. Verifica tu email en Supabase<br />
-              3. Luego podrás iniciar sesión aquí
+              Usuario: <strong>superadmin@seda.es</strong><br />
+              Contraseña: <strong>AdminFuerte#2024</strong><br />
+              Este login es exclusivo para administradores.
             </p>
           </div>
         </CardContent>

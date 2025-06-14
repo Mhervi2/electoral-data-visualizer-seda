@@ -133,4 +133,3 @@ const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
 };
 
 export default AdminProtectedRoute;
-

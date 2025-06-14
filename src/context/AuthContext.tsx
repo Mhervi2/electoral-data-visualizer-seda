@@ -63,13 +63,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   .insert({
                     id: session.user.id,
                     email: session.user.email || '',
-                    is_admin: session.user.email === 'admin@seda.es'
+                    is_admin: session.user.email === 'superadmin@seda.es'
                   });
                 
                 if (!insertError) {
                   setUser({
                     email: session.user.email || '',
-                    isAdmin: session.user.email === 'admin@seda.es'
+                    isAdmin: session.user.email === 'superadmin@seda.es'
                   });
                 } else {
                   console.error('Error creating profile:', insertError);
