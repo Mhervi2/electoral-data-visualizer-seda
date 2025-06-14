@@ -33,6 +33,11 @@ export const MesaIdentification = ({
   console.log('MesaIdentification - mpcaData length:', mpcaData.length);
   console.log('MesaIdentification - selected municipio:', municipio);
   console.log('MesaIdentification - loading:', loading);
+  console.log('MesaIdentification - selectedMpcaRecord:', selectedMpcaRecord);
+  
+  // Check if Barcelona exists in the data
+  const barcelonaTest = mpcaData.find(m => m.municipio?.toLowerCase().includes('barcelona'));
+  console.log('Barcelona test in MesaIdentification:', barcelonaTest);
   
   return (
     <Card>
@@ -57,6 +62,11 @@ export const MesaIdentification = ({
             {!loading && mpcaData.length === 0 && (
               <p className="text-sm text-destructive mt-1">
                 Error al cargar municipios. Revisa la conexión.
+              </p>
+            )}
+            {!loading && mpcaData.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {mpcaData.length} municipios cargados
               </p>
             )}
           </div>

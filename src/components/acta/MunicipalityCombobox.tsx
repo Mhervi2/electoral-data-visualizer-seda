@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -21,13 +21,36 @@ export const MunicipalityCombobox = ({
   placeholder = "Buscar municipio..." 
 }: MunicipalityComboboxProps) => {
   const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
 
   console.log('MunicipalityCombobox - mpcaData:', mpcaData.length, 'items');
-  console.log('MunicipalityCombobox - first few items:', mpcaData.slice(0, 3));
+  console.log('MunicipalityCombobox - first few items:', mpcaData.slice(0, 5));
+  console.log('MunicipalityCombobox - search value:', searchValue);
 
   const selectedMunicipality = mpcaData.find(
     (mpca) => mpca.idm.toString() === selectedValue
   );
+
+  // Filter municipalities based on search value
+  const filteredMunicipalities = useMemo(() => {
+    if (!searchValue.trim()) {
+      return mpcaData;
+    }
+    
+    const search = searchValue.toLowerCase().trim();
+    console.log('Filtering with search term:', search);
+    
+    const filtered = mpcaData.filter((mpca) => {
+      const municipioMatch = mpca.municipio?.toLowerCase().includes(search);
+      const provinciaMatch = mpca.provincia?.toLowerCase().includes(search);
+      const caMatch = mpca.ca?.toLowerCase().includes(search);
+      
+      return municipioMatch || provinciaMatch || caMatch;
+    });
+    
+    console.log('Filtered results:', filtered.length, 'municipalities');
+    return filtered;
+  }, [mpcaData, searchValue]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -45,22 +68,28 @@ export const MunicipalityCombobox = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command shouldFilter={false}>
+        <Command>
           <CommandInput 
             placeholder="Escribir nombre del municipio..." 
+            value={searchValue}
+            onValueChange={setSearchValue}
           />
           <CommandList>
-            <CommandEmpty>No se encontraron municipios.</CommandEmpty>
+            <CommandEmpty>
+              {mpcaData.length === 0 
+                ? "Cargando municipios..." 
+                : "No se encontraron municipios."}
+            </CommandEmpty>
             <CommandGroup>
-              {mpcaData.map((mpca) => (
+              {filteredMunicipalities.map((mpca) => (
                 <CommandItem
                   key={mpca.idm}
                   value={mpca.municipio}
-                  keywords={[mpca.municipio.toLowerCase(), mpca.provincia.toLowerCase()]}
                   onSelect={() => {
                     console.log('Selected municipality:', mpca);
                     onSelect(mpca.idm.toString());
                     setOpen(false);
+                    setSearchValue('');
                   }}
                 >
                   <Check
@@ -70,7 +99,7 @@ export const MunicipalityCombobox = ({
                     )}
                   />
                   <div className="flex flex-col">
-                    <span>{mpca.municipio}</span>
+                    <span className="font-medium">{mpca.municipio}</span>
                     <span className="text-xs text-muted-foreground">
                       {mpca.provincia}, {mpca.ca}
                     </span>

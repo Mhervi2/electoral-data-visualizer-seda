@@ -11,6 +11,7 @@ export const useActaData = () => {
 
   useEffect(() => {
     const fetchAllData = async () => {
+      console.log('Starting to fetch all data...');
       setLoading(true);
       await Promise.all([
         fetchMpcaData(),
@@ -18,6 +19,7 @@ export const useActaData = () => {
         fetchElections()
       ]);
       setLoading(false);
+      console.log('Finished fetching all data');
     };
     
     fetchAllData();
@@ -37,7 +39,12 @@ export const useActaData = () => {
       }
       
       console.log('MPCA data fetched successfully:', data?.length, 'municipalities');
-      console.log('Sample data:', data?.slice(0, 3));
+      console.log('Sample MPCA data:', data?.slice(0, 3));
+      
+      // Check if Barcelona exists in the data
+      const barcelona = data?.find(m => m.municipio?.toLowerCase().includes('barcelona'));
+      console.log('Barcelona found in data:', barcelona);
+      
       setMpcaData(data || []);
     } catch (error) {
       console.error('Error fetching MPCA data:', error);
