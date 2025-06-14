@@ -30,16 +30,10 @@ export const MesaIdentification = ({
   onBlur,
   loading = false
 }: MesaIdentificationProps) => {
-  console.log('=== MESA IDENTIFICATION DEBUG ===');
-  console.log('Loading state:', loading);
-  console.log('MPCA data length:', mpcaData.length);
-  console.log('Sample MPCA data:', mpcaData.slice(0, 2));
-  
-  // Show detailed status with better error information
   const getStatusInfo = () => {
     if (loading) {
       return {
-        message: "Cargando municipios desde la base de datos...",
+        message: "Cargando municipios...",
         color: "text-blue-600",
         isError: false
       };
@@ -47,14 +41,14 @@ export const MesaIdentification = ({
     
     if (mpcaData.length === 0) {
       return {
-        message: "Error: No se pudieron cargar los municipios. Verifica que la tabla 'mpca' existe en la base de datos.",
+        message: "No se encontraron municipios disponibles.",
         color: "text-red-600",
         isError: true
       };
     }
     
     return {
-      message: `✓ ${mpcaData.length} municipios cargados correctamente`,
+      message: `✓ ${mpcaData.length} municipios disponibles`,
       color: "text-green-600",
       isError: false
     };
@@ -82,12 +76,7 @@ export const MesaIdentification = ({
             </p>
             {!loading && !statusInfo.isError && (
               <p className="text-xs text-gray-500 mt-1">
-                Escribe para buscar (ej: "barcelona", "madrid", "sevilla")
-              </p>
-            )}
-            {statusInfo.isError && (
-              <p className="text-xs text-red-500 mt-1">
-                Contacta al administrador si el problema persiste.
+                Escribe para buscar (ej: "Barcelona", "Madrid", "Sevilla")
               </p>
             )}
           </div>
