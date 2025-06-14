@@ -51,7 +51,7 @@ const SubmitActa = () => {
     try {
       console.log('Checking for existing act...');
       const { data, error } = await supabase
-        .from('electoral_acts')
+        .from('electoral_acts_with_municipalities')
         .select(`
           id,
           district,
@@ -63,21 +63,26 @@ const SubmitActa = () => {
           total_voters,
           blank_votes,
           null_votes,
-          municipality:municipalities (name),
+          municipio,
           party_votes (
             votes,
             political_parties (name, siglas)
           )
         `)
         .eq('election_id', actaData.electionId)
-        .eq('municipality_id', actaData.municipio)
+        .eq('municipality_idm', actaData.municipio)
         .eq('district', actaData.distrito)
         .eq('section', actaData.seccion)
         .eq('table_letter', actaData.mesa);
 
       if (data && data.length > 0) {
         console.log('Found existing acts:', data.length);
-        setExistingAct(data[0]);
+        // Transform the data to match the expected format
+        const transformedAct = {
+          ...data[0],
+          municipality: { name: data[0].municipio }
+        };
+        setExistingAct(transformedAct);
         setShowExistingActDialog(true);
         return true;
       }
@@ -179,12 +184,12 @@ const SubmitActa = () => {
         return;
       }
 
-      // Insert electoral act with image URL if available
+      // Insert electoral act with the new municipality_idm field
       const { data: actData, error: actError } = await supabase
         .from('electoral_acts')
         .insert({
           election_id: actaData.electionId,
-          municipality_id: actaData.municipio,
+          municipality_idm: parseInt(actaData.municipio),
           district: actaData.distrito,
           section: actaData.seccion,
           table_letter: actaData.mesa,
@@ -224,7 +229,7 @@ const SubmitActa = () => {
         p_table_name: 'electoral_acts',
         p_record_id: actData.id,
         p_new_values: {
-          municipality_id: actaData.municipio,
+          municipality_idm: parseInt(actaData.municipio),
           district: actaData.distrito,
           section: actaData.seccion,
           table_letter: actaData.mesa

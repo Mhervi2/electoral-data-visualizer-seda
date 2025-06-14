@@ -99,7 +99,7 @@ export type Database = {
           election_id: string | null
           id: string
           image_url: string | null
-          municipality_id: string | null
+          municipality_idm: number | null
           null_votes: number
           section: string
           source_type: string
@@ -115,7 +115,7 @@ export type Database = {
           election_id?: string | null
           id?: string
           image_url?: string | null
-          municipality_id?: string | null
+          municipality_idm?: number | null
           null_votes?: number
           section: string
           source_type: string
@@ -131,7 +131,7 @@ export type Database = {
           election_id?: string | null
           id?: string
           image_url?: string | null
-          municipality_id?: string | null
+          municipality_idm?: number | null
           null_votes?: number
           section?: string
           source_type?: string
@@ -148,35 +148,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "electoral_acts_municipality_id_fkey"
-            columns: ["municipality_id"]
+            foreignKeyName: "fk_electoral_acts_municipality"
+            columns: ["municipality_idm"]
             isOneToOne: false
-            referencedRelation: "municipalities"
-            referencedColumns: ["id"]
+            referencedRelation: "mpca"
+            referencedColumns: ["idm"]
           },
         ]
       }
       mpca: {
         Row: {
           ca: string | null
+          id: string | null
           idca: number | null
-          idm: number | null
+          idm: number
           idp: number | null
           municipio: string | null
           provincia: string | null
         }
         Insert: {
           ca?: string | null
+          id?: string | null
           idca?: number | null
-          idm?: number | null
+          idm?: number
           idp?: number | null
           municipio?: string | null
           provincia?: string | null
         }
         Update: {
           ca?: string | null
+          id?: string | null
           idca?: number | null
-          idm?: number | null
+          idm?: number
           idp?: number | null
           municipio?: string | null
           provincia?: string | null
@@ -273,6 +276,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "party_votes_electoral_act_id_fkey"
+            columns: ["electoral_act_id"]
+            isOneToOne: false
+            referencedRelation: "electoral_acts_with_municipalities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "party_votes_party_id_fkey"
             columns: ["party_id"]
             isOneToOne: false
@@ -357,7 +367,43 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      electoral_acts_with_municipalities: {
+        Row: {
+          blank_votes: number | null
+          census_total: number | null
+          comunidad_autonoma: string | null
+          created_at: string | null
+          district: string | null
+          election_id: string | null
+          id: string | null
+          image_url: string | null
+          municipality_idm: number | null
+          municipio: string | null
+          null_votes: number | null
+          provincia: string | null
+          section: string | null
+          source_type: string | null
+          submitted_by: string | null
+          table_letter: string | null
+          total_voters: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "electoral_acts_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "elections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_electoral_acts_municipality"
+            columns: ["municipality_idm"]
+            isOneToOne: false
+            referencedRelation: "mpca"
+            referencedColumns: ["idm"]
+          },
+        ]
+      }
     }
     Functions: {
       log_audit_action: {
