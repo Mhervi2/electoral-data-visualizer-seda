@@ -30,6 +30,7 @@ export const useActaData = () => {
 
   const fetchMpcaData = async () => {
     try {
+      console.log('Fetching MPCA data...');
       const { data, error } = await supabase
         .from('mpca')
         .select('idm, municipio, idp, provincia, idca, ca')
@@ -41,10 +42,11 @@ export const useActaData = () => {
         return;
       }
       
-      console.log('MPCA data loaded successfully:', data?.length, 'municipalities');
+      console.log('MPCA data fetched successfully:', data?.length, 'municipalities');
+      console.log('First few items:', data?.slice(0, 5));
       setMpcaData(data || []);
     } catch (error) {
-      console.error('Error fetching MPCA data:', error);
+      console.error('Error in fetchMpcaData:', error);
       setMpcaData([]);
     }
   };
