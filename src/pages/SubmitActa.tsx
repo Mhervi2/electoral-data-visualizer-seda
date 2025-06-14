@@ -12,10 +12,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useSecureFileUpload } from '@/hooks/useSecureFileUpload';
 
-interface Municipality {
-  id: string;
-  name: string;
-  province: { name: string; autonomous_community: { name: string } };
+interface MpcaData {
+  idm: number;
+  municipio: string;
+  idp: number;
+  provincia: string;
+  idca: number;
+  ca: string;
 }
 
 interface PoliticalParty {
@@ -69,11 +72,12 @@ interface ActaData {
 const SubmitActa = () => {
   const { user } = useAuth();
   const { uploadFile, uploading } = useSecureFileUpload();
-  const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
+  const [mpcaData, setMpcaData] = useState<MpcaData[]>([]);
   const [politicalParties, setPoliticalParties] = useState<PoliticalParty[]>([]);
   const [elections, setElections] = useState<Election[]>([]);
   const [existingAct, setExistingAct] = useState<ExistingAct | null>(null);
   const [showExistingActDialog, setShowExistingActDialog] = useState(false);
+  const [selectedMpcaRecord, setSelectedMpcaRecord] = useState<MpcaData | null>(null);
   
   const [actaData, setActaData] = useState<ActaData>({
     electionId: '',
@@ -92,31 +96,22 @@ const SubmitActa = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchMunicipalities();
+    fetchMpcaData();
     fetchPoliticalParties();
     fetchElections();
   }, []);
 
-  const fetchMunicipalities = async () => {
+  const fetchMpcaData = async () => {
     try {
       const { data, error } = await supabase
-        .from('municipalities')
-        .select(`
-          id,
-          name,
-          province:provinces (
-            name,
-            autonomous_community:autonomous_communities (
-              name
-            )
-          )
-        `)
-        .order('name');
+        .from('mpca')
+        .select('*')
+        .order('municipio');
 
       if (error) throw error;
-      setMunicipalities(data || []);
+      setMpcaData(data || []);
     } catch (error) {
-      console.error('Error fetching municipalities:', error);
+      console.error('Error fetching MPCA data:', error);
     }
   };
 
@@ -147,6 +142,12 @@ const SubmitActa = () => {
     } catch (error) {
       console.error('Error fetching elections:', error);
     }
+  };
+
+  const handleMunicipalityChange = (municipalityId: string) => {
+    const selectedMpca = mpcaData.find(m => m.idm.toString() === municipalityId);
+    setSelectedMpcaRecord(selectedMpca || null);
+    setActaData(prev => ({ ...prev, municipio: municipalityId }));
   };
 
   const checkExistingAct = async () => {
@@ -183,7 +184,7 @@ const SubmitActa = () => {
 
       if (data && data.length > 0) {
         console.log('Found existing acts:', data.length);
-        setExistingAct(data[0]); // Show details of first act found
+        setExistingAct(data[0]);
         setShowExistingActDialog(true);
         return true;
       }
@@ -193,8 +194,6 @@ const SubmitActa = () => {
       return false;
     }
   };
-
-  const selectedMunicipality = municipalities.find(m => m.id === actaData.municipio);
 
   const handleInputChange = (field: keyof ActaData, value: string) => {
     setActaData(prev => ({ ...prev, [field]: value }));
@@ -357,6 +356,7 @@ const SubmitActa = () => {
         nulos: '',
         votos: {},
       });
+      setSelectedMpcaRecord(null);
 
     } catch (error) {
       console.error('Error submitting act:', error);
@@ -480,29 +480,29 @@ const SubmitActa = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="municipio">Municipio *</Label>
-                <Select value={actaData.municipio} onValueChange={(value) => handleInputChange('municipio', value)}>
+                <Select value={actaData.municipio} onValueChange={handleMunicipalityChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar municipio" />
                   </SelectTrigger>
                   <SelectContent>
-                    {municipalities.map(municipality => (
-                      <SelectItem key={municipality.id} value={municipality.id}>
-                        {municipality.name}
+                    {mpcaData.map(mpca => (
+                      <SelectItem key={mpca.idm} value={mpca.idm.toString()}>
+                        {mpca.municipio}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               
-              {selectedMunicipality && (
+              {selectedMpcaRecord && (
                 <div className="space-y-2">
                   <div>
                     <Label>Provincia</Label>
-                    <Input value={selectedMunicipality.province.name} disabled />
+                    <Input value={selectedMpcaRecord.provincia} disabled />
                   </div>
                   <div>
                     <Label>Comunidad Autónoma</Label>
-                    <Input value={selectedMunicipality.province.autonomous_community.name} disabled />
+                    <Input value={selectedMpcaRecord.ca} disabled />
                   </div>
                 </div>
               )}

@@ -156,6 +156,33 @@ export type Database = {
           },
         ]
       }
+      mpca: {
+        Row: {
+          ca: string | null
+          idca: number | null
+          idm: number | null
+          idp: number | null
+          municipio: string | null
+          provincia: string | null
+        }
+        Insert: {
+          ca?: string | null
+          idca?: number | null
+          idm?: number | null
+          idp?: number | null
+          municipio?: string | null
+          provincia?: string | null
+        }
+        Update: {
+          ca?: string | null
+          idca?: number | null
+          idm?: number | null
+          idp?: number | null
+          municipio?: string | null
+          provincia?: string | null
+        }
+        Relationships: []
+      }
       municipalities: {
         Row: {
           created_at: string | null
