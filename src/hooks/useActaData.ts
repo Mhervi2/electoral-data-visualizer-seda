@@ -11,19 +11,25 @@ export const useActaData = () => {
 
   useEffect(() => {
     const fetchAllData = async () => {
-      console.log('Starting to fetch all data...');
+      console.log('=== STARTING DATA FETCH PROCESS ===');
+      console.log('Supabase URL:', 'https://bzufsrhmxaiqnmkvketb.supabase.co');
+      console.log('Auth status:', await supabase.auth.getSession());
+      
       setLoading(true);
       try {
+        // Fetch MPCA data first to debug the issue
+        await fetchMpcaData();
+        
+        // Then fetch other data
         await Promise.all([
-          fetchMpcaData(),
           fetchPoliticalParties(),
           fetchElections()
         ]);
       } catch (error) {
-        console.error('Error in fetchAllData:', error);
+        console.error('=== CRITICAL ERROR IN fetchAllData ===', error);
       } finally {
         setLoading(false);
-        console.log('Finished fetching all data');
+        console.log('=== DATA FETCH PROCESS COMPLETED ===');
       }
     };
     
@@ -32,38 +38,69 @@ export const useActaData = () => {
 
   const fetchMpcaData = async () => {
     try {
-      console.log('=== STARTING MPCA DATA FETCH ===');
-      console.log('Supabase client:', supabase);
+      console.log('=== MPCA FETCH START ===');
+      console.log('Supabase client status:', supabase ? 'EXISTS' : 'NULL');
       
+      // Test basic connectivity first
+      const { data: testData, error: testError } = await supabase
+        .from('mpca')
+        .select('count')
+        .limit(1);
+        
+      console.log('Test query result:', { testData, testError });
+      
+      if (testError) {
+        console.error('=== TEST QUERY FAILED ===');
+        console.error('Error code:', testError.code);
+        console.error('Error message:', testError.message);
+        console.error('Error details:', testError.details);
+        console.error('Error hint:', testError.hint);
+        setMpcaData([]);
+        return;
+      }
+
+      // If test passes, fetch actual data
+      console.log('Test query successful, fetching full data...');
       const { data, error } = await supabase
         .from('mpca')
-        .select('*')
+        .select('idm, municipio, idp, provincia, idca, ca')
         .order('municipio');
 
-      console.log('MPCA Query result - error:', error);
-      console.log('MPCA Query result - data:', data);
+      console.log('=== FULL QUERY RESULTS ===');
+      console.log('Error:', error);
+      console.log('Data length:', data?.length);
+      console.log('First 5 records:', data?.slice(0, 5));
 
       if (error) {
-        console.error('Error fetching MPCA data:', error);
+        console.error('=== MPCA QUERY ERROR ===');
         console.error('Error details:', {
+          code: error.code,
           message: error.message,
           details: error.details,
-          hint: error.hint,
-          code: error.code
+          hint: error.hint
         });
-        throw error;
+        setMpcaData([]);
+        return;
       }
       
-      console.log('MPCA data fetched successfully:', data?.length, 'municipalities');
-      console.log('Sample MPCA data:', data?.slice(0, 3));
+      if (!data || data.length === 0) {
+        console.warn('=== NO MPCA DATA FOUND ===');
+        setMpcaData([]);
+        return;
+      }
       
-      // Check if Barcelona exists in the data
-      const barcelona = data?.find(m => m.municipio?.toLowerCase().includes('barcelona'));
-      console.log('Barcelona found in data:', barcelona);
+      console.log('=== MPCA DATA SUCCESS ===');
+      console.log('Total municipalities loaded:', data.length);
       
-      setMpcaData(data || []);
+      // Test Barcelona specifically
+      const barcelona = data.find(m => 
+        m.municipio && m.municipio.toLowerCase().includes('barcelona')
+      );
+      console.log('Barcelona found:', barcelona);
+      
+      setMpcaData(data);
     } catch (error) {
-      console.error('Exception in fetchMpcaData:', error);
+      console.error('=== MPCA FETCH EXCEPTION ===', error);
       setMpcaData([]);
     }
   };

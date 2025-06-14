@@ -30,32 +30,37 @@ export const MesaIdentification = ({
   onBlur,
   loading = false
 }: MesaIdentificationProps) => {
-  console.log('=== MESA IDENTIFICATION RENDER ===');
-  console.log('MesaIdentification - mpcaData length:', mpcaData.length);
-  console.log('MesaIdentification - selected municipio:', municipio);
-  console.log('MesaIdentification - loading:', loading);
-  console.log('MesaIdentification - selectedMpcaRecord:', selectedMpcaRecord);
+  console.log('=== MESA IDENTIFICATION DEBUG ===');
+  console.log('Loading state:', loading);
+  console.log('MPCA data length:', mpcaData.length);
+  console.log('Sample MPCA data:', mpcaData.slice(0, 2));
   
-  // Check if Barcelona exists in the data
-  const barcelonaTest = mpcaData.find(m => m.municipio?.toLowerCase().includes('barcelona'));
-  console.log('Barcelona test in MesaIdentification:', barcelonaTest);
-  
-  // Show detailed status
-  const getStatusMessage = () => {
+  // Show detailed status with better error information
+  const getStatusInfo = () => {
     if (loading) {
-      return "Cargando municipios...";
+      return {
+        message: "Cargando municipios desde la base de datos...",
+        color: "text-blue-600",
+        isError: false
+      };
     }
+    
     if (mpcaData.length === 0) {
-      return "Error al cargar municipios. Revisa la conexión.";
+      return {
+        message: "Error: No se pudieron cargar los municipios. Verifica que la tabla 'mpca' existe en la base de datos.",
+        color: "text-red-600",
+        isError: true
+      };
     }
-    return `${mpcaData.length} municipios cargados`;
+    
+    return {
+      message: `✓ ${mpcaData.length} municipios cargados correctamente`,
+      color: "text-green-600",
+      isError: false
+    };
   };
   
-  const getStatusColor = () => {
-    if (loading) return "text-blue-600";
-    if (mpcaData.length === 0) return "text-red-600";
-    return "text-green-600";
-  };
+  const statusInfo = getStatusInfo();
   
   return (
     <Card>
@@ -70,14 +75,19 @@ export const MesaIdentification = ({
               mpcaData={mpcaData}
               selectedValue={municipio}
               onSelect={onMunicipalityChange}
-              placeholder={loading ? "Cargando municipios..." : "Buscar municipio..."}
+              placeholder={loading ? "Cargando..." : "Buscar municipio..."}
             />
-            <p className={`text-sm mt-1 ${getStatusColor()}`}>
-              {getStatusMessage()}
+            <p className={`text-sm mt-1 ${statusInfo.color}`}>
+              {statusInfo.message}
             </p>
-            {mpcaData.length > 0 && (
+            {!loading && !statusInfo.isError && (
               <p className="text-xs text-gray-500 mt-1">
-                Escribe para buscar municipios (ej: "barcelona", "madrid")
+                Escribe para buscar (ej: "barcelona", "madrid", "sevilla")
+              </p>
+            )}
+            {statusInfo.isError && (
+              <p className="text-xs text-red-500 mt-1">
+                Contacta al administrador si el problema persiste.
               </p>
             )}
           </div>
