@@ -70,7 +70,7 @@ const SubmitActa = () => {
           )
         `)
         .eq('election_id', actaData.electionId)
-        .eq('municipality_idm', actaData.municipio)
+        .eq('municipality_idm', parseInt(actaData.municipio))
         .eq('district', actaData.distrito)
         .eq('section', actaData.seccion)
         .eq('table_letter', actaData.mesa);

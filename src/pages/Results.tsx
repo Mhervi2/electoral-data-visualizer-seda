@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ import DiscrepancyDetector from '@/components/results/DiscrepancyDetector';
 
 interface ElectoralAct {
   id: string;
-  municipality_id: string;
+  municipality_idm: number;
   district: string;
   section: string;
   table_letter: string;
@@ -26,18 +27,9 @@ interface ElectoralAct {
   source_type: string;
   image_url?: string;
   created_at: string;
-  municipalities?: {
-    name: string;
-    provinces?: {
-      name: string;
-      autonomous_communities?: {
-        name: string;
-      };
-    };
-    autonomous_communities?: {
-      name: string;
-    };
-  };
+  municipio?: string;
+  provincia?: string;
+  comunidad_autonoma?: string;
   party_votes?: { 
     party: { 
       name: string; 
@@ -91,18 +83,9 @@ const Results = () => {
       setLoading(true);
       
       let query = supabase
-        .from('electoral_acts')
+        .from('electoral_acts_with_municipalities')
         .select(`
           *,
-          municipalities!inner (
-            name,
-            provinces (
-              name,
-              autonomous_communities (
-                name
-              )
-            )
-          ),
           party_votes (
             votes,
             political_parties (
@@ -115,7 +98,7 @@ const Results = () => {
 
       // Apply filters only if they have values
       if (filters.municipality.trim()) {
-        query = query.ilike('municipalities.name', `%${filters.municipality.trim()}%`);
+        query = query.ilike('municipio', `%${filters.municipality.trim()}%`);
       }
       
       if (filters.district.trim()) {
@@ -150,16 +133,7 @@ const Results = () => {
           party_votes: act.party_votes?.map((pv: any) => ({
             party: pv.political_parties || { name: 'N/A', siglas: 'N/A', color: '#6B7280' },
             votes: pv.votes || 0
-          })) || [],
-          municipalities: act.municipalities ? {
-            name: act.municipalities.name || 'N/A',
-            provinces: act.municipalities.provinces ? {
-              name: act.municipalities.provinces.name || 'N/A',
-              autonomous_communities: act.municipalities.provinces.autonomous_communities ? {
-                name: act.municipalities.provinces.autonomous_communities.name || 'N/A'
-              } : undefined
-            } : undefined
-          } : undefined
+          })) || []
         })) || [];
         
         setElectoralActs(transformedData);
@@ -218,9 +192,9 @@ const Results = () => {
   };
 
   const getLocationDisplay = (act: ElectoralAct) => {
-    const municipality = act.municipalities?.name || 'N/A';
-    const province = act.municipalities?.provinces?.name;
-    const autonomousCommunity = act.municipalities?.provinces?.autonomous_communities?.name;
+    const municipality = act.municipio || 'N/A';
+    const province = act.provincia;
+    const autonomousCommunity = act.comunidad_autonoma;
     
     let location = municipality;
     if (province && province !== municipality) {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -34,12 +33,11 @@ const DiscrepancyDetector = () => {
     try {
       console.log('Detecting discrepancies...');
       
-      // Get all electoral acts grouped by location
+      // Get all electoral acts using the new view
       const { data: acts, error } = await supabase
-        .from('electoral_acts')
+        .from('electoral_acts_with_municipalities')
         .select(`
           *,
-          municipalities!inner (name),
           party_votes (
             votes,
             political_parties (siglas)
@@ -52,7 +50,7 @@ const DiscrepancyDetector = () => {
       const groupedActs = new Map<string, any[]>();
       
       acts?.forEach(act => {
-        const key = `${act.municipality_id}-${act.district}-${act.section}-${act.table_letter}`;
+        const key = `${act.municipality_idm}-${act.district}-${act.section}-${act.table_letter}`;
         if (!groupedActs.has(key)) {
           groupedActs.set(key, []);
         }
@@ -90,7 +88,7 @@ const DiscrepancyDetector = () => {
 
           if (differences.length > 0) {
             foundDiscrepancies.push({
-              municipality: firstAct.municipalities?.name || 'N/A',
+              municipality: firstAct.municipio || 'N/A',
               district: firstAct.district,
               section: firstAct.section,
               table_letter: firstAct.table_letter,
