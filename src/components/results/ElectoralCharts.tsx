@@ -51,24 +51,24 @@ export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsPro
 
   return (
     <div className="grid grid-cols-1 gap-6">
-      {/* Pie Chart */}
+      {/* Pie Chart - Reduced size */}
       <Card>
         <CardHeader>
           <CardTitle>Distribución Porcentual</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[450px] w-full">
+          <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={pieChartData}
                   cx="50%"
                   cy="45%"
-                  outerRadius={120}
+                  outerRadius={80}
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
                   labelLine={false}
-                  fontSize={11}
+                  fontSize={10}
                 >
                   {pieChartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} stroke="none" />
@@ -78,11 +78,11 @@ export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsPro
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex flex-wrap justify-center gap-4 mt-4">
+          <div className="flex flex-wrap justify-center gap-3 mt-3">
             {pieChartData.slice(0, 5).map((entry, index) => (
               <div key={entry.name} className="flex items-center gap-2 text-xs">
                 <div 
-                  className="w-3 h-3 rounded-full" 
+                  className="w-2 h-2 rounded-full" 
                   style={{ backgroundColor: entry.fill }}
                 />
                 <span className="text-gray-700 font-medium">{entry.name}</span>

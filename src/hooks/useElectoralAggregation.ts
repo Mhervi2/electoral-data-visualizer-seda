@@ -19,6 +19,24 @@ interface PartyResultBySource {
   };
 }
 
+interface ElectoralAct {
+  id: string;
+  municipality_idm: number;
+  district: string;
+  section: string;
+  table_letter: string;
+  census_total: number;
+  total_voters: number;
+  blank_votes: number;
+  null_votes: number;
+  source_type: string;
+  image_url?: string;
+  created_at: string;
+  municipio?: string;
+  provincia?: string;
+  comunidad_autonoma?: string;
+}
+
 interface AggregatedResults {
   totalVotes: number;
   totalCensus: number;
@@ -33,6 +51,7 @@ interface AggregatedResults {
     coverage: number;
   }[];
   selectedSources: string[];
+  individualActas: ElectoralAct[];
 }
 
 interface Filters {
@@ -59,13 +78,42 @@ export const useElectoralAggregation = () => {
     sourceTypes: ['user', 'indra', 'escrutinio', 'oficial']
   });
 
+  const buildQuery = (baseQuery: any) => {
+    let query = baseQuery;
+
+    // Apply hierarchical filters
+    if (filters.autonomousCommunity.trim()) {
+      query = query.ilike('comunidad_autonoma', `%${filters.autonomousCommunity.trim()}%`);
+    }
+    if (filters.province.trim()) {
+      query = query.ilike('provincia', `%${filters.province.trim()}%`);
+    }
+    if (filters.municipality.trim()) {
+      query = query.ilike('municipio', `%${filters.municipality.trim()}%`);
+    }
+    if (filters.district.trim()) {
+      query = query.eq('district', filters.district.trim());
+    }
+    if (filters.section.trim()) {
+      query = query.eq('section', filters.section.trim());
+    }
+    if (filters.table.trim()) {
+      query = query.eq('table_letter', filters.table.trim());
+    }
+    if (filters.sourceTypes.length > 0) {
+      query = query.in('source_type', filters.sourceTypes);
+    }
+
+    return query;
+  };
+
   const fetchAggregatedResults = async () => {
     try {
       setLoading(true);
       console.log('Fetching aggregated results with filters:', filters);
 
-      // Build the query based on applied filters
-      let query = supabase
+      // Build the query for aggregated data
+      let aggregatedQuery = supabase
         .from('electoral_acts_with_municipalities')
         .select(`
           census_total,
@@ -83,33 +131,40 @@ export const useElectoralAggregation = () => {
           )
         `);
 
-      // Apply hierarchical filters
-      if (filters.autonomousCommunity.trim()) {
-        query = query.ilike('comunidad_autonoma', `%${filters.autonomousCommunity.trim()}%`);
-      }
-      if (filters.province.trim()) {
-        query = query.ilike('provincia', `%${filters.province.trim()}%`);
-      }
-      if (filters.municipality.trim()) {
-        query = query.ilike('municipio', `%${filters.municipality.trim()}%`);
-      }
-      if (filters.district.trim()) {
-        query = query.eq('district', filters.district.trim());
-      }
-      if (filters.section.trim()) {
-        query = query.eq('section', filters.section.trim());
-      }
-      if (filters.table.trim()) {
-        query = query.eq('table_letter', filters.table.trim());
-      }
-      if (filters.sourceTypes.length > 0) {
-        query = query.in('source_type', filters.sourceTypes);
-      }
+      aggregatedQuery = buildQuery(aggregatedQuery);
 
-      const { data: acts, error } = await query;
+      // Build the query for individual actas
+      let individualQuery = supabase
+        .from('electoral_acts_with_municipalities')
+        .select(`
+          id,
+          municipality_idm,
+          district,
+          section,
+          table_letter,
+          census_total,
+          total_voters,
+          blank_votes,
+          null_votes,
+          source_type,
+          image_url,
+          created_at,
+          municipio,
+          provincia,
+          comunidad_autonoma
+        `)
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching electoral acts:', error);
+      individualQuery = buildQuery(individualQuery);
+
+      // Execute both queries
+      const [{ data: acts, error: actsError }, { data: individualActas, error: individualError }] = await Promise.all([
+        aggregatedQuery,
+        individualQuery
+      ]);
+
+      if (actsError) {
+        console.error('Error fetching electoral acts:', actsError);
         toast({
           variant: "destructive",
           title: "Error",
@@ -118,8 +173,18 @@ export const useElectoralAggregation = () => {
         return;
       }
 
+      if (individualError) {
+        console.error('Error fetching individual actas:', individualError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudieron cargar las actas individuales.",
+        });
+        return;
+      }
+
       // Aggregate the results
-      const aggregated = aggregateElectoralData(acts || []);
+      const aggregated = aggregateElectoralData(acts || [], individualActas || []);
       setAggregatedResults(aggregated);
 
     } catch (error) {
@@ -134,7 +199,7 @@ export const useElectoralAggregation = () => {
     }
   };
 
-  const aggregateElectoralData = (acts: any[]): AggregatedResults => {
+  const aggregateElectoralData = (acts: any[], individualActas: ElectoralAct[]): AggregatedResults => {
     const totalCensus = acts.reduce((sum, act) => sum + (act.census_total || 0), 0);
     const totalVotes = acts.reduce((sum, act) => sum + (act.total_voters || 0), 0);
     const blankVotes = acts.reduce((sum, act) => sum + (act.blank_votes || 0), 0);
@@ -230,7 +295,8 @@ export const useElectoralAggregation = () => {
       validVotes,
       partyResults,
       sourceComparison,
-      selectedSources: filters.sourceTypes
+      selectedSources: filters.sourceTypes,
+      individualActas
     };
   };
 

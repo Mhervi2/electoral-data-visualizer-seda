@@ -9,7 +9,7 @@ import { ResultsFilters } from '@/components/results/ResultsFilters';
 import { ElectoralSummary } from '@/components/results/ElectoralSummary';
 import { ElectoralCharts } from '@/components/results/ElectoralCharts';
 import { ResultsDetailsTable } from '@/components/results/ResultsDetailsTable';
-import { SourceComparison } from '@/components/results/SourceComparison';
+import { IndividualActsList } from '@/components/results/IndividualActsList';
 import DiscrepancyDetector from '@/components/results/DiscrepancyDetector';
 
 const Results = () => {
@@ -49,6 +49,26 @@ const Results = () => {
       });
     }
   }, [searchParams, toast]);
+
+  const handleActaClick = (acta: any) => {
+    console.log('Acta clicked:', acta);
+    
+    // Auto-fill filters with acta data
+    setFilters(prev => ({
+      ...prev,
+      autonomousCommunity: acta.comunidad_autonoma || '',
+      province: acta.provincia || '',
+      municipality: acta.municipio || '',
+      district: acta.district || '',
+      section: acta.section || '',
+      table: acta.table_letter || ''
+    }));
+
+    toast({
+      title: "Filtros actualizados",
+      description: `Mostrando datos específicos del acta: Mesa ${acta.table_letter}, ${acta.municipio}`,
+    });
+  };
 
   if (loading && !aggregatedResults) {
     return (
@@ -112,9 +132,12 @@ const Results = () => {
             />
           )}
 
-          {/* Source Comparison */}
-          {aggregatedResults.sourceComparison.length > 0 && (
-            <SourceComparison sourceComparison={aggregatedResults.sourceComparison} />
+          {/* Individual Actas List - replaces SourceComparison */}
+          {aggregatedResults.individualActas.length > 0 && (
+            <IndividualActsList 
+              individualActas={aggregatedResults.individualActas}
+              onActaClick={handleActaClick}
+            />
           )}
         </>
       )}
