@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 interface ResultsFiltersProps {
   filters: {
+    autonomousCommunity: string;
+    province: string;
     municipality: string;
     district: string;
     section: string;
@@ -18,7 +20,7 @@ interface ResultsFiltersProps {
 
 export const ResultsFilters = ({ filters, onFiltersChange }: ResultsFiltersProps) => {
   const handleFilterChange = (key: string, value: string) => {
-    onFiltersChange(prev => ({ ...prev, [key]: value }));
+    onFiltersChange((prev: any) => ({ ...prev, [key]: value }));
   };
 
   return (
@@ -27,7 +29,25 @@ export const ResultsFilters = ({ filters, onFiltersChange }: ResultsFiltersProps
         <CardTitle>Filtros de Búsqueda</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          <div>
+            <Label htmlFor="ca-filter">Comunidad Autónoma</Label>
+            <Input
+              id="ca-filter"
+              placeholder="Buscar CA..."
+              value={filters.autonomousCommunity}
+              onChange={(e) => handleFilterChange('autonomousCommunity', e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="province-filter">Provincia</Label>
+            <Input
+              id="province-filter"
+              placeholder="Buscar provincia..."
+              value={filters.province}
+              onChange={(e) => handleFilterChange('province', e.target.value)}
+            />
+          </div>
           <div>
             <Label htmlFor="municipality-filter">Municipio</Label>
             <Input

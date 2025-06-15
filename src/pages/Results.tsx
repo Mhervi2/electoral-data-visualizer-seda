@@ -4,9 +4,12 @@ import { useSearchParams } from 'react-router-dom';
 import { BarChart3 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useResultsData } from '@/hooks/useResultsData';
+import { useElectoralAggregation } from '@/hooks/useElectoralAggregation';
 import { ResultsFilters } from '@/components/results/ResultsFilters';
-import { ResultsTable } from '@/components/results/ResultsTable';
+import { ElectoralSummary } from '@/components/results/ElectoralSummary';
+import { ElectoralCharts } from '@/components/results/ElectoralCharts';
+import { ResultsDetailsTable } from '@/components/results/ResultsDetailsTable';
+import { SourceComparison } from '@/components/results/SourceComparison';
 import DiscrepancyDetector from '@/components/results/DiscrepancyDetector';
 
 const Results = () => {
@@ -14,28 +17,27 @@ const Results = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const {
-    electoralActs,
-    discrepancies,
+    aggregatedResults,
     loading,
     filters,
     setFilters,
-    fetchElectoralActs,
-    fetchDiscrepancies
-  } = useResultsData();
+    refetch
+  } = useElectoralAggregation();
 
+  // Initialize filters from URL params
   useEffect(() => {
-    fetchElectoralActs();
-    if (user?.isAdmin) {
-      fetchDiscrepancies();
-    }
-  }, [user?.isAdmin]);
-
-  // Separate useEffect for filters to avoid infinite loops
-  useEffect(() => {
-    if (!loading) {
-      fetchElectoralActs();
-    }
-  }, [filters.municipality, filters.district, filters.section, filters.table, filters.sourceType]);
+    const urlFilters = {
+      autonomousCommunity: searchParams.get('autonomousCommunity') || '',
+      province: searchParams.get('province') || '',
+      municipality: searchParams.get('municipality') || '',
+      district: searchParams.get('district') || '',
+      section: searchParams.get('section') || '',
+      table: searchParams.get('table') || '',
+      sourceType: 'all'
+    };
+    
+    setFilters(urlFilters);
+  }, [searchParams, setFilters]);
 
   // Show toast if we came from submit form with existing act
   useEffect(() => {
@@ -65,7 +67,7 @@ const Results = () => {
             Resultados Electorales
           </h1>
           <p className="text-muted-foreground">
-            Visualiza los resultados detallados por mesa electoral
+            Visualiza los resultados agregados por nivel geográfico
           </p>
         </div>
       </div>
@@ -77,7 +79,48 @@ const Results = () => {
         <DiscrepancyDetector />
       )}
 
-      <ResultsTable electoralActs={electoralActs} />
+      {aggregatedResults && (
+        <>
+          {/* Summary Cards */}
+          <ElectoralSummary
+            totalVotes={aggregatedResults.totalVotes}
+            totalCensus={aggregatedResults.totalCensus}
+            participation={aggregatedResults.participation}
+            blankVotes={aggregatedResults.blankVotes}
+            nullVotes={aggregatedResults.nullVotes}
+            validVotes={aggregatedResults.validVotes}
+          />
+
+          {/* Charts */}
+          {aggregatedResults.partyResults.length > 0 && (
+            <ElectoralCharts
+              partyResults={aggregatedResults.partyResults}
+              totalVotes={aggregatedResults.validVotes}
+            />
+          )}
+
+          {/* Results Table */}
+          {aggregatedResults.partyResults.length > 0 && (
+            <ResultsDetailsTable
+              partyResults={aggregatedResults.partyResults}
+              totalVotes={aggregatedResults.validVotes}
+            />
+          )}
+
+          {/* Source Comparison */}
+          {aggregatedResults.sourceComparison.length > 0 && (
+            <SourceComparison sourceComparison={aggregatedResults.sourceComparison} />
+          )}
+        </>
+      )}
+
+      {!aggregatedResults && !loading && (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">
+            No se encontraron resultados electorales que coincidan con los filtros aplicados.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
