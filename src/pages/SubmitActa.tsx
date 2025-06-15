@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -17,7 +16,7 @@ import { ActaData, ExistingAct, MpcaData } from '@/types/acta';
 const SubmitActa = () => {
   const { user } = useAuth();
   const { uploadFile, uploading } = useSecureFileUpload();
-  const { mpcaData, politicalParties, elections, loading, error } = useActaData();
+  const { politicalParties, elections } = useActaData();
   const [existingAct, setExistingAct] = useState<ExistingAct | null>(null);
   const [showExistingActDialog, setShowExistingActDialog] = useState(false);
   const [selectedMpcaRecord, setSelectedMpcaRecord] = useState<MpcaData | null>(null);
@@ -38,9 +37,9 @@ const SubmitActa = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleMunicipalityChange = (municipalityId: string) => {
-    const selectedMpca = mpcaData.find(m => m.idm.toString() === municipalityId);
-    setSelectedMpcaRecord(selectedMpca || null);
+  const handleMunicipalityChange = (municipalityId: string, municipalityData: MpcaData | null) => {
+    console.log('Municipality selected:', municipalityId, municipalityData);
+    setSelectedMpcaRecord(municipalityData);
     setActaData(prev => ({ ...prev, municipio: municipalityId }));
   };
 
@@ -78,7 +77,6 @@ const SubmitActa = () => {
 
       if (data && data.length > 0) {
         console.log('Found existing acts:', data.length);
-        // Transform the data to match the expected format
         const transformedAct = {
           ...data[0],
           municipality: { name: data[0].municipio }
@@ -166,14 +164,12 @@ const SubmitActa = () => {
 
     if (!validateData()) return;
 
-    // Check for existing act
     const hasExisting = await checkExistingAct();
     if (hasExisting) return;
 
     setIsSubmitting(true);
     
     try {
-      // Get the current user's auth ID
       const { data: { user: authUser } } = await supabase.auth.getUser();
       
       if (!authUser) {
@@ -185,7 +181,6 @@ const SubmitActa = () => {
         return;
       }
 
-      // Insert electoral act with the new municipality_idm field
       const { data: actData, error: actError } = await supabase
         .from('electoral_acts')
         .insert({
@@ -207,7 +202,6 @@ const SubmitActa = () => {
 
       if (actError) throw actError;
 
-      // Insert party votes
       const partyVotesData = Object.entries(actaData.votos)
         .filter(([_, votes]) => votes && parseInt(votes) > 0)
         .map(([partyId, votes]) => ({
@@ -224,7 +218,6 @@ const SubmitActa = () => {
         if (votesError) throw votesError;
       }
 
-      // Log audit action
       await supabase.rpc('log_audit_action', {
         p_action: 'CREATE_ELECTORAL_ACT',
         p_table_name: 'electoral_acts',
@@ -242,7 +235,6 @@ const SubmitActa = () => {
         description: "El acta electoral ha sido enviada correctamente.",
       });
 
-      // Reset form
       setActaData({
         electionId: '',
         municipio: '',
@@ -289,7 +281,6 @@ const SubmitActa = () => {
         />
 
         <MesaIdentification 
-          mpcaData={mpcaData}
           selectedMpcaRecord={selectedMpcaRecord}
           municipio={actaData.municipio}
           distrito={actaData.distrito}
@@ -298,8 +289,6 @@ const SubmitActa = () => {
           onMunicipalityChange={handleMunicipalityChange}
           onInputChange={handleInputChange}
           onBlur={checkExistingAct}
-          loading={loading}
-          error={error}
         />
 
         <ImageUploadSection 
