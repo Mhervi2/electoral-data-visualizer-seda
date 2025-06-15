@@ -8,160 +8,108 @@ export const useActaData = () => {
   const [politicalParties, setPoliticalParties] = useState<PoliticalParty[]>([]);
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
+      setError(null);
       try {
-        await Promise.all([
+        const [mpcaResult, partiesResult, electionsResult] = await Promise.allSettled([
           fetchMpcaData(),
           fetchPoliticalParties(),
-          fetchElections()
+          fetchElections(),
         ]);
-      } catch (error) {
-        console.error('Error fetching data:', error);
+
+        if (mpcaResult.status === 'fulfilled') {
+          setMpcaData(mpcaResult.value);
+        } else {
+          console.error('Failed to fetch MPCA data:', mpcaResult.reason);
+          setError('Error al cargar los municipios. Revisa la consola para más detalles.');
+          setMpcaData([]);
+        }
+
+        if (partiesResult.status === 'fulfilled') {
+          setPoliticalParties(partiesResult.value);
+        } else {
+          console.error('Failed to fetch political parties:', partiesResult.reason);
+          setPoliticalParties([]);
+        }
+
+        if (electionsResult.status === 'fulfilled') {
+          setElections(electionsResult.value);
+        } else {
+          console.error('Failed to fetch elections:', electionsResult.reason);
+          setElections([]);
+        }
+      } catch (err) {
+        console.error('An unexpected error occurred in fetchAllData:', err);
+        setError('Ocurrió un error inesperado al cargar los datos.');
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchAllData();
   }, []);
 
-  const fetchMpcaData = async () => {
-    try {
-      console.log('Fetching MPCA data...');
-      console.log('Supabase client initialized:', !!supabase);
-      
-      // Test connection with a simple query first
-      const { data: testData, error: testError } = await supabase
-        .from('mpca')
-        .select('count(*)', { count: 'exact' });
-      
-      console.log('Connection test result:', { testData, testError });
+  const fetchMpcaData = async (): Promise<MpcaData[]> => {
+    console.log('Fetching MPCA data...');
+    const { data, error } = await supabase
+      .from('mpca')
+      .select('idm, municipio, provincia, ca, idp, idca')
+      .order('municipio', { ascending: true });
 
-      // Try different approaches to fetch data
-      let data, error;
-      
-      // First attempt: basic select
-      const result1 = await supabase
-        .from('mpca')
-        .select('*')
-        .limit(10);
-        
-      console.log('Basic select (limit 10):', result1);
-      
-      if (result1.error) {
-        console.error('Basic select failed:', result1.error);
-        
-        // Second attempt: try with specific columns
-        const result2 = await supabase
-          .from('mpca')
-          .select('idm, municipio, provincia, ca, idp, idca')
-          .limit(10);
-          
-        console.log('Column select (limit 10):', result2);
-        data = result2.data;
-        error = result2.error;
-      } else {
-        // If basic select worked, get all data
-        const fullResult = await supabase
-          .from('mpca')
-          .select('idm, municipio, provincia, ca, idp, idca');
-          
-        data = fullResult.data;
-        error = fullResult.error;
-        console.log('Full data fetch result:', { dataLength: data?.length, error });
-      }
-
-      if (error) {
-        console.error('Error fetching MPCA data:', error);
-        console.error('Error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
-        setMpcaData([]);
-        return;
-      }
-      
-      if (!data || data.length === 0) {
-        console.warn('No MPCA data returned from database');
-        setMpcaData([]);
-        return;
-      }
-      
-      console.log('MPCA data fetched successfully:', data.length, 'municipalities');
-      console.log('Sample data:', data.slice(0, 3));
-      
-      // Validate and clean the data
-      const validData = data.filter(item => item.idm && item.municipio).map(item => ({
-        idm: Number(item.idm),
-        municipio: item.municipio || '',
-        idp: Number(item.idp) || 0,
-        provincia: item.provincia || '',
-        idca: Number(item.idca) || 0,
-        ca: item.ca || ''
-      }));
-      
-      console.log('Valid data after filtering:', validData.length);
-      
-      // Sort the data
-      const sortedData = validData.sort((a, b) => 
-        a.municipio.localeCompare(b.municipio, 'es', { sensitivity: 'base' })
-      );
-      
-      setMpcaData(sortedData);
-    } catch (error) {
-      console.error('Exception in fetchMpcaData:', error);
-      setMpcaData([]);
+    if (error) {
+      console.error('Supabase error fetching MPCA data:', error);
+      throw new Error(`Detalles del error: ${error.message}`);
     }
+
+    if (!data) {
+      console.warn('No MPCA data returned from Supabase.');
+      return [];
+    }
+
+    console.log(`MPCA data fetched successfully: ${data.length} records.`);
+    
+    return data.map(item => ({
+      idm: Number(item.idm),
+      municipio: item.municipio || '',
+      idp: Number(item.idp) || 0,
+      provincia: item.provincia || '',
+      idca: Number(item.idca) || 0,
+      ca: item.ca || '',
+    }));
   };
 
-  const fetchPoliticalParties = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('political_parties')
-        .select('*')
-        .order('siglas');
-
-      if (error) {
-        console.error('Error fetching political parties:', error);
-        throw error;
-      }
-      
-      setPoliticalParties(data || []);
-    } catch (error) {
+  const fetchPoliticalParties = async (): Promise<PoliticalParty[]> => {
+    const { data, error } = await supabase.from('political_parties').select('*').order('siglas');
+    if (error) {
       console.error('Error fetching political parties:', error);
-      setPoliticalParties([]);
+      throw error;
     }
+    return data || [];
   };
 
-  const fetchElections = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('elections')
-        .select('*')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
+  const fetchElections = async (): Promise<Election[]> => {
+    const { data, error } = await supabase
+      .from('elections')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching elections:', error);
-        throw error;
-      }
-      
-      setElections(data || []);
-    } catch (error) {
+    if (error) {
       console.error('Error fetching elections:', error);
-      setElections([]);
+      throw error;
     }
+    return data || [];
   };
 
   return {
     mpcaData,
     politicalParties,
     elections,
-    loading
+    loading,
+    error,
   };
 };

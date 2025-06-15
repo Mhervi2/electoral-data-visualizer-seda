@@ -16,6 +16,7 @@ interface MesaIdentificationProps {
   onInputChange: (field: string, value: string) => void;
   onBlur: () => void;
   loading?: boolean;
+  error?: string | null;
 }
 
 export const MesaIdentification = ({
@@ -28,9 +29,10 @@ export const MesaIdentification = ({
   onMunicipalityChange,
   onInputChange,
   onBlur,
-  loading = false
+  loading = false,
+  error = null
 }: MesaIdentificationProps) => {
-  console.log('MesaIdentification render - loading:', loading, 'mpcaData length:', mpcaData.length);
+  console.log('MesaIdentification render - loading:', loading, 'error:', error, 'mpcaData length:', mpcaData.length);
   
   const getStatusInfo = () => {
     if (loading) {
@@ -41,9 +43,9 @@ export const MesaIdentification = ({
       };
     }
     
-    if (mpcaData.length === 0) {
+    if (error || (!loading && mpcaData.length === 0)) {
       return {
-        message: "⚠️ No se pudieron cargar los municipios. Verifica la conexión a la base de datos.",
+        message: error || "⚠️ No se encontraron municipios. Es posible que falten permisos (RLS) en la tabla 'mpca' de Supabase.",
         color: "text-red-600",
         isError: true
       };
@@ -78,7 +80,7 @@ export const MesaIdentification = ({
             </p>
             {!loading && !statusInfo.isError && (
               <p className="text-xs text-gray-500 mt-1">
-                Escribe para buscar (ej: "Barcelona", "Madrid", "Sevilla")
+                Escribe para buscar por municipio, provincia o C.A.
               </p>
             )}
             {statusInfo.isError && (
