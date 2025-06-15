@@ -1,12 +1,12 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
 import { ActaData, ExistingAct, MpcaData } from '@/types/acta';
 
 export const useSubmitActa = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [existingAct, setExistingAct] = useState<ExistingAct | null>(null);
   const [showExistingActDialog, setShowExistingActDialog] = useState(false);
@@ -92,6 +92,23 @@ export const useSubmitActa = () => {
     }
   };
 
+  const navigateToResults = () => {
+    // Build query parameters for the results page to show the specific act
+    const params = new URLSearchParams({
+      municipality: selectedMpcaRecord?.municipio || '',
+      district: actaData.distrito,
+      section: actaData.seccion,
+      table: actaData.mesa
+    });
+    
+    toast({
+      title: "Acta existente encontrada",
+      description: "Te hemos llevado a la página de resultados donde puedes ver el acta existente.",
+    });
+
+    navigate(`/results?${params.toString()}`);
+  };
+
   const validateData = (): boolean => {
     const censo = parseInt(actaData.censo) || 0;
     const votantes = parseInt(actaData.votantes) || 0;
@@ -123,34 +140,19 @@ export const useSubmitActa = () => {
   };
 
   const submitActa = async () => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Debes iniciar sesión para enviar un acta.",
-      });
-      return;
-    }
-
     if (!validateData()) return;
 
     const hasExisting = await checkExistingAct();
-    if (hasExisting) return;
+    if (hasExisting) {
+      // Instead of just showing dialog, navigate to results
+      navigateToResults();
+      return;
+    }
 
     setIsSubmitting(true);
     
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      
-      if (!authUser) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "No se pudo verificar la sesión del usuario.",
-        });
-        return;
-      }
-
+      // Submit without requiring authentication
       const { data: actData, error: actError } = await supabase
         .from('electoral_acts')
         .insert({
@@ -165,7 +167,7 @@ export const useSubmitActa = () => {
           null_votes: parseInt(actaData.nulos),
           source_type: 'user',
           image_url: actaData.imageUrl,
-          submitted_by: authUser.id
+          submitted_by: null // No user authentication required
         })
         .select()
         .single();
@@ -188,18 +190,6 @@ export const useSubmitActa = () => {
         if (votesError) throw votesError;
       }
 
-      await supabase.rpc('log_audit_action', {
-        p_action: 'CREATE_ELECTORAL_ACT',
-        p_table_name: 'electoral_acts',
-        p_record_id: actData.id,
-        p_new_values: {
-          municipality_idm: parseInt(actaData.municipio),
-          district: actaData.distrito,
-          section: actaData.seccion,
-          table_letter: actaData.mesa
-        }
-      });
-
       toast({
         title: "Acta enviada",
         description: "El acta electoral ha sido enviada correctamente.",
@@ -219,6 +209,9 @@ export const useSubmitActa = () => {
         votos: {},
       });
       setSelectedMpcaRecord(null);
+
+      // Navigate to results page to show the submitted act
+      navigateToResults();
 
     } catch (error) {
       console.error('Error submitting act:', error);
@@ -243,6 +236,7 @@ export const useSubmitActa = () => {
     handleInputChange,
     handleVoteChange,
     checkExistingAct,
-    submitActa
+    submitActa,
+    navigateToResults
   };
 };

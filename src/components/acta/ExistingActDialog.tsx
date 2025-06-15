@@ -1,16 +1,17 @@
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { AlertTriangle, ArrowRight } from 'lucide-react';
 import { ExistingAct } from '@/types/acta';
 
 interface ExistingActDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   existingAct: ExistingAct | null;
+  onNavigateToResults?: () => void;
 }
 
-export const ExistingActDialog = ({ open, onOpenChange, existingAct }: ExistingActDialogProps) => {
+export const ExistingActDialog = ({ open, onOpenChange, existingAct, onNavigateToResults }: ExistingActDialogProps) => {
   const getSourceTypeLabel = (sourceType: string) => {
     const labels = {
       'user': 'Acta de Usuario',
@@ -19,6 +20,13 @@ export const ExistingActDialog = ({ open, onOpenChange, existingAct }: ExistingA
       'oficial': 'Resultado Oficial'
     };
     return labels[sourceType as keyof typeof labels] || sourceType;
+  };
+
+  const handleViewResults = () => {
+    onOpenChange(false);
+    if (onNavigateToResults) {
+      onNavigateToResults();
+    }
   };
 
   return (
@@ -30,7 +38,7 @@ export const ExistingActDialog = ({ open, onOpenChange, existingAct }: ExistingA
             Acta Ya Registrada
           </DialogTitle>
           <DialogDescription>
-            Ya existe un acta registrada para esta mesa electoral. Revise los detalles a continuación.
+            Ya existe un acta registrada para esta mesa electoral. Puedes ver los detalles en la página de resultados.
           </DialogDescription>
         </DialogHeader>
         {existingAct && (
@@ -71,9 +79,9 @@ export const ExistingActDialog = ({ open, onOpenChange, existingAct }: ExistingA
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cerrar
               </Button>
-              <Button onClick={() => onOpenChange(false)}>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Entendido
+              <Button onClick={handleViewResults}>
+                <ArrowRight className="h-4 w-4 mr-2" />
+                Ver en Resultados
               </Button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,14 +53,15 @@ interface Discrepancy {
 const Results = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [electoralActs, setElectoralActs] = useState<ElectoralAct[]>([]);
   const [discrepancies, setDiscrepancies] = useState<Discrepancy[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
-    municipality: '',
-    district: '',
-    section: '',
-    table: '',
+    municipality: searchParams.get('municipality') || '',
+    district: searchParams.get('district') || '',
+    section: searchParams.get('section') || '',
+    table: searchParams.get('table') || '',
     sourceType: 'all'
   });
 
@@ -76,6 +78,17 @@ const Results = () => {
       fetchElectoralActs();
     }
   }, [filters.municipality, filters.district, filters.section, filters.table, filters.sourceType]);
+
+  // Show toast if we came from submit form with existing act
+  useEffect(() => {
+    if (searchParams.get('municipality') && searchParams.get('district') && 
+        searchParams.get('section') && searchParams.get('table')) {
+      toast({
+        title: "Acta existente",
+        description: "Mostrando resultados para la mesa que intentaste enviar.",
+      });
+    }
+  }, [searchParams, toast]);
 
   const fetchElectoralActs = async () => {
     try {

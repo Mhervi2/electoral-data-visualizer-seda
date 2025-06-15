@@ -25,7 +25,8 @@ export const SubmitActaForm = () => {
     handleInputChange,
     handleVoteChange,
     checkExistingAct,
-    submitActa
+    submitActa,
+    navigateToResults
   } = useSubmitActa();
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,6 +60,7 @@ export const SubmitActaForm = () => {
         open={showExistingActDialog}
         onOpenChange={setShowExistingActDialog}
         existingAct={existingAct}
+        onNavigateToResults={navigateToResults}
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
