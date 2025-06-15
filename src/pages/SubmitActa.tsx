@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -108,10 +109,12 @@ const SubmitActa = () => {
     if (file) {
       console.log('File selected:', file.name, file.size, file.type);
       
+      // Allow image upload without authentication
       const imageUrl = await uploadFile(file, 'electoral-acts', {
         maxSizeInMB: 5,
         allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
-        folder: 'acts'
+        folder: 'acts',
+        requireAuth: false // This allows uploads without login
       });
 
       if (imageUrl) {

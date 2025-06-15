@@ -7,6 +7,7 @@ interface UploadOptions {
   maxSizeInMB?: number;
   allowedTypes?: string[];
   folder?: string;
+  requireAuth?: boolean;
 }
 
 export const useSecureFileUpload = () => {
@@ -21,7 +22,8 @@ export const useSecureFileUpload = () => {
     const {
       maxSizeInMB = 10,
       allowedTypes = ['image/jpeg', 'image/png', 'image/webp'],
-      folder = 'acts'
+      folder = 'acts',
+      requireAuth = true
     } = options;
 
     setUploading(true);
@@ -48,20 +50,24 @@ export const useSecureFileUpload = () => {
         return null;
       }
 
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          variant: "destructive",
-          title: "Error de autenticación",
-          description: "Debe iniciar sesión para subir archivos.",
-        });
-        return null;
+      // Get current user (optional for public uploads)
+      let userId = 'anonymous';
+      if (requireAuth) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast({
+            variant: "destructive",
+            title: "Error de autenticación",
+            description: "Debe iniciar sesión para subir archivos.",
+          });
+          return null;
+        }
+        userId = user.id;
       }
 
       // Generate unique filename
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const fileName = `${userId}/${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
       console.log('Uploading file:', fileName, 'Size:', file.size, 'Type:', file.type);
 
