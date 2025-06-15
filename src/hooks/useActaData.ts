@@ -11,6 +11,57 @@ export const useActaData = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchMpcaData = async (): Promise<MpcaData[]> => {
+      console.log("Re-fetching MPCA data from scratch...");
+      const { data, error: supabaseError } = await supabase
+        .from('mpca')
+        .select('idm, municipio, provincia, ca, idp, idca')
+        .order('municipio', { ascending: true });
+
+      if (supabaseError) {
+        console.error('Supabase error fetching MPCA data:', supabaseError);
+        throw new Error(`Error de base de datos: ${supabaseError.message}. Verifique los permisos (RLS) en la tabla 'mpca'.`);
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('No MPCA data returned. Table might be empty or RLS policies are blocking access.');
+        throw new Error("No se encontraron municipios. La tabla 'mpca' puede estar vacía o inaccesible (revise los permisos RLS).");
+      }
+
+      console.log(`MPCA data fetched successfully: ${data.length} records.`);
+      return data.map(item => ({
+        idm: Number(item.idm),
+        municipio: item.municipio || '',
+        idp: Number(item.idp) || 0,
+        provincia: item.provincia || '',
+        idca: Number(item.idca) || 0,
+        ca: item.ca || '',
+      }));
+    };
+
+    const fetchPoliticalParties = async (): Promise<PoliticalParty[]> => {
+      const { data, error } = await supabase.from('political_parties').select('*').order('siglas');
+      if (error) {
+        console.error('Error fetching political parties:', error);
+        throw new Error('Error al cargar los partidos políticos.');
+      }
+      return data || [];
+    };
+
+    const fetchElections = async (): Promise<Election[]> => {
+      const { data, error } = await supabase
+        .from('elections')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching elections:', error);
+        throw new Error('Error al cargar las elecciones.');
+      }
+      return data || [];
+    };
+
     const fetchAllData = async () => {
       setLoading(true);
       setError(null);
@@ -25,7 +76,7 @@ export const useActaData = () => {
           setMpcaData(mpcaResult.value);
         } else {
           console.error('Failed to fetch MPCA data:', mpcaResult.reason);
-          setError('Error al cargar los municipios. Revisa la consola para más detalles.');
+          setError(mpcaResult.reason.message);
           setMpcaData([]);
         }
 
@@ -42,7 +93,7 @@ export const useActaData = () => {
           console.error('Failed to fetch elections:', electionsResult.reason);
           setElections([]);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('An unexpected error occurred in fetchAllData:', err);
         setError('Ocurrió un error inesperado al cargar los datos.');
       } finally {
@@ -52,58 +103,6 @@ export const useActaData = () => {
 
     fetchAllData();
   }, []);
-
-  const fetchMpcaData = async (): Promise<MpcaData[]> => {
-    console.log('Fetching MPCA data...');
-    const { data, error } = await supabase
-      .from('mpca')
-      .select('idm, municipio, provincia, ca, idp, idca')
-      .order('municipio', { ascending: true });
-
-    if (error) {
-      console.error('Supabase error fetching MPCA data:', error);
-      throw new Error(`Detalles del error: ${error.message}`);
-    }
-
-    if (!data) {
-      console.warn('No MPCA data returned from Supabase.');
-      return [];
-    }
-
-    console.log(`MPCA data fetched successfully: ${data.length} records.`);
-    
-    return data.map(item => ({
-      idm: Number(item.idm),
-      municipio: item.municipio || '',
-      idp: Number(item.idp) || 0,
-      provincia: item.provincia || '',
-      idca: Number(item.idca) || 0,
-      ca: item.ca || '',
-    }));
-  };
-
-  const fetchPoliticalParties = async (): Promise<PoliticalParty[]> => {
-    const { data, error } = await supabase.from('political_parties').select('*').order('siglas');
-    if (error) {
-      console.error('Error fetching political parties:', error);
-      throw error;
-    }
-    return data || [];
-  };
-
-  const fetchElections = async (): Promise<Election[]> => {
-    const { data, error } = await supabase
-      .from('elections')
-      .select('*')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching elections:', error);
-      throw error;
-    }
-    return data || [];
-  };
 
   return {
     mpcaData,

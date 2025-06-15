@@ -37,23 +37,31 @@ export const MesaIdentification = ({
   const getStatusInfo = () => {
     if (loading) {
       return {
-        message: "Cargando municipios desde la base de datos...",
+        message: "Cargando municipios...",
         color: "text-blue-600",
         isError: false
       };
     }
     
-    if (error || (!loading && mpcaData.length === 0)) {
+    if (error) {
       return {
-        message: error || "⚠️ No se encontraron municipios. Es posible que falten permisos (RLS) en la tabla 'mpca' de Supabase.",
-        color: "text-red-600",
+        message: `⚠️ ${error}`,
+        color: "text-red-700",
+        isError: true
+      };
+    }
+    
+    if (mpcaData.length === 0) {
+      return {
+        message: "No hay municipios disponibles para seleccionar.",
+        color: "text-yellow-700",
         isError: true
       };
     }
     
     return {
       message: `✅ ${mpcaData.length} municipios cargados correctamente`,
-      color: "text-green-600",
+      color: "text-green-700",
       isError: false
     };
   };
@@ -75,17 +83,17 @@ export const MesaIdentification = ({
               onSelect={onMunicipalityChange}
               placeholder={loading ? "Cargando..." : "Buscar municipio..."}
             />
-            <p className={`text-sm mt-2 p-2 rounded ${statusInfo.color} ${statusInfo.isError ? 'bg-red-50' : 'bg-green-50'}`}>
-              {statusInfo.message}
-            </p>
+            <div className={`text-sm mt-2 p-2 rounded ${statusInfo.isError ? 'bg-red-50' : 'bg-green-50'}`}>
+              <p className={statusInfo.color}>{statusInfo.message}</p>
+              {statusInfo.isError && (
+                <p className="text-xs text-red-600 mt-1">
+                  Por favor, revisa la consola del navegador y la configuración de la tabla <strong>'mpca'</strong> en Supabase.
+                </p>
+              )}
+            </div>
             {!loading && !statusInfo.isError && (
               <p className="text-xs text-gray-500 mt-1">
                 Escribe para buscar por municipio, provincia o C.A.
-              </p>
-            )}
-            {statusInfo.isError && (
-              <p className="text-xs text-red-600 mt-1">
-                Revisa la consola del navegador para más detalles del error.
               </p>
             )}
           </div>
