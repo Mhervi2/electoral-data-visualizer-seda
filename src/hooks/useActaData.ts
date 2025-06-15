@@ -31,20 +31,45 @@ export const useActaData = () => {
   const fetchMpcaData = async () => {
     try {
       console.log('Fetching MPCA data...');
+      console.log('Supabase client:', supabase);
+      
+      // First, let's try a simple count query
+      const { count, error: countError } = await supabase
+        .from('mpca')
+        .select('*', { count: 'exact', head: true });
+      
+      console.log('Total records in mpca table:', count);
+      if (countError) {
+        console.error('Count error:', countError);
+      }
+
+      // Now try to fetch all data without ordering first
       const { data, error } = await supabase
         .from('mpca')
-        .select('idm, municipio, idp, provincia, idca, ca')
-        .order('municipio');
+        .select('idm, municipio, idp, provincia, idca, ca');
 
+      console.log('Raw query result:', { data, error });
+      
       if (error) {
         console.error('Error fetching MPCA data:', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         setMpcaData([]);
         return;
       }
       
       console.log('MPCA data fetched successfully:', data?.length, 'municipalities');
       console.log('First few items:', data?.slice(0, 5));
-      setMpcaData(data || []);
+      
+      // Sort the data after fetching to avoid potential database issues
+      const sortedData = data?.sort((a, b) => a.municipio?.localeCompare(b.municipio || '') || 0) || [];
+      console.log('Sorted data length:', sortedData.length);
+      
+      setMpcaData(sortedData);
     } catch (error) {
       console.error('Error in fetchMpcaData:', error);
       setMpcaData([]);
