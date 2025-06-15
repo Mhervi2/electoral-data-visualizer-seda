@@ -1,9 +1,11 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Loader2 } from 'lucide-react';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface ResultsFiltersProps {
   filters: {
@@ -16,21 +18,61 @@ interface ResultsFiltersProps {
     sourceTypes: string[];
   };
   onFiltersChange: (filters: any) => void;
+  isLoading?: boolean;
 }
 
-export const ResultsFilters = ({ filters, onFiltersChange }: ResultsFiltersProps) => {
-  const handleFilterChange = (key: string, value: string) => {
-    onFiltersChange((prev: any) => ({ ...prev, [key]: value }));
+export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: ResultsFiltersProps) => {
+  // Estado local para los inputs de texto
+  const [localFilters, setLocalFilters] = useState({
+    autonomousCommunity: filters.autonomousCommunity,
+    province: filters.province,
+    municipality: filters.municipality,
+    district: filters.district,
+    section: filters.section,
+    table: filters.table,
+  });
+
+  // Debounce para los filtros de texto (600ms de retraso)
+  const debouncedFilters = useDebounce(localFilters, 600);
+
+  // Actualizar filtros globales cuando cambien los valores debounced
+  useEffect(() => {
+    onFiltersChange((prev: any) => ({
+      ...prev,
+      ...debouncedFilters
+    }));
+  }, [debouncedFilters, onFiltersChange]);
+
+  // Sincronizar estado local cuando cambien los filtros externos
+  useEffect(() => {
+    setLocalFilters({
+      autonomousCommunity: filters.autonomousCommunity,
+      province: filters.province,
+      municipality: filters.municipality,
+      district: filters.district,
+      section: filters.section,
+      table: filters.table,
+    });
+  }, [filters.autonomousCommunity, filters.province, filters.municipality, filters.district, filters.section, filters.table]);
+
+  const handleLocalFilterChange = (key: string, value: string) => {
+    setLocalFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSourceTypesChange = (value: string[]) => {
+    // Los toggles se aplican inmediatamente sin debounce
     onFiltersChange((prev: any) => ({ ...prev, sourceTypes: value }));
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Filtros de Búsqueda</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          Filtros de Búsqueda
+          {isLoading && (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -39,8 +81,8 @@ export const ResultsFilters = ({ filters, onFiltersChange }: ResultsFiltersProps
             <Input
               id="ca-filter"
               placeholder="Buscar CA..."
-              value={filters.autonomousCommunity}
-              onChange={(e) => handleFilterChange('autonomousCommunity', e.target.value)}
+              value={localFilters.autonomousCommunity}
+              onChange={(e) => handleLocalFilterChange('autonomousCommunity', e.target.value)}
             />
           </div>
           <div>
@@ -48,8 +90,8 @@ export const ResultsFilters = ({ filters, onFiltersChange }: ResultsFiltersProps
             <Input
               id="province-filter"
               placeholder="Buscar provincia..."
-              value={filters.province}
-              onChange={(e) => handleFilterChange('province', e.target.value)}
+              value={localFilters.province}
+              onChange={(e) => handleLocalFilterChange('province', e.target.value)}
             />
           </div>
           <div>
@@ -57,8 +99,8 @@ export const ResultsFilters = ({ filters, onFiltersChange }: ResultsFiltersProps
             <Input
               id="municipality-filter"
               placeholder="Buscar municipio..."
-              value={filters.municipality}
-              onChange={(e) => handleFilterChange('municipality', e.target.value)}
+              value={localFilters.municipality}
+              onChange={(e) => handleLocalFilterChange('municipality', e.target.value)}
             />
           </div>
           <div>
@@ -66,8 +108,8 @@ export const ResultsFilters = ({ filters, onFiltersChange }: ResultsFiltersProps
             <Input
               id="district-filter"
               placeholder="Ej: 01"
-              value={filters.district}
-              onChange={(e) => handleFilterChange('district', e.target.value)}
+              value={localFilters.district}
+              onChange={(e) => handleLocalFilterChange('district', e.target.value)}
             />
           </div>
           <div>
@@ -75,8 +117,8 @@ export const ResultsFilters = ({ filters, onFiltersChange }: ResultsFiltersProps
             <Input
               id="section-filter"
               placeholder="Ej: 001"
-              value={filters.section}
-              onChange={(e) => handleFilterChange('section', e.target.value)}
+              value={localFilters.section}
+              onChange={(e) => handleLocalFilterChange('section', e.target.value)}
             />
           </div>
           <div>
@@ -84,8 +126,8 @@ export const ResultsFilters = ({ filters, onFiltersChange }: ResultsFiltersProps
             <Input
               id="table-filter"
               placeholder="Ej: A"
-              value={filters.table}
-              onChange={(e) => handleFilterChange('table', e.target.value)}
+              value={localFilters.table}
+              onChange={(e) => handleLocalFilterChange('table', e.target.value)}
             />
           </div>
         </div>

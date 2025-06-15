@@ -50,7 +50,7 @@ const Results = () => {
     }
   }, [searchParams, toast]);
 
-  if (loading) {
+  if (loading && !aggregatedResults) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -72,7 +72,11 @@ const Results = () => {
         </div>
       </div>
 
-      <ResultsFilters filters={filters} onFiltersChange={setFilters} />
+      <ResultsFilters 
+        filters={filters} 
+        onFiltersChange={setFilters} 
+        isLoading={loading} 
+      />
 
       {/* Discrepancy Detection Section (Admin Only) */}
       {user?.isAdmin && (
