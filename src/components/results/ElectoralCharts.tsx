@@ -1,8 +1,6 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 interface PartyResultBySource {
   party: {
@@ -74,20 +72,20 @@ export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsPro
       {/* Bar Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Distribución de Votos</CardTitle>
+          <CardTitle>Distribución de Votos por Partido</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[400px] w-full">
+          <div className="h-[450px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={barChartData} 
                 layout="horizontal" 
-                margin={{ left: 80, right: 30, top: 20, bottom: 20 }}
+                margin={{ left: 60, right: 20, top: 20, bottom: 60 }}
               >
                 <XAxis 
                   type="number" 
                   tickFormatter={(value) => value.toLocaleString()}
-                  fontSize={11}
+                  fontSize={10}
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: '#666' }}
@@ -95,8 +93,8 @@ export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsPro
                 <YAxis 
                   type="category" 
                   dataKey="party" 
-                  width={70}
-                  fontSize={12}
+                  width={50}
+                  fontSize={11}
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: '#333', fontWeight: 500 }}
@@ -110,8 +108,16 @@ export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsPro
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-4 text-xs text-gray-500 text-center">
-            ■ Votos
+          <div className="mt-4 flex flex-wrap justify-center gap-4">
+            {barChartData.slice(0, 6).map((entry, index) => (
+              <div key={entry.party} className="flex items-center gap-2 text-xs">
+                <div 
+                  className="w-3 h-3 rounded-sm" 
+                  style={{ backgroundColor: entry.fill }}
+                />
+                <span className="text-gray-700 font-medium">{entry.party}</span>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -119,19 +125,19 @@ export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsPro
       {/* Pie Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Distribución de Escaños</CardTitle>
+          <CardTitle>Distribución Porcentual</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[400px] w-full">
+          <div className="h-[450px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={pieChartData}
                   cx="50%"
                   cy="45%"
-                  outerRadius={100}
+                  outerRadius={120}
                   dataKey="value"
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(1)}%)`}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
                   labelLine={false}
                   fontSize={11}
                 >
