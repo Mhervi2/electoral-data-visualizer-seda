@@ -23,9 +23,9 @@ export const MunicipalityCombobox = ({
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
 
-  console.log('MunicipalityCombobox - mpcaData:', mpcaData.length, 'items');
-  console.log('MunicipalityCombobox - first few items:', mpcaData.slice(0, 5));
-  console.log('MunicipalityCombobox - search value:', searchValue);
+  console.log('MunicipalityCombobox render - mpcaData length:', mpcaData.length);
+  console.log('MunicipalityCombobox render - first item:', mpcaData[0]);
+  console.log('MunicipalityCombobox render - selectedValue:', selectedValue);
 
   const selectedMunicipality = mpcaData.find(
     (mpca) => mpca.idm.toString() === selectedValue
@@ -77,11 +77,11 @@ export const MunicipalityCombobox = ({
           <CommandList>
             <CommandEmpty>
               {mpcaData.length === 0 
-                ? "Cargando municipios..." 
-                : "No se encontraron municipios."}
+                ? "No hay datos de municipios disponibles. Revisa la conexión a la base de datos." 
+                : "No se encontraron municipios con ese criterio."}
             </CommandEmpty>
             <CommandGroup>
-              {filteredMunicipalities.map((mpca) => (
+              {filteredMunicipalities.slice(0, 100).map((mpca) => (
                 <CommandItem
                   key={mpca.idm}
                   value={mpca.municipio}

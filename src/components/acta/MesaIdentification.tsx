@@ -30,10 +30,12 @@ export const MesaIdentification = ({
   onBlur,
   loading = false
 }: MesaIdentificationProps) => {
+  console.log('MesaIdentification render - loading:', loading, 'mpcaData length:', mpcaData.length);
+  
   const getStatusInfo = () => {
     if (loading) {
       return {
-        message: "Cargando municipios...",
+        message: "Cargando municipios desde la base de datos...",
         color: "text-blue-600",
         isError: false
       };
@@ -41,14 +43,14 @@ export const MesaIdentification = ({
     
     if (mpcaData.length === 0) {
       return {
-        message: "No se encontraron municipios disponibles.",
+        message: "⚠️ No se pudieron cargar los municipios. Verifica la conexión a la base de datos.",
         color: "text-red-600",
         isError: true
       };
     }
     
     return {
-      message: `✓ ${mpcaData.length} municipios disponibles`,
+      message: `✅ ${mpcaData.length} municipios cargados correctamente`,
       color: "text-green-600",
       isError: false
     };
@@ -71,12 +73,17 @@ export const MesaIdentification = ({
               onSelect={onMunicipalityChange}
               placeholder={loading ? "Cargando..." : "Buscar municipio..."}
             />
-            <p className={`text-sm mt-1 ${statusInfo.color}`}>
+            <p className={`text-sm mt-2 p-2 rounded ${statusInfo.color} ${statusInfo.isError ? 'bg-red-50' : 'bg-green-50'}`}>
               {statusInfo.message}
             </p>
             {!loading && !statusInfo.isError && (
               <p className="text-xs text-gray-500 mt-1">
                 Escribe para buscar (ej: "Barcelona", "Madrid", "Sevilla")
+              </p>
+            )}
+            {statusInfo.isError && (
+              <p className="text-xs text-red-600 mt-1">
+                Revisa la consola del navegador para más detalles del error.
               </p>
             )}
           </div>

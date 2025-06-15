@@ -31,25 +31,49 @@ export const useActaData = () => {
   const fetchMpcaData = async () => {
     try {
       console.log('Fetching MPCA data...');
-      console.log('Supabase client:', supabase);
+      console.log('Supabase client initialized:', !!supabase);
       
-      // First, let's try a simple count query
-      const { count, error: countError } = await supabase
+      // Test connection with a simple query first
+      const { data: testData, error: testError } = await supabase
         .from('mpca')
-        .select('*', { count: 'exact', head: true });
+        .select('count(*)', { count: 'exact' });
       
-      console.log('Total records in mpca table:', count);
-      if (countError) {
-        console.error('Count error:', countError);
+      console.log('Connection test result:', { testData, testError });
+
+      // Try different approaches to fetch data
+      let data, error;
+      
+      // First attempt: basic select
+      const result1 = await supabase
+        .from('mpca')
+        .select('*')
+        .limit(10);
+        
+      console.log('Basic select (limit 10):', result1);
+      
+      if (result1.error) {
+        console.error('Basic select failed:', result1.error);
+        
+        // Second attempt: try with specific columns
+        const result2 = await supabase
+          .from('mpca')
+          .select('idm, municipio, provincia, ca, idp, idca')
+          .limit(10);
+          
+        console.log('Column select (limit 10):', result2);
+        data = result2.data;
+        error = result2.error;
+      } else {
+        // If basic select worked, get all data
+        const fullResult = await supabase
+          .from('mpca')
+          .select('idm, municipio, provincia, ca, idp, idca');
+          
+        data = fullResult.data;
+        error = fullResult.error;
+        console.log('Full data fetch result:', { dataLength: data?.length, error });
       }
 
-      // Now try to fetch all data without ordering first
-      const { data, error } = await supabase
-        .from('mpca')
-        .select('idm, municipio, idp, provincia, idca, ca');
-
-      console.log('Raw query result:', { data, error });
-      
       if (error) {
         console.error('Error fetching MPCA data:', error);
         console.error('Error details:', {
@@ -62,16 +86,35 @@ export const useActaData = () => {
         return;
       }
       
-      console.log('MPCA data fetched successfully:', data?.length, 'municipalities');
-      console.log('First few items:', data?.slice(0, 5));
+      if (!data || data.length === 0) {
+        console.warn('No MPCA data returned from database');
+        setMpcaData([]);
+        return;
+      }
       
-      // Sort the data after fetching to avoid potential database issues
-      const sortedData = data?.sort((a, b) => a.municipio?.localeCompare(b.municipio || '') || 0) || [];
-      console.log('Sorted data length:', sortedData.length);
+      console.log('MPCA data fetched successfully:', data.length, 'municipalities');
+      console.log('Sample data:', data.slice(0, 3));
+      
+      // Validate and clean the data
+      const validData = data.filter(item => item.idm && item.municipio).map(item => ({
+        idm: Number(item.idm),
+        municipio: item.municipio || '',
+        idp: Number(item.idp) || 0,
+        provincia: item.provincia || '',
+        idca: Number(item.idca) || 0,
+        ca: item.ca || ''
+      }));
+      
+      console.log('Valid data after filtering:', validData.length);
+      
+      // Sort the data
+      const sortedData = validData.sort((a, b) => 
+        a.municipio.localeCompare(b.municipio, 'es', { sensitivity: 'base' })
+      );
       
       setMpcaData(sortedData);
     } catch (error) {
-      console.error('Error in fetchMpcaData:', error);
+      console.error('Exception in fetchMpcaData:', error);
       setMpcaData([]);
     }
   };
