@@ -33,7 +33,7 @@ const Results = () => {
       district: searchParams.get('district') || '',
       section: searchParams.get('section') || '',
       table: searchParams.get('table') || '',
-      sourceType: 'all'
+      sourceTypes: ['user', 'indra', 'escrutinio', 'oficial']
     };
     
     setFilters(urlFilters);
@@ -104,6 +104,7 @@ const Results = () => {
             <ResultsDetailsTable
               partyResults={aggregatedResults.partyResults}
               totalVotes={aggregatedResults.validVotes}
+              selectedSources={aggregatedResults.selectedSources}
             />
           )}
 

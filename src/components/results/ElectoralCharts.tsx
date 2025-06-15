@@ -4,16 +4,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
-interface ElectoralChartsProps {
-  partyResults: {
-    party: {
-      name: string;
-      siglas: string;
-      color: string;
+interface PartyResultBySource {
+  party: {
+    name: string;
+    siglas: string;
+    color: string;
+  };
+  totalVotes: number;
+  percentage: number;
+  sourceResults: {
+    [sourceType: string]: {
+      votes: number;
+      percentage: number;
     };
-    votes: number;
-    percentage: number;
-  }[];
+  };
+}
+
+interface ElectoralChartsProps {
+  partyResults: PartyResultBySource[];
   totalVotes: number;
 }
 
@@ -31,14 +39,14 @@ export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsPro
 
   const barChartData = topParties.map(result => ({
     party: result.party.siglas,
-    votes: result.votes,
+    votes: result.totalVotes,
     percentage: result.percentage,
     fill: result.party.color
   }));
 
   const pieChartData = topParties.map(result => ({
     name: result.party.siglas,
-    value: result.votes,
+    value: result.totalVotes,
     fill: result.party.color
   }));
 
@@ -52,9 +60,22 @@ export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsPro
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barChartData} layout="horizontal" margin={{ left: 50, right: 30, top: 20, bottom: 20 }}>
-                <XAxis type="number" />
-                <YAxis type="category" dataKey="party" width={50} />
+              <BarChart 
+                data={barChartData} 
+                layout="horizontal" 
+                margin={{ left: 60, right: 20, top: 20, bottom: 20 }}
+              >
+                <XAxis 
+                  type="number" 
+                  tickFormatter={(value) => value.toLocaleString()}
+                  fontSize={12}
+                />
+                <YAxis 
+                  type="category" 
+                  dataKey="party" 
+                  width={55}
+                  fontSize={12}
+                />
                 <ChartTooltip 
                   content={<ChartTooltipContent />}
                   formatter={(value: any, name: string) => [

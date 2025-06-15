@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface ResultsFiltersProps {
   filters: {
@@ -13,7 +13,7 @@ interface ResultsFiltersProps {
     district: string;
     section: string;
     table: string;
-    sourceType: string;
+    sourceTypes: string[];
   };
   onFiltersChange: (filters: any) => void;
 }
@@ -23,13 +23,17 @@ export const ResultsFilters = ({ filters, onFiltersChange }: ResultsFiltersProps
     onFiltersChange((prev: any) => ({ ...prev, [key]: value }));
   };
 
+  const handleSourceTypesChange = (value: string[]) => {
+    onFiltersChange((prev: any) => ({ ...prev, sourceTypes: value }));
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Filtros de Búsqueda</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div>
             <Label htmlFor="ca-filter">Comunidad Autónoma</Label>
             <Input
@@ -84,21 +88,29 @@ export const ResultsFilters = ({ filters, onFiltersChange }: ResultsFiltersProps
               onChange={(e) => handleFilterChange('table', e.target.value)}
             />
           </div>
-          <div>
-            <Label htmlFor="source-filter">Fuente</Label>
-            <Select value={filters.sourceType} onValueChange={(value) => handleFilterChange('sourceType', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todas las fuentes" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las fuentes</SelectItem>
-                <SelectItem value="user">Acta de Usuario</SelectItem>
-                <SelectItem value="indra">INDRA</SelectItem>
-                <SelectItem value="escrutinio">Escrutinio General</SelectItem>
-                <SelectItem value="oficial">Resultado Oficial</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        </div>
+        
+        <div>
+          <Label className="text-base font-medium">Fuentes de Datos</Label>
+          <ToggleGroup 
+            type="multiple" 
+            value={filters.sourceTypes} 
+            onValueChange={handleSourceTypesChange}
+            className="justify-start mt-2 flex-wrap"
+          >
+            <ToggleGroupItem value="user" variant="outline">
+              Actas de Usuario
+            </ToggleGroupItem>
+            <ToggleGroupItem value="indra" variant="outline">
+              INDRA
+            </ToggleGroupItem>
+            <ToggleGroupItem value="escrutinio" variant="outline">
+              Escrutinio General
+            </ToggleGroupItem>
+            <ToggleGroupItem value="oficial" variant="outline">
+              Resultado Oficial
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
       </CardContent>
     </Card>

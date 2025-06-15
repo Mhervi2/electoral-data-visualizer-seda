@@ -3,6 +3,22 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface PartyResultBySource {
+  party: {
+    name: string;
+    siglas: string;
+    color: string;
+  };
+  totalVotes: number;
+  percentage: number;
+  sourceResults: {
+    [sourceType: string]: {
+      votes: number;
+      percentage: number;
+    };
+  };
+}
+
 interface AggregatedResults {
   totalVotes: number;
   totalCensus: number;
@@ -10,20 +26,13 @@ interface AggregatedResults {
   blankVotes: number;
   nullVotes: number;
   validVotes: number;
-  partyResults: {
-    party: {
-      name: string;
-      siglas: string;
-      color: string;
-    };
-    votes: number;
-    percentage: number;
-  }[];
+  partyResults: PartyResultBySource[];
   sourceComparison: {
     source: string;
     totalVotes: number;
     coverage: number;
   }[];
+  selectedSources: string[];
 }
 
 interface Filters {
@@ -33,7 +42,7 @@ interface Filters {
   district: string;
   section: string;
   table: string;
-  sourceType: string;
+  sourceTypes: string[];
 }
 
 export const useElectoralAggregation = () => {
@@ -47,7 +56,7 @@ export const useElectoralAggregation = () => {
     district: '',
     section: '',
     table: '',
-    sourceType: 'all'
+    sourceTypes: ['user', 'indra', 'escrutinio', 'oficial']
   });
 
   const fetchAggregatedResults = async () => {
@@ -93,8 +102,8 @@ export const useElectoralAggregation = () => {
       if (filters.table.trim()) {
         query = query.eq('table_letter', filters.table.trim());
       }
-      if (filters.sourceType !== 'all') {
-        query = query.eq('source_type', filters.sourceType);
+      if (filters.sourceTypes.length > 0) {
+        query = query.in('source_type', filters.sourceTypes);
       }
 
       const { data: acts, error } = await query;
@@ -133,21 +142,29 @@ export const useElectoralAggregation = () => {
     const validVotes = totalVotes - blankVotes - nullVotes;
     const participation = totalCensus > 0 ? (totalVotes / totalCensus) * 100 : 0;
 
-    // Aggregate party votes
-    const partyVotesMap = new Map<string, { party: any; votes: number }>();
+    // Aggregate party votes by source
+    const partyVotesMap = new Map<string, { party: any; sourceResults: Map<string, number>; totalVotes: number }>();
     
     acts.forEach(act => {
       if (act.party_votes) {
         act.party_votes.forEach((pv: any) => {
           if (pv.political_parties) {
             const partyKey = pv.political_parties.siglas;
+            const sourceType = act.source_type || 'unknown';
+            const votes = pv.votes || 0;
+            
             const existing = partyVotesMap.get(partyKey);
             if (existing) {
-              existing.votes += pv.votes || 0;
+              existing.totalVotes += votes;
+              const currentSourceVotes = existing.sourceResults.get(sourceType) || 0;
+              existing.sourceResults.set(sourceType, currentSourceVotes + votes);
             } else {
+              const sourceResults = new Map<string, number>();
+              sourceResults.set(sourceType, votes);
               partyVotesMap.set(partyKey, {
                 party: pv.political_parties,
-                votes: pv.votes || 0
+                sourceResults,
+                totalVotes: votes
               });
             }
           }
@@ -155,13 +172,35 @@ export const useElectoralAggregation = () => {
       }
     });
 
-    const partyResults = Array.from(partyVotesMap.values())
-      .map(({ party, votes }) => ({
-        party,
-        votes,
-        percentage: validVotes > 0 ? (votes / validVotes) * 100 : 0
-      }))
-      .sort((a, b) => b.votes - a.votes);
+    // Calculate valid votes by source for percentage calculations
+    const validVotesBySource = new Map<string, number>();
+    filters.sourceTypes.forEach(sourceType => {
+      const sourceValidVotes = acts
+        .filter(act => act.source_type === sourceType)
+        .reduce((sum, act) => sum + (act.total_voters - act.blank_votes - act.null_votes), 0);
+      validVotesBySource.set(sourceType, sourceValidVotes);
+    });
+
+    const partyResults: PartyResultBySource[] = Array.from(partyVotesMap.values())
+      .map(({ party, sourceResults, totalVotes }) => {
+        const sourceResultsObj: { [sourceType: string]: { votes: number; percentage: number } } = {};
+        
+        filters.sourceTypes.forEach(sourceType => {
+          const votes = sourceResults.get(sourceType) || 0;
+          const sourceValidVotes = validVotesBySource.get(sourceType) || 0;
+          const percentage = sourceValidVotes > 0 ? (votes / sourceValidVotes) * 100 : 0;
+          
+          sourceResultsObj[sourceType] = { votes, percentage };
+        });
+
+        return {
+          party,
+          totalVotes,
+          percentage: validVotes > 0 ? (totalVotes / validVotes) * 100 : 0,
+          sourceResults: sourceResultsObj
+        };
+      })
+      .sort((a, b) => b.totalVotes - a.totalVotes);
 
     // Source comparison
     const sourceMap = new Map<string, { totalVotes: number; count: number }>();
@@ -190,13 +229,14 @@ export const useElectoralAggregation = () => {
       nullVotes,
       validVotes,
       partyResults,
-      sourceComparison
+      sourceComparison,
+      selectedSources: filters.sourceTypes
     };
   };
 
   useEffect(() => {
     fetchAggregatedResults();
-  }, [filters.autonomousCommunity, filters.province, filters.municipality, filters.district, filters.section, filters.table, filters.sourceType]);
+  }, [filters.autonomousCommunity, filters.province, filters.municipality, filters.district, filters.section, filters.table, filters.sourceTypes]);
 
   return {
     aggregatedResults,
