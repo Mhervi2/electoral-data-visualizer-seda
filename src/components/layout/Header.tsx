@@ -42,10 +42,10 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
               <img 
-                src="https://placehold.co/40x40/A80000/FFFFFF.png?text=SEDA" 
+                src="/lovable-uploads/b9e2bf6a-f33b-4c47-901a-cb1b67b22c1a.png" 
                 alt="SEDA Electoral Logo" 
-                className="h-10 w-10"
-                data-ai-hint="SEDA Electoral logo"
+                className="h-12 w-12 object-contain"
+                data-ai-hint="SEDA Electoral logo with checkmark design"
               />
               <div>
                 <h1 className="text-xl font-bold text-primary font-space-grotesk">SEDA Electoral</h1>

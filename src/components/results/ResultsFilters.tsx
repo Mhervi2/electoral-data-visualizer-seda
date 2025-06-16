@@ -3,9 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Loader2 } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useLocationOptions } from '@/hooks/useLocationOptions';
 
 interface ResultsFiltersProps {
   filters: {
@@ -22,15 +24,16 @@ interface ResultsFiltersProps {
 }
 
 export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: ResultsFiltersProps) => {
-  // Estado local para los inputs de texto
+  // Estado local para los inputs de texto (mantenemos solo los que siguen siendo inputs)
   const [localFilters, setLocalFilters] = useState({
-    autonomousCommunity: filters.autonomousCommunity,
-    province: filters.province,
     municipality: filters.municipality,
     district: filters.district,
     section: filters.section,
     table: filters.table,
   });
+
+  // Obtener opciones de ubicación
+  const { autonomousCommunities, provinces, loading: optionsLoading } = useLocationOptions(filters.autonomousCommunity);
 
   // Debounce para los filtros de texto (600ms de retraso)
   const debouncedFilters = useDebounce(localFilters, 600);
@@ -46,17 +49,25 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
   // Sincronizar estado local cuando cambien los filtros externos
   useEffect(() => {
     setLocalFilters({
-      autonomousCommunity: filters.autonomousCommunity,
-      province: filters.province,
       municipality: filters.municipality,
       district: filters.district,
       section: filters.section,
       table: filters.table,
     });
-  }, [filters.autonomousCommunity, filters.province, filters.municipality, filters.district, filters.section, filters.table]);
+  }, [filters.municipality, filters.district, filters.section, filters.table]);
 
   const handleLocalFilterChange = (key: string, value: string) => {
     setLocalFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSelectChange = (key: string, value: string) => {
+    // Los selects se aplican inmediatamente
+    onFiltersChange((prev: any) => ({ 
+      ...prev, 
+      [key]: value,
+      // Si se cambia la comunidad autónoma, limpiar la provincia
+      ...(key === 'autonomousCommunity' ? { province: '' } : {})
+    }));
   };
 
   const handleSourceTypesChange = (value: string[]) => {
@@ -69,7 +80,7 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           Filtros de Búsqueda
-          {isLoading && (
+          {(isLoading || optionsLoading) && (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           )}
         </CardTitle>
@@ -78,21 +89,42 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div>
             <Label htmlFor="ca-filter">Comunidad Autónoma</Label>
-            <Input
-              id="ca-filter"
-              placeholder="Buscar CA..."
-              value={localFilters.autonomousCommunity}
-              onChange={(e) => handleLocalFilterChange('autonomousCommunity', e.target.value)}
-            />
+            <Select 
+              value={filters.autonomousCommunity} 
+              onValueChange={(value) => handleSelectChange('autonomousCommunity', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar CA..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todas las CA</SelectItem>
+                {autonomousCommunities.map((ca) => (
+                  <SelectItem key={ca} value={ca}>
+                    {ca}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="province-filter">Provincia</Label>
-            <Input
-              id="province-filter"
-              placeholder="Buscar provincia..."
-              value={localFilters.province}
-              onChange={(e) => handleLocalFilterChange('province', e.target.value)}
-            />
+            <Select 
+              value={filters.province} 
+              onValueChange={(value) => handleSelectChange('province', value)}
+              disabled={!filters.autonomousCommunity}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar provincia..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todas las provincias</SelectItem>
+                {provinces.map((province) => (
+                  <SelectItem key={province} value={province}>
+                    {province}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="municipality-filter">Municipio</Label>
