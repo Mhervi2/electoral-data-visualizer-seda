@@ -81,7 +81,7 @@ export const useElectoralAggregation = () => {
   const buildQuery = (baseQuery: any) => {
     let query = baseQuery;
 
-    // Apply hierarchical filters
+    // Apply hierarchical filters using the correct column names
     if (filters.autonomousCommunity.trim()) {
       query = query.ilike('comunidad_autonoma', `%${filters.autonomousCommunity.trim()}%`);
     }
@@ -183,6 +183,9 @@ export const useElectoralAggregation = () => {
         return;
       }
 
+      console.log('Acts loaded:', acts?.length || 0);
+      console.log('Individual actas loaded:', individualActas?.length || 0);
+
       // Aggregate the results
       const aggregated = aggregateElectoralData(acts || [], individualActas || []);
       setAggregatedResults(aggregated);
@@ -211,7 +214,7 @@ export const useElectoralAggregation = () => {
     const partyVotesMap = new Map<string, { party: any; sourceResults: Map<string, number>; totalVotes: number }>();
     
     acts.forEach(act => {
-      if (act.party_votes) {
+      if (act.party_votes && Array.isArray(act.party_votes)) {
         act.party_votes.forEach((pv: any) => {
           if (pv.political_parties) {
             const partyKey = pv.political_parties.siglas;
@@ -285,6 +288,13 @@ export const useElectoralAggregation = () => {
       totalVotes: data.totalVotes,
       coverage: acts.length > 0 ? (data.count / acts.length) * 100 : 0
     }));
+
+    console.log('Aggregated results:', {
+      totalVotes,
+      totalCensus,
+      partyResults: partyResults.length,
+      individualActas: individualActas.length
+    });
 
     return {
       totalVotes,

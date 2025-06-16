@@ -18,28 +18,32 @@ export const useLocationOptions = (selectedCommunity?: string) => {
   useEffect(() => {
     const fetchLocationOptions = async () => {
       try {
-        // Obtener comunidades autónomas únicas
+        console.log('Fetching location options...');
+        
+        // Obtener comunidades autónomas únicas desde mpca
         const { data: caData, error: caError } = await supabase
-          .from('electoral_acts_with_municipalities')
-          .select('comunidad_autonoma')
-          .not('comunidad_autonoma', 'is', null);
+          .from('mpca')
+          .select('ca')
+          .not('ca', 'is', null);
 
         if (caError) {
           console.error('Error fetching autonomous communities:', caError);
         }
 
         const uniqueCommunities = Array.from(
-          new Set(caData?.map(item => item.comunidad_autonoma).filter(Boolean))
+          new Set(caData?.map(item => item.ca).filter(Boolean))
         ).sort();
+
+        console.log('Autonomous communities loaded:', uniqueCommunities);
 
         // Obtener provincias (filtradas por comunidad si está seleccionada)
         let provincesQuery = supabase
-          .from('electoral_acts_with_municipalities')
+          .from('mpca')
           .select('provincia')
           .not('provincia', 'is', null);
 
         if (selectedCommunity) {
-          provincesQuery = provincesQuery.eq('comunidad_autonoma', selectedCommunity);
+          provincesQuery = provincesQuery.eq('ca', selectedCommunity);
         }
 
         const { data: provincesData, error: provincesError } = await provincesQuery;
@@ -51,6 +55,8 @@ export const useLocationOptions = (selectedCommunity?: string) => {
         const uniqueProvinces = Array.from(
           new Set(provincesData?.map(item => item.provincia).filter(Boolean))
         ).sort();
+
+        console.log('Provinces loaded:', uniqueProvinces);
 
         setOptions({
           autonomousCommunities: uniqueCommunities,
