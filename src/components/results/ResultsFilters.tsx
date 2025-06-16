@@ -61,10 +61,13 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
   };
 
   const handleSelectChange = (key: string, value: string) => {
+    // Convertir "all" a cadena vacía para mantener la compatibilidad
+    const actualValue = value === "all" ? "" : value;
+    
     // Los selects se aplican inmediatamente
     onFiltersChange((prev: any) => ({ 
       ...prev, 
-      [key]: value,
+      [key]: actualValue,
       // Si se cambia la comunidad autónoma, limpiar la provincia
       ...(key === 'autonomousCommunity' ? { province: '' } : {})
     }));
@@ -90,14 +93,14 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
           <div>
             <Label htmlFor="ca-filter">Comunidad Autónoma</Label>
             <Select 
-              value={filters.autonomousCommunity} 
+              value={filters.autonomousCommunity || "all"} 
               onValueChange={(value) => handleSelectChange('autonomousCommunity', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar CA..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas las CA</SelectItem>
+                <SelectItem value="all">Todas las CA</SelectItem>
                 {autonomousCommunities.map((ca) => (
                   <SelectItem key={ca} value={ca}>
                     {ca}
@@ -109,7 +112,7 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
           <div>
             <Label htmlFor="province-filter">Provincia</Label>
             <Select 
-              value={filters.province} 
+              value={filters.province || "all"} 
               onValueChange={(value) => handleSelectChange('province', value)}
               disabled={!filters.autonomousCommunity}
             >
@@ -117,7 +120,7 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
                 <SelectValue placeholder="Seleccionar provincia..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas las provincias</SelectItem>
+                <SelectItem value="all">Todas las provincias</SelectItem>
                 {provinces.map((province) => (
                   <SelectItem key={province} value={province}>
                     {province}
