@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, Clock, RefreshCw } from 'lucide-react';
+import { Check, X, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -20,91 +20,47 @@ interface PartySuggestion {
 const PartySuggestions = () => {
   const [suggestions, setSuggestions] = useState<PartySuggestion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchSuggestions();
+  }, []);
 
   const fetchSuggestions = async () => {
     try {
-      setLoading(true);
-      console.log('Fetching party suggestions...');
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
       const { data, error } = await supabase
         .from('party_suggestions')
         .select('*')
         .order('created_at', { ascending: false });
 
-      clearTimeout(timeoutId);
-
-      if (error) {
-        console.error('Error fetching suggestions:', error);
-        throw error;
-      }
-
-      console.log(`Loaded ${data?.length || 0} party suggestions`);
+      if (error) throw error;
       setSuggestions(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching suggestions:', error);
-      
-      let errorMessage = `No se pudieron cargar las sugerencias: ${error.message}`;
-      if (error.name === 'AbortError') {
-        errorMessage = 'Timeout: La consulta tardó demasiado tiempo';
-      }
-      
       toast({
         variant: "destructive",
         title: "Error",
-        description: errorMessage,
+        description: "No se pudieron cargar las sugerencias.",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchSuggestions();
-  }, []);
-
   const handleSuggestionAction = async (id: string, action: 'approved' | 'rejected', name: string, siglas: string) => {
-    setProcessing(id);
-    
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-
       if (action === 'approved') {
-        // Check if party already exists
-        const { data: existingParty } = await supabase
-          .from('political_parties')
-          .select('id')
-          .eq('siglas', siglas)
-          .single();
-
-        if (existingParty) {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: `Ya existe un partido con las siglas "${siglas}".`,
-          });
-          return;
-        }
-
-        // Add to political_parties table
+        // First add to political_parties table
         const { error: partyError } = await supabase
           .from('political_parties')
           .insert({
-            id: siglas.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            id: siglas.toLowerCase().replace(/\s+/g, '-'),
             name,
             siglas,
             color: '#6B7280'
           });
 
-        if (partyError) {
-          console.error('Error adding party:', partyError);
-          throw partyError;
-        }
+        if (partyError) throw partyError;
       }
 
       // Update suggestion status
@@ -116,35 +72,21 @@ const PartySuggestions = () => {
         })
         .eq('id', id);
 
-      if (error) {
-        console.error('Error updating suggestion:', error);
-        throw error;
-      }
-
-      clearTimeout(timeoutId);
+      if (error) throw error;
 
       toast({
         title: action === 'approved' ? "Sugerencia aprobada" : "Sugerencia rechazada",
         description: `El partido "${name}" ha sido ${action === 'approved' ? 'añadido' : 'rechazado'}.`,
       });
 
-      // Refresh suggestions instead of reloading page
-      await fetchSuggestions();
-    } catch (error: any) {
+      fetchSuggestions();
+    } catch (error) {
       console.error('Error updating suggestion:', error);
-      
-      let errorMessage = `No se pudo procesar la sugerencia: ${error.message}`;
-      if (error.name === 'AbortError') {
-        errorMessage = 'Timeout: La operación tardó demasiado tiempo';
-      }
-      
       toast({
         variant: "destructive",
         title: "Error",
-        description: errorMessage,
+        description: "No se pudo procesar la sugerencia.",
       });
-    } finally {
-      setProcessing(null);
     }
   };
 
@@ -162,42 +104,22 @@ const PartySuggestions = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Cargando sugerencias...</p>
-        </div>
-      </div>
-    );
+    return <div>Cargando sugerencias...</div>;
   }
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Sugerencias de Partidos Políticos</CardTitle>
-            <CardDescription>
-              Gestiona las sugerencias de nuevos partidos políticos enviadas por los usuarios.
-            </CardDescription>
-          </div>
-          <Button variant="outline" onClick={fetchSuggestions} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Actualizar
-          </Button>
-        </div>
+        <CardTitle>Sugerencias de Partidos Políticos</CardTitle>
+        <CardDescription>
+          Gestiona las sugerencias de nuevos partidos políticos enviadas por los usuarios.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {suggestions.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">
-              No hay sugerencias pendientes.
-            </p>
-            <Button variant="outline" onClick={fetchSuggestions} className="mt-4">
-              Verificar de nuevo
-            </Button>
-          </div>
+          <p className="text-muted-foreground text-center py-4">
+            No hay sugerencias pendientes.
+          </p>
         ) : (
           <Table>
             <TableHeader>
@@ -222,16 +144,14 @@ const PartySuggestions = () => {
                         <Button
                           size="sm"
                           onClick={() => handleSuggestionAction(suggestion.id, 'approved', suggestion.name, suggestion.siglas)}
-                          disabled={processing === suggestion.id}
                         >
                           <Check className="h-4 w-4 mr-1" />
-                          {processing === suggestion.id ? 'Procesando...' : 'Aprobar'}
+                          Aprobar
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleSuggestionAction(suggestion.id, 'rejected', suggestion.name, suggestion.siglas)}
-                          disabled={processing === suggestion.id}
                         >
                           <X className="h-4 w-4 mr-1" />
                           Rechazar

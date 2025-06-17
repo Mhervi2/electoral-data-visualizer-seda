@@ -3,12 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { MpcaData } from '@/types/acta';
-import { OptimizedMunicipalitySelector } from './OptimizedMunicipalitySelector';
+import { MunicipalitySelector } from './MunicipalitySelector';
 
 interface MesaIdentificationProps {
-  mpcaData: MpcaData[];
-  mpcaLoading: boolean;
-  mpcaError: string | null;
   selectedMpcaRecord: MpcaData | null;
   municipio: string;
   distrito: string;
@@ -17,13 +14,9 @@ interface MesaIdentificationProps {
   onMunicipalityChange: (municipalityId: string, municipalityData: MpcaData | null) => void;
   onInputChange: (field: string, value: string) => void;
   onBlur: () => void;
-  onRetryMpca?: () => void;
 }
 
 export const MesaIdentification = ({
-  mpcaData,
-  mpcaLoading,
-  mpcaError,
   selectedMpcaRecord,
   municipio,
   distrito,
@@ -32,7 +25,6 @@ export const MesaIdentification = ({
   onMunicipalityChange,
   onInputChange,
   onBlur,
-  onRetryMpca,
 }: MesaIdentificationProps) => {
   return (
     <Card>
@@ -42,13 +34,9 @@ export const MesaIdentification = ({
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <OptimizedMunicipalitySelector
-              mpcaData={mpcaData}
-              loading={mpcaLoading}
-              error={mpcaError}
+            <MunicipalitySelector
               selectedMunicipalityId={municipio}
               onMunicipalitySelect={onMunicipalityChange}
-              onRetry={onRetryMpca}
             />
           </div>
           

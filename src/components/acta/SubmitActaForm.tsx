@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useSecureFileUpload } from '@/hooks/useSecureFileUpload';
-import { useOptimizedActaData } from '@/hooks/useOptimizedActaData';
+import { useActaData } from '@/hooks/useActaData';
 import { useSubmitActa } from '@/hooks/useSubmitActa';
 import { ElectionSelection } from './ElectionSelection';
 import { MesaIdentification } from './MesaIdentification';
@@ -13,15 +13,7 @@ import { ExistingActDialog } from './ExistingActDialog';
 
 export const SubmitActaForm = () => {
   const { uploadFile, uploading } = useSecureFileUpload();
-  const { 
-    mpcaData, 
-    politicalParties, 
-    elections, 
-    loading: actaDataLoading, 
-    error: actaDataError,
-    refetch: refetchActaData
-  } = useOptimizedActaData();
-  
+  const { politicalParties, elections } = useActaData();
   const {
     actaData,
     existingAct,
@@ -42,11 +34,12 @@ export const SubmitActaForm = () => {
     if (file) {
       console.log('File selected:', file.name, file.size, file.type);
       
+      // Allow image upload without authentication
       const imageUrl = await uploadFile(file, 'electoral-acts', {
         maxSizeInMB: 5,
         allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
         folder: 'acts',
-        requireAuth: false
+        requireAuth: false // This allows uploads without login
       });
 
       if (imageUrl) {
@@ -60,34 +53,6 @@ export const SubmitActaForm = () => {
     e.preventDefault();
     await submitActa();
   };
-
-  if (actaDataLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Cargando datos...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (actaDataError) {
-    return (
-      <div className="p-4 border border-red-300 rounded-lg bg-red-50">
-        <h3 className="text-red-800 font-medium">Error al cargar los datos</h3>
-        <p className="text-red-600 text-sm mt-1">{actaDataError}</p>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={refetchActaData}
-          className="mt-2"
-        >
-          Reintentar
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -106,9 +71,6 @@ export const SubmitActaForm = () => {
         />
 
         <MesaIdentification 
-          mpcaData={mpcaData}
-          mpcaLoading={actaDataLoading}
-          mpcaError={actaDataError}
           selectedMpcaRecord={selectedMpcaRecord}
           municipio={actaData.municipio}
           distrito={actaData.distrito}
@@ -117,7 +79,6 @@ export const SubmitActaForm = () => {
           onMunicipalityChange={handleMunicipalityChange}
           onInputChange={handleInputChange}
           onBlur={checkExistingAct}
-          onRetryMpca={refetchActaData}
         />
 
         <ImageUploadSection 

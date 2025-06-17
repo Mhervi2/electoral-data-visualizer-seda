@@ -1,3 +1,4 @@
+
 export interface MpcaData {
   idm: number;
   municipio: string;
@@ -11,7 +12,6 @@ export interface PoliticalParty {
   id: string;
   name: string;
   siglas: string;
-  color: string; // Added missing color property
 }
 
 export interface Election {

@@ -4,25 +4,21 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, ChevronsUpDown, AlertCircle, RefreshCw } from 'lucide-react';
+import { Check, ChevronsUpDown, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MpcaData } from '@/types/acta';
+import { useMpcaData } from '@/hooks/useMpcaData';
 
 interface MunicipalitySelectorProps {
-  mpcaData: MpcaData[];
-  loading: boolean;
-  error: string | null;
   selectedMunicipalityId: string;
   onMunicipalitySelect: (municipalityId: string, municipalityData: MpcaData | null) => void;
 }
 
 export const MunicipalitySelector = ({ 
-  mpcaData,
-  loading,
-  error,
   selectedMunicipalityId, 
   onMunicipalitySelect 
 }: MunicipalitySelectorProps) => {
+  const { mpcaData, loading, error } = useMpcaData();
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
 
@@ -32,7 +28,7 @@ export const MunicipalitySelector = ({
   );
 
   const filteredMunicipalities = useMemo(() => {
-    if (!searchValue.trim()) return mpcaData.slice(0, 100);
+    if (!searchValue.trim()) return mpcaData;
     
     const search = searchValue.toLowerCase().trim();
     return mpcaData.filter((mpca) => {
@@ -40,7 +36,7 @@ export const MunicipalitySelector = ({
       const provinciaMatch = mpca.provincia?.toLowerCase().includes(search);
       const caMatch = mpca.ca?.toLowerCase().includes(search);
       return municipioMatch || provinciaMatch || caMatch;
-    }).slice(0, 100);
+    });
   }, [mpcaData, searchValue]);
 
   const handleSelect = (municipality: MpcaData) => {
@@ -49,17 +45,13 @@ export const MunicipalitySelector = ({
     setSearchValue('');
   };
 
-  const handleRetry = () => {
-    window.location.reload();
-  };
-
   if (loading) {
     return (
       <div>
         <Label htmlFor="municipio">Municipio *</Label>
         <Button variant="outline" className="w-full justify-between" disabled>
-          <span>Cargando municipios...</span>
-          <RefreshCw className="ml-2 h-4 w-4 animate-spin" />
+          Cargando municipios...
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </div>
     );
@@ -69,49 +61,16 @@ export const MunicipalitySelector = ({
     return (
       <div>
         <Label htmlFor="municipio">Municipio *</Label>
-        <div className="space-y-2">
-          <Button 
-            variant="outline" 
-            className="w-full justify-between border-red-300 text-red-700" 
-            disabled
-          >
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-500" />
-              Error al cargar municipios
-            </div>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRetry}
-            className="w-full"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Reintentar
-          </Button>
-        </div>
+        <Button variant="outline" className="w-full justify-between border-red-300" disabled>
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-red-500" />
+            Error al cargar municipios
+          </div>
+        </Button>
         <p className="text-sm text-red-600 mt-1">{error}</p>
-      </div>
-    );
-  }
-
-  if (mpcaData.length === 0) {
-    return (
-      <div>
-        <Label htmlFor="municipio">Municipio *</Label>
-        <Button variant="outline" className="w-full justify-between" disabled>
-          <span>No hay municipios disponibles</span>
-          <AlertCircle className="ml-2 h-4 w-4 text-orange-500" />
-        </Button>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleRetry}
-          className="w-full mt-2"
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Reintentar
-        </Button>
+        <p className="text-xs text-gray-500 mt-1">
+          Verifica la conexión a la base de datos y las políticas RLS
+        </p>
       </div>
     );
   }
@@ -142,12 +101,12 @@ export const MunicipalitySelector = ({
             />
             <CommandList>
               <CommandEmpty>
-                {searchValue 
-                  ? "No se encontraron resultados" 
-                  : "Escribe para buscar municipios"}
+                {mpcaData.length === 0 
+                  ? "No hay municipios disponibles" 
+                  : "No se encontraron resultados"}
               </CommandEmpty>
               <CommandGroup>
-                {filteredMunicipalities.map((municipality) => (
+                {filteredMunicipalities.slice(0, 100).map((municipality) => (
                   <CommandItem
                     key={municipality.idm}
                     value={`${municipality.municipio} ${municipality.provincia} ${municipality.ca}`}
@@ -175,9 +134,11 @@ export const MunicipalitySelector = ({
         </PopoverContent>
       </Popover>
       
-      <p className="text-xs text-green-600 mt-1">
-        ✅ {mpcaData.length} municipios cargados
-      </p>
+      {mpcaData.length > 0 && (
+        <p className="text-xs text-green-600 mt-1">
+          ✅ {mpcaData.length} municipios cargados correctamente
+        </p>
+      )}
     </div>
   );
 };

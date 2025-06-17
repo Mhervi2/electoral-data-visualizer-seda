@@ -18,10 +18,6 @@ export const useExistingActChecker = () => {
 
     try {
       console.log('Checking for existing act...');
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
       const { data, error } = await supabase
         .from('electoral_acts_with_municipalities')
         .select(`
@@ -47,13 +43,6 @@ export const useExistingActChecker = () => {
         .eq('section', actaData.seccion)
         .eq('table_letter', actaData.mesa);
 
-      clearTimeout(timeoutId);
-
-      if (error) {
-        console.error('Error checking existing act:', error);
-        return false;
-      }
-
       if (data && data.length > 0) {
         console.log('Found existing acts:', data.length);
         const transformedAct = {
@@ -65,17 +54,8 @@ export const useExistingActChecker = () => {
         return true;
       }
       return false;
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.error('Timeout checking existing act');
-        toast({
-          variant: "destructive",
-          title: "Timeout",
-          description: "La verificación tardó demasiado tiempo.",
-        });
-      } else {
-        console.error('Error checking existing act:', error);
-      }
+    } catch (error) {
+      console.error('Error checking existing act:', error);
       return false;
     }
   };

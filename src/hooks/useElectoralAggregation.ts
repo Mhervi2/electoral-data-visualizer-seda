@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -78,9 +78,10 @@ export const useElectoralAggregation = () => {
     sourceTypes: ['user', 'indra', 'escrutinio', 'oficial']
   });
 
-  const buildQuery = useCallback((baseQuery: any) => {
+  const buildQuery = (baseQuery: any) => {
     let query = baseQuery;
 
+    // Apply hierarchical filters using the correct column names
     if (filters.autonomousCommunity.trim()) {
       query = query.ilike('comunidad_autonoma', `%${filters.autonomousCommunity.trim()}%`);
     }
@@ -104,16 +105,112 @@ export const useElectoralAggregation = () => {
     }
 
     return query;
-  }, [filters]);
+  };
 
-  const aggregateElectoralData = useCallback((acts: any[], individualActas: ElectoralAct[]): AggregatedResults => {
-    const totalCensus = acts.reduce((sum, act) => sum + (Number(act.census_total) || 0), 0);
-    const totalVotes = acts.reduce((sum, act) => sum + (Number(act.total_voters) || 0), 0);
-    const blankVotes = acts.reduce((sum, act) => sum + (Number(act.blank_votes) || 0), 0);
-    const nullVotes = acts.reduce((sum, act) => sum + (Number(act.null_votes) || 0), 0);
+  const fetchAggregatedResults = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching aggregated results with filters:', filters);
+
+      // Build the query for aggregated data
+      let aggregatedQuery = supabase
+        .from('electoral_acts_with_municipalities')
+        .select(`
+          census_total,
+          total_voters,
+          blank_votes,
+          null_votes,
+          source_type,
+          party_votes (
+            votes,
+            political_parties (
+              name,
+              siglas,
+              color
+            )
+          )
+        `);
+
+      aggregatedQuery = buildQuery(aggregatedQuery);
+
+      // Build the query for individual actas
+      let individualQuery = supabase
+        .from('electoral_acts_with_municipalities')
+        .select(`
+          id,
+          municipality_idm,
+          district,
+          section,
+          table_letter,
+          census_total,
+          total_voters,
+          blank_votes,
+          null_votes,
+          source_type,
+          image_url,
+          created_at,
+          municipio,
+          provincia,
+          comunidad_autonoma
+        `)
+        .order('created_at', { ascending: false });
+
+      individualQuery = buildQuery(individualQuery);
+
+      // Execute both queries
+      const [{ data: acts, error: actsError }, { data: individualActas, error: individualError }] = await Promise.all([
+        aggregatedQuery,
+        individualQuery
+      ]);
+
+      if (actsError) {
+        console.error('Error fetching electoral acts:', actsError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudieron cargar los resultados electorales.",
+        });
+        return;
+      }
+
+      if (individualError) {
+        console.error('Error fetching individual actas:', individualError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudieron cargar las actas individuales.",
+        });
+        return;
+      }
+
+      console.log('Acts loaded:', acts?.length || 0);
+      console.log('Individual actas loaded:', individualActas?.length || 0);
+
+      // Aggregate the results
+      const aggregated = aggregateElectoralData(acts || [], individualActas || []);
+      setAggregatedResults(aggregated);
+
+    } catch (error) {
+      console.error('Error fetching aggregated results:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Ocurrió un error al cargar los resultados electorales.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const aggregateElectoralData = (acts: any[], individualActas: ElectoralAct[]): AggregatedResults => {
+    const totalCensus = acts.reduce((sum, act) => sum + (act.census_total || 0), 0);
+    const totalVotes = acts.reduce((sum, act) => sum + (act.total_voters || 0), 0);
+    const blankVotes = acts.reduce((sum, act) => sum + (act.blank_votes || 0), 0);
+    const nullVotes = acts.reduce((sum, act) => sum + (act.null_votes || 0), 0);
     const validVotes = totalVotes - blankVotes - nullVotes;
     const participation = totalCensus > 0 ? (totalVotes / totalCensus) * 100 : 0;
 
+    // Aggregate party votes by source
     const partyVotesMap = new Map<string, { party: any; sourceResults: Map<string, number>; totalVotes: number }>();
     
     acts.forEach(act => {
@@ -122,7 +219,7 @@ export const useElectoralAggregation = () => {
           if (pv.political_parties) {
             const partyKey = pv.political_parties.siglas;
             const sourceType = act.source_type || 'unknown';
-            const votes = Number(pv.votes) || 0;
+            const votes = pv.votes || 0;
             
             const existing = partyVotesMap.get(partyKey);
             if (existing) {
@@ -143,11 +240,12 @@ export const useElectoralAggregation = () => {
       }
     });
 
+    // Calculate valid votes by source for percentage calculations
     const validVotesBySource = new Map<string, number>();
     filters.sourceTypes.forEach(sourceType => {
       const sourceValidVotes = acts
         .filter(act => act.source_type === sourceType)
-        .reduce((sum, act) => sum + (Number(act.total_voters) - Number(act.blank_votes) - Number(act.null_votes)), 0);
+        .reduce((sum, act) => sum + (act.total_voters - act.blank_votes - act.null_votes), 0);
       validVotesBySource.set(sourceType, sourceValidVotes);
     });
 
@@ -172,16 +270,16 @@ export const useElectoralAggregation = () => {
       })
       .sort((a, b) => b.totalVotes - a.totalVotes);
 
+    // Source comparison
     const sourceMap = new Map<string, { totalVotes: number; count: number }>();
     acts.forEach(act => {
       const source = act.source_type || 'unknown';
       const existing = sourceMap.get(source);
-      const voters = Number(act.total_voters) || 0;
       if (existing) {
-        existing.totalVotes += voters;
+        existing.totalVotes += act.total_voters || 0;
         existing.count += 1;
       } else {
-        sourceMap.set(source, { totalVotes: voters, count: 1 });
+        sourceMap.set(source, { totalVotes: act.total_voters || 0, count: 1 });
       }
     });
 
@@ -190,6 +288,13 @@ export const useElectoralAggregation = () => {
       totalVotes: data.totalVotes,
       coverage: acts.length > 0 ? (data.count / acts.length) * 100 : 0
     }));
+
+    console.log('Aggregated results:', {
+      totalVotes,
+      totalCensus,
+      partyResults: partyResults.length,
+      individualActas: individualActas.length
+    });
 
     return {
       totalVotes,
@@ -203,162 +308,17 @@ export const useElectoralAggregation = () => {
       selectedSources: filters.sourceTypes,
       individualActas
     };
-  }, [filters.sourceTypes]);
+  };
 
-  const fetchAggregatedResults = useCallback(async () => {
-    try {
-      setLoading(true);
-      console.log('Fetching aggregated results with filters:', filters);
-
-      // First get count to limit queries if needed
-      let countQuery = supabase
-        .from('electoral_acts_with_municipalities')
-        .select('id', { count: 'exact', head: true });
-      countQuery = buildQuery(countQuery);
-      
-      const { count, error: countError } = await countQuery;
-
-      if (countError) {
-        console.error('Error counting acts:', countError);
-        throw countError;
-      }
-
-      console.log(`Found ${count || 0} electoral acts matching filters`);
-
-      if ((count || 0) === 0) {
-        setAggregatedResults({
-          totalVotes: 0,
-          totalCensus: 0,
-          participation: 0,
-          blankVotes: 0,
-          nullVotes: 0,
-          validVotes: 0,
-          partyResults: [],
-          sourceComparison: [],
-          selectedSources: filters.sourceTypes,
-          individualActas: []
-        });
-        return;
-      }
-
-      // Limit to 1000 records for performance
-      const limit = count && count > 1000 ? 1000 : undefined;
-      if (limit) {
-        console.log(`Limiting results to ${limit} records for performance`);
-      }
-
-      // Fetch aggregated data
-      let aggregatedQuery = supabase
-        .from('electoral_acts_with_municipalities')
-        .select(`
-          census_total,
-          total_voters,
-          blank_votes,
-          null_votes,
-          source_type,
-          party_votes (
-            votes,
-            political_parties (
-              name,
-              siglas,
-              color
-            )
-          )
-        `);
-
-      aggregatedQuery = buildQuery(aggregatedQuery);
-      if (limit) {
-        aggregatedQuery = aggregatedQuery.limit(limit);
-      }
-
-      // Fetch individual acts for display
-      let individualQuery = supabase
-        .from('electoral_acts_with_municipalities')
-        .select(`
-          id,
-          municipality_idm,
-          district,
-          section,
-          table_letter,
-          census_total,
-          total_voters,
-          blank_votes,
-          null_votes,
-          source_type,
-          image_url,
-          created_at,
-          municipio,
-          provincia,
-          comunidad_autonoma
-        `)
-        .order('created_at', { ascending: false });
-
-      individualQuery = buildQuery(individualQuery);
-      individualQuery = individualQuery.limit(100); // Always limit individual acts
-
-      const [{ data: acts, error: actsError }, { data: individualActas, error: individualError }] = await Promise.all([
-        aggregatedQuery,
-        individualQuery
-      ]);
-
-      if (actsError) {
-        console.error('Error fetching electoral acts:', actsError);
-        throw actsError;
-      }
-
-      if (individualError) {
-        console.error('Error fetching individual actas:', individualError);
-        throw individualError;
-      }
-
-      console.log('Acts loaded:', acts?.length || 0);
-      console.log('Individual actas loaded:', individualActas?.length || 0);
-
-      const aggregated = aggregateElectoralData(acts || [], (individualActas || []) as ElectoralAct[]);
-      setAggregatedResults(aggregated);
-
-    } catch (error: any) {
-      console.error('Error fetching aggregated results:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Error al cargar los resultados: ${error.message || 'Error desconocido'}`,
-      });
-      
-      // Set empty results on error
-      setAggregatedResults({
-        totalVotes: 0,
-        totalCensus: 0,
-        participation: 0,
-        blankVotes: 0,
-        nullVotes: 0,
-        validVotes: 0,
-        partyResults: [],
-        sourceComparison: [],
-        selectedSources: filters.sourceTypes,
-        individualActas: []
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, buildQuery, aggregateElectoralData, toast]);
-
-  // Debounce filter changes to avoid too many API calls
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchAggregatedResults();
-    }, 300);
+    fetchAggregatedResults();
+  }, [filters.autonomousCommunity, filters.province, filters.municipality, filters.district, filters.section, filters.table, filters.sourceTypes]);
 
-    return () => clearTimeout(timeoutId);
-  }, [fetchAggregatedResults]);
-
-  const memoizedReturn = useMemo(() => ({
+  return {
     aggregatedResults,
     loading,
     filters,
     setFilters,
     refetch: fetchAggregatedResults
-  }), [aggregatedResults, loading, filters, fetchAggregatedResults]);
-
-  return memoizedReturn;
+  };
 };
