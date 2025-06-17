@@ -186,35 +186,6 @@ export type Database = {
         }
         Relationships: []
       }
-      municipalities: {
-        Row: {
-          created_at: string | null
-          id: string
-          name: string
-          province_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          name: string
-          province_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          name?: string
-          province_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "municipalities_province_id_fkey"
-            columns: ["province_id"]
-            isOneToOne: false
-            referencedRelation: "provinces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       party_suggestions: {
         Row: {
           created_at: string | null
@@ -335,35 +306,6 @@ export type Database = {
           is_admin?: boolean | null
         }
         Relationships: []
-      }
-      provinces: {
-        Row: {
-          autonomous_community_id: string | null
-          created_at: string | null
-          id: string
-          name: string
-        }
-        Insert: {
-          autonomous_community_id?: string | null
-          created_at?: string | null
-          id?: string
-          name: string
-        }
-        Update: {
-          autonomous_community_id?: string | null
-          created_at?: string | null
-          id?: string
-          name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "provinces_autonomous_community_id_fkey"
-            columns: ["autonomous_community_id"]
-            isOneToOne: false
-            referencedRelation: "autonomous_communities"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
