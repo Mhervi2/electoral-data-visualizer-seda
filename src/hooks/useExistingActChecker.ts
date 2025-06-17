@@ -34,7 +34,7 @@ export const useExistingActChecker = () => {
           municipio,
           party_votes (
             votes,
-            political_parties (name, siglas)
+            political_parties (name, siglas, color)
           )
         `)
         .eq('election_id', actaData.electionId)
