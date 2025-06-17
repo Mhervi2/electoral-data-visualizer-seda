@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MpcaData, PoliticalParty, Election } from '@/types/acta';
@@ -42,7 +41,7 @@ export const useActaData = () => {
     console.log("Fetching political parties...");
     const { data, error } = await supabase
       .from('political_parties')
-      .select('id, name, siglas')
+      .select('id, name, siglas, color')
       .order('siglas', { ascending: true });
     
     if (error) {
@@ -60,6 +59,7 @@ export const useActaData = () => {
       id: party.id,
       name: party.name || '',
       siglas: party.siglas || '',
+      color: party.color || '#6B7280',
     }));
   };
 

@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getConnectionStatus } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -26,15 +27,7 @@ export const useOptimizedActaData = () => {
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_CACHE_TIME,
     retry: 3,
-    retryDelay: RETRY_DELAY,
-    onError: (error: any) => {
-      console.error('MPCA data fetch error:', error);
-      toast({
-        variant: "destructive",
-        title: "Error al cargar municipios",
-        description: "Reintentando automáticamente...",
-      });
-    }
+    retryDelay: RETRY_DELAY
   });
 
   const {
@@ -58,18 +51,7 @@ export const useOptimizedActaData = () => {
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_CACHE_TIME,
     retry: 3,
-    retryDelay: RETRY_DELAY,
-    onError: (error: any) => {
-      console.error('Political parties fetch error:', error);
-      toast({
-        variant: "destructive",
-        title: "Error al cargar partidos",
-        description: getErrorMessage(error),
-      });
-    },
-    onSuccess: (data) => {
-      console.log('Political parties loaded successfully:', data);
-    }
+    retryDelay: RETRY_DELAY
   });
 
   const {
@@ -83,16 +65,48 @@ export const useOptimizedActaData = () => {
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_CACHE_TIME,
     retry: 3,
-    retryDelay: RETRY_DELAY,
-    onError: (error: any) => {
-      console.error('Elections fetch error:', error);
+    retryDelay: RETRY_DELAY
+  });
+
+  // Handle errors using useEffect instead of onError callback
+  React.useEffect(() => {
+    if (mpcaError) {
+      console.error('MPCA data fetch error:', mpcaError);
+      toast({
+        variant: "destructive",
+        title: "Error al cargar municipios",
+        description: "Reintentando automáticamente...",
+      });
+    }
+  }, [mpcaError, toast]);
+
+  React.useEffect(() => {
+    if (partiesError) {
+      console.error('Political parties fetch error:', partiesError);
+      toast({
+        variant: "destructive",
+        title: "Error al cargar partidos",
+        description: getErrorMessage(partiesError),
+      });
+    }
+  }, [partiesError, toast]);
+
+  React.useEffect(() => {
+    if (electionsError) {
+      console.error('Elections fetch error:', electionsError);
       toast({
         variant: "destructive",
         title: "Error al cargar elecciones",
         description: "Reintentando automáticamente...",
       });
     }
-  });
+  }, [electionsError, toast]);
+
+  React.useEffect(() => {
+    if (politicalParties.length > 0) {
+      console.log('Political parties loaded successfully:', politicalParties);
+    }
+  }, [politicalParties]);
 
   const refetchAll = async () => {
     try {
