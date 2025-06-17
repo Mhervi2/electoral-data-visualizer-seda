@@ -29,7 +29,7 @@ export const useActaData = () => {
 
     console.log(`MPCA data fetched successfully: ${data.length} records.`);
     return data.map(item => ({
-      idm: Number(item.idm),
+      idm: Number(item.idm) || 0,
       municipio: item.municipio || '',
       idp: Number(item.idp) || 0,
       provincia: item.provincia || '',
@@ -39,45 +39,75 @@ export const useActaData = () => {
   };
 
   const fetchPoliticalParties = async (): Promise<PoliticalParty[]> => {
+    console.log("Fetching political parties...");
     const { data, error } = await supabase
       .from('political_parties')
-      .select('*')
-      .order('siglas');
+      .select('id, name, siglas')
+      .order('siglas', { ascending: true });
     
     if (error) {
       console.error('Error fetching political parties:', error);
-      throw new Error('Error al cargar los partidos políticos.');
+      throw new Error(`Error al cargar los partidos políticos: ${error.message}`);
     }
-    return data || [];
+
+    if (!data || data.length === 0) {
+      console.warn('No political parties found');
+      return [];
+    }
+
+    console.log(`Political parties fetched successfully: ${data.length} records.`);
+    return data.map(party => ({
+      id: party.id,
+      name: party.name || '',
+      siglas: party.siglas || '',
+    }));
   };
 
   const fetchElections = async (): Promise<Election[]> => {
+    console.log("Fetching elections...");
     const { data, error } = await supabase
       .from('elections')
-      .select('*')
+      .select('id, name, status')
       .eq('status', 'active')
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching elections:', error);
-      throw new Error('Error al cargar las elecciones.');
+      throw new Error(`Error al cargar las elecciones: ${error.message}`);
     }
-    return data || [];
+
+    if (!data) {
+      console.warn('No elections found');
+      return [];
+    }
+
+    console.log(`Elections fetched successfully: ${data.length} records.`);
+    return data.map(election => ({
+      id: election.id,
+      name: election.name || '',
+      status: election.status || 'active',
+    }));
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchAllData = async () => {
+      if (!isMounted) return;
+      
       setLoading(true);
       setError(null);
       
       try {
-        console.log('Starting to fetch data...');
+        console.log('Starting to fetch all data...');
         
         const [mpcaResult, partiesResult, electionsResult] = await Promise.allSettled([
           fetchMpcaData(),
           fetchPoliticalParties(),
           fetchElections(),
         ]);
+
+        if (!isMounted) return;
 
         if (mpcaResult.status === 'fulfilled') {
           setMpcaData(mpcaResult.value);
@@ -106,13 +136,21 @@ export const useActaData = () => {
 
       } catch (err: any) {
         console.error('Unexpected error in fetchAllData:', err);
-        setError('Error inesperado al cargar los datos.');
+        if (isMounted) {
+          setError('Error inesperado al cargar los datos.');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchAllData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return {
@@ -121,5 +159,11 @@ export const useActaData = () => {
     elections,
     loading,
     error,
+    refetch: () => {
+      setLoading(true);
+      setError(null);
+      // Re-trigger the useEffect
+      window.location.reload();
+    }
   };
 };
