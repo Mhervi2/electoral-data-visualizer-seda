@@ -12,6 +12,9 @@ export const useActaSubmission = () => {
     setIsSubmitting(true);
     
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       // Submit without requiring authentication
       const { data: actData, error: actError } = await supabase
         .from('electoral_acts')
@@ -50,6 +53,8 @@ export const useActaSubmission = () => {
         if (votesError) throw votesError;
       }
 
+      clearTimeout(timeoutId);
+
       toast({
         title: "Acta enviada",
         description: "El acta electoral ha sido enviada correctamente.",
@@ -57,12 +62,20 @@ export const useActaSubmission = () => {
 
       return true;
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting act:', error);
+      
+      let errorMessage = "No se pudo enviar el acta. Inténtalo de nuevo.";
+      if (error.name === 'AbortError') {
+        errorMessage = "Timeout: El envío tardó demasiado tiempo.";
+      } else if (error.message?.includes('duplicate key')) {
+        errorMessage = "Ya existe un acta para esta mesa.";
+      }
+      
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudo enviar el acta. Inténtalo de nuevo.",
+        description: errorMessage,
       });
       return false;
     } finally {

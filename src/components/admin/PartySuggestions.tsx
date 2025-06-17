@@ -28,10 +28,15 @@ const PartySuggestions = () => {
       setLoading(true);
       console.log('Fetching party suggestions...');
       
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const { data, error } = await supabase
         .from('party_suggestions')
         .select('*')
         .order('created_at', { ascending: false });
+
+      clearTimeout(timeoutId);
 
       if (error) {
         console.error('Error fetching suggestions:', error);
@@ -42,10 +47,16 @@ const PartySuggestions = () => {
       setSuggestions(data || []);
     } catch (error: any) {
       console.error('Error fetching suggestions:', error);
+      
+      let errorMessage = `No se pudieron cargar las sugerencias: ${error.message}`;
+      if (error.name === 'AbortError') {
+        errorMessage = 'Timeout: La consulta tardó demasiado tiempo';
+      }
+      
       toast({
         variant: "destructive",
         title: "Error",
-        description: `No se pudieron cargar las sugerencias: ${error.message}`,
+        description: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -60,6 +71,9 @@ const PartySuggestions = () => {
     setProcessing(id);
     
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       if (action === 'approved') {
         // Check if party already exists
         const { data: existingParty } = await supabase
@@ -107,19 +121,27 @@ const PartySuggestions = () => {
         throw error;
       }
 
+      clearTimeout(timeoutId);
+
       toast({
         title: action === 'approved' ? "Sugerencia aprobada" : "Sugerencia rechazada",
         description: `El partido "${name}" ha sido ${action === 'approved' ? 'añadido' : 'rechazado'}.`,
       });
 
-      // Refresh suggestions
+      // Refresh suggestions instead of reloading page
       await fetchSuggestions();
     } catch (error: any) {
       console.error('Error updating suggestion:', error);
+      
+      let errorMessage = `No se pudo procesar la sugerencia: ${error.message}`;
+      if (error.name === 'AbortError') {
+        errorMessage = 'Timeout: La operación tardó demasiado tiempo';
+      }
+      
       toast({
         variant: "destructive",
         title: "Error",
-        description: `No se pudo procesar la sugerencia: ${error.message}`,
+        description: errorMessage,
       });
     } finally {
       setProcessing(null);

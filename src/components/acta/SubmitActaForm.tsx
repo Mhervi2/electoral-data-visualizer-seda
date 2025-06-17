@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useSecureFileUpload } from '@/hooks/useSecureFileUpload';
-import { useActaData } from '@/hooks/useActaData';
+import { useOptimizedActaData } from '@/hooks/useOptimizedActaData';
 import { useSubmitActa } from '@/hooks/useSubmitActa';
 import { ElectionSelection } from './ElectionSelection';
 import { MesaIdentification } from './MesaIdentification';
@@ -13,7 +13,15 @@ import { ExistingActDialog } from './ExistingActDialog';
 
 export const SubmitActaForm = () => {
   const { uploadFile, uploading } = useSecureFileUpload();
-  const { mpcaData, politicalParties, elections, loading: actaDataLoading, error: actaDataError } = useActaData();
+  const { 
+    mpcaData, 
+    politicalParties, 
+    elections, 
+    loading: actaDataLoading, 
+    error: actaDataError,
+    refetch: refetchActaData
+  } = useOptimizedActaData();
+  
   const {
     actaData,
     existingAct,
@@ -72,7 +80,7 @@ export const SubmitActaForm = () => {
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={() => window.location.reload()}
+          onClick={refetchActaData}
           className="mt-2"
         >
           Reintentar
@@ -109,6 +117,7 @@ export const SubmitActaForm = () => {
           onMunicipalityChange={handleMunicipalityChange}
           onInputChange={handleInputChange}
           onBlur={checkExistingAct}
+          onRetryMpca={refetchActaData}
         />
 
         <ImageUploadSection 
