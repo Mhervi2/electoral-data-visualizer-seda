@@ -103,6 +103,10 @@ const PoliticalParties = () => {
     }
   };
 
+  const handleRefresh = () => {
+    refetchParties();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -122,7 +126,7 @@ const PoliticalParties = () => {
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={refetchParties}
+          onClick={handleRefresh}
           className="mt-2"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
@@ -145,7 +149,7 @@ const PoliticalParties = () => {
         </div>
         
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={refetchParties} disabled={loading}>
+          <Button variant="outline" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
           </Button>
@@ -232,7 +236,7 @@ const PoliticalParties = () => {
               <div className="flex items-center space-x-3">
                 <div
                   className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-                  style={{ backgroundColor: party.color || '#6B7280' }}
+                  style={{ backgroundColor: '#6B7280' }}
                 >
                   {party.siglas}
                 </div>
@@ -264,7 +268,7 @@ const PoliticalParties = () => {
               }
             </p>
             {!searchTerm && (
-              <Button variant="outline" onClick={refetchParties} className="mt-4">
+              <Button variant="outline" onClick={handleRefresh} className="mt-4">
                 Reintentar carga
               </Button>
             )}

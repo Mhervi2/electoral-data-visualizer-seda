@@ -1,12 +1,12 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase, getConnectionStatus } from '@/integrations/supabase/client';
-import { MpcaData, PoliticalParty, Election } from '@/types/acta';
+import { getConnectionStatus } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-const QUERY_STALE_TIME = 5 * 60 * 1000; // 5 minutes
-const QUERY_CACHE_TIME = 10 * 60 * 1000; // 10 minutes
-const RETRY_DELAY = (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000);
+import { fetchMpcaData } from '@/services/mpcaService';
+import { fetchPoliticalParties } from '@/services/politicalPartiesService';
+import { fetchElections } from '@/services/electionsService';
+import { getErrorMessage } from '@/utils/errorUtils';
+import { QUERY_STALE_TIME, QUERY_CACHE_TIME, RETRY_DELAY } from '@/config/queryConfig';
 
 export const useOptimizedActaData = () => {
   const { toast } = useToast();
@@ -134,133 +134,4 @@ export const useOptimizedActaData = () => {
     refetchParties,
     refetchElections
   };
-};
-
-const fetchMpcaData = async (): Promise<MpcaData[]> => {
-  console.log("Fetching MPCA data...");
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-  try {
-    const { data, error } = await supabase
-      .from('mpca')
-      .select('idm, municipio, provincia, ca, idp, idca')
-      .order('municipio', { ascending: true });
-
-    clearTimeout(timeoutId);
-
-    if (error) {
-      throw new Error(`Error de base de datos: ${error.message}`);
-    }
-
-    if (!data || data.length === 0) {
-      console.warn('No MPCA data returned');
-      return [];
-    }
-
-    console.log(`MPCA data fetched successfully: ${data.length} records.`);
-    return data.map(item => ({
-      idm: Number(item.idm) || 0,
-      municipio: item.municipio || '',
-      idp: Number(item.idp) || 0,
-      provincia: item.provincia || '',
-      idca: Number(item.idca) || 0,
-      ca: item.ca || '',
-    }));
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      throw new Error('Timeout: La consulta tardó demasiado tiempo');
-    }
-    throw error;
-  }
-};
-
-const fetchPoliticalParties = async (): Promise<PoliticalParty[]> => {
-  console.log("Fetching political parties...");
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-  try {
-    const { data, error } = await supabase
-      .from('political_parties')
-      .select('id, name, siglas, color')
-      .order('siglas', { ascending: true });
-    
-    clearTimeout(timeoutId);
-
-    if (error) {
-      throw new Error(`Error al cargar los partidos políticos: ${error.message}`);
-    }
-
-    if (!data || data.length === 0) {
-      console.warn('No political parties found');
-      return [];
-    }
-
-    console.log(`Political parties fetched successfully: ${data.length} records.`);
-    return data.map(party => ({
-      id: party.id,
-      name: party.name || '',
-      siglas: party.siglas || '',
-      color: party.color || '#6B7280',
-    }));
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      throw new Error('Timeout: La consulta tardó demasiado tiempo');
-    }
-    throw error;
-  }
-};
-
-const fetchElections = async (): Promise<Election[]> => {
-  console.log("Fetching elections...");
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-  try {
-    const { data, error } = await supabase
-      .from('elections')
-      .select('id, name, status')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false });
-
-    clearTimeout(timeoutId);
-
-    if (error) {
-      throw new Error(`Error al cargar las elecciones: ${error.message}`);
-    }
-
-    if (!data) {
-      console.warn('No elections found');
-      return [];
-    }
-
-    console.log(`Elections fetched successfully: ${data.length} records.`);
-    return data.map(election => ({
-      id: election.id,
-      name: election.name || '',
-      status: election.status || 'active',
-    }));
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      throw new Error('Timeout: La consulta tardó demasiado tiempo');
-    }
-    throw error;
-  }
-};
-
-const getErrorMessage = (error: any): string => {
-  if (error?.message) {
-    return error.message;
-  }
-  if (typeof error === 'string') {
-    return error;
-  }
-  return 'Error inesperado al cargar los datos';
 };
