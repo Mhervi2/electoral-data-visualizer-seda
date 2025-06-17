@@ -10,9 +10,9 @@ export const useActaData = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchMpcaData = async (): Promise<MpcaData[]> => {
-      console.log("Re-fetching MPCA data from scratch...");
+  const fetchMpcaData = async (): Promise<MpcaData[]> => {
+    try {
+      console.log("Fetching MPCA data...");
       const { data, error: supabaseError } = await supabase
         .from('mpca')
         .select('idm, municipio, provincia, ca, idp, idca')
@@ -20,12 +20,12 @@ export const useActaData = () => {
 
       if (supabaseError) {
         console.error('Supabase error fetching MPCA data:', supabaseError);
-        throw new Error(`Error de base de datos: ${supabaseError.message}. Verifique los permisos (RLS) en la tabla 'mpca'.`);
+        throw new Error(`Error de base de datos: ${supabaseError.message}`);
       }
 
       if (!data || data.length === 0) {
-        console.warn('No MPCA data returned. Table might be empty or RLS policies are blocking access.');
-        throw new Error("No se encontraron municipios. La tabla 'mpca' puede estar vacía o inaccesible (revise los permisos RLS).");
+        console.warn('No MPCA data returned');
+        return [];
       }
 
       console.log(`MPCA data fetched successfully: ${data.length} records.`);
@@ -37,18 +37,32 @@ export const useActaData = () => {
         idca: Number(item.idca) || 0,
         ca: item.ca || '',
       }));
-    };
+    } catch (error: any) {
+      console.error('Error fetching MPCA data:', error);
+      throw error;
+    }
+  };
 
-    const fetchPoliticalParties = async (): Promise<PoliticalParty[]> => {
-      const { data, error } = await supabase.from('political_parties').select('*').order('siglas');
+  const fetchPoliticalParties = async (): Promise<PoliticalParty[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('political_parties')
+        .select('*')
+        .order('siglas');
+      
       if (error) {
         console.error('Error fetching political parties:', error);
         throw new Error('Error al cargar los partidos políticos.');
       }
       return data || [];
-    };
+    } catch (error: any) {
+      console.error('Error in fetchPoliticalParties:', error);
+      throw error;
+    }
+  };
 
-    const fetchElections = async (): Promise<Election[]> => {
+  const fetchElections = async (): Promise<Election[]> => {
+    try {
       const { data, error } = await supabase
         .from('elections')
         .select('*')
@@ -60,42 +74,58 @@ export const useActaData = () => {
         throw new Error('Error al cargar las elecciones.');
       }
       return data || [];
-    };
+    } catch (error: any) {
+      console.error('Error in fetchElections:', error);
+      throw error;
+    }
+  };
 
+  useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
       setError(null);
+      
       try {
+        console.log('Starting to fetch all data...');
+        
+        // Fetch all data in parallel but handle errors individually
         const [mpcaResult, partiesResult, electionsResult] = await Promise.allSettled([
           fetchMpcaData(),
           fetchPoliticalParties(),
           fetchElections(),
         ]);
 
+        // Handle MPCA data
         if (mpcaResult.status === 'fulfilled') {
           setMpcaData(mpcaResult.value);
+          console.log(`Successfully loaded ${mpcaResult.value.length} municipalities`);
         } else {
           console.error('Failed to fetch MPCA data:', mpcaResult.reason);
-          setError(mpcaResult.reason.message);
+          setError('Error al cargar los municipios. Por favor, recarga la página.');
           setMpcaData([]);
         }
 
+        // Handle political parties
         if (partiesResult.status === 'fulfilled') {
           setPoliticalParties(partiesResult.value);
+          console.log(`Successfully loaded ${partiesResult.value.length} political parties`);
         } else {
           console.error('Failed to fetch political parties:', partiesResult.reason);
           setPoliticalParties([]);
         }
 
+        // Handle elections
         if (electionsResult.status === 'fulfilled') {
           setElections(electionsResult.value);
+          console.log(`Successfully loaded ${electionsResult.value.length} elections`);
         } else {
           console.error('Failed to fetch elections:', electionsResult.reason);
           setElections([]);
         }
+
       } catch (err: any) {
-        console.error('An unexpected error occurred in fetchAllData:', err);
-        setError('Ocurrió un error inesperado al cargar los datos.');
+        console.error('Unexpected error in fetchAllData:', err);
+        setError('Error inesperado al cargar los datos. Por favor, recarga la página.');
       } finally {
         setLoading(false);
       }

@@ -112,6 +112,34 @@ export const useElectoralAggregation = () => {
       setLoading(true);
       console.log('Fetching aggregated results with filters:', filters);
 
+      // First, get a count to avoid large queries
+      let countQuery = supabase
+        .from('electoral_acts_with_municipalities')
+        .select('id', { count: 'exact', head: true });
+      countQuery = buildQuery(countQuery);
+      
+      const { count } = await countQuery;
+      console.log(`Found ${count} electoral acts matching filters`);
+
+      if (count === 0) {
+        setAggregatedResults({
+          totalVotes: 0,
+          totalCensus: 0,
+          participation: 0,
+          blankVotes: 0,
+          nullVotes: 0,
+          validVotes: 0,
+          partyResults: [],
+          sourceComparison: [],
+          selectedSources: filters.sourceTypes,
+          individualActas: []
+        });
+        return;
+      }
+
+      // Limit the query if too many results
+      const limit = count && count > 1000 ? 1000 : undefined;
+
       // Build the query for aggregated data
       let aggregatedQuery = supabase
         .from('electoral_acts_with_municipalities')
@@ -132,6 +160,9 @@ export const useElectoralAggregation = () => {
         `);
 
       aggregatedQuery = buildQuery(aggregatedQuery);
+      if (limit) {
+        aggregatedQuery = aggregatedQuery.limit(limit);
+      }
 
       // Build the query for individual actas
       let individualQuery = supabase
@@ -156,6 +187,9 @@ export const useElectoralAggregation = () => {
         .order('created_at', { ascending: false });
 
       individualQuery = buildQuery(individualQuery);
+      if (limit) {
+        individualQuery = individualQuery.limit(Math.min(limit, 100));
+      }
 
       // Execute both queries
       const [{ data: acts, error: actsError }, { data: individualActas, error: individualError }] = await Promise.all([
