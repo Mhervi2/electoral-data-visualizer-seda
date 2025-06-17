@@ -17,7 +17,7 @@ export const useExistingActChecker = () => {
     }
 
     try {
-      console.log('Checking for existing act...');
+      console.log('🔍 Checking for existing act...');
       const { data, error } = await supabase
         .from('electoral_acts_with_municipalities')
         .select(`
@@ -43,19 +43,34 @@ export const useExistingActChecker = () => {
         .eq('section', actaData.seccion)
         .eq('table_letter', actaData.mesa);
 
+      if (error) {
+        console.error('❌ Error checking existing act:', error);
+        return false;
+      }
+
       if (data && data.length > 0) {
-        console.log('Found existing acts:', data.length);
-        const transformedAct = {
+        console.log(`✅ Found ${data.length} existing acts`);
+        const transformedAct: ExistingAct = {
           ...data[0],
-          municipality: { name: data[0].municipio }
+          municipality: { name: data[0].municipio || '' },
+          party_votes: (data[0].party_votes || []).map(pv => ({
+            votes: pv.votes,
+            political_parties: {
+              name: pv.political_parties?.name || '',
+              siglas: pv.political_parties?.siglas || '',
+              color: pv.political_parties?.color || '#6B7280'
+            }
+          }))
         };
         setExistingAct(transformedAct);
         setShowExistingActDialog(true);
         return true;
       }
+      
+      console.log('ℹ️ No existing acts found');
       return false;
     } catch (error) {
-      console.error('Error checking existing act:', error);
+      console.error('💥 Fatal error checking existing act:', error);
       return false;
     }
   };

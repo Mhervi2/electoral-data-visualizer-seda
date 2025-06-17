@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Check, ChevronsUpDown, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MpcaData } from '@/types/acta';
-import { useMpcaData } from '@/hooks/useMpcaData';
+import { useAppData } from '@/hooks/useAppData';
 
 interface MunicipalitySelectorProps {
   selectedMunicipalityId: string;
@@ -18,7 +18,7 @@ export const MunicipalitySelector = ({
   selectedMunicipalityId, 
   onMunicipalitySelect 
 }: MunicipalitySelectorProps) => {
-  const { mpcaData, loading, error } = useMpcaData();
+  const { mpcaData, loading, error } = useAppData();
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
 
@@ -68,9 +68,6 @@ export const MunicipalitySelector = ({
           </div>
         </Button>
         <p className="text-sm text-red-600 mt-1">{error}</p>
-        <p className="text-xs text-gray-500 mt-1">
-          Verifica la conexión a la base de datos y las políticas RLS
-        </p>
       </div>
     );
   }

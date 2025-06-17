@@ -10,6 +10,21 @@ interface PartyVotesProps {
 }
 
 export const PartyVotes = ({ politicalParties, votos, onVoteChange }: PartyVotesProps) => {
+  if (!politicalParties || politicalParties.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Votos a Candidaturas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            No hay partidos políticos disponibles. Cargando...
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -21,8 +36,8 @@ export const PartyVotes = ({ politicalParties, votos, onVoteChange }: PartyVotes
             <div key={partido.id} className="flex items-center space-x-4">
               <div 
                 className="w-4 h-4 rounded-full flex-shrink-0" 
-                style={{ backgroundColor: partido.color }}
-                title={`Color del partido: ${partido.color}`}
+                style={{ backgroundColor: partido.color || '#6B7280' }}
+                title={`Color del partido: ${partido.color || '#6B7280'}`}
               />
               <div className="w-20 text-sm font-medium">{partido.siglas}</div>
               <div className="flex-1 text-sm">{partido.name}</div>

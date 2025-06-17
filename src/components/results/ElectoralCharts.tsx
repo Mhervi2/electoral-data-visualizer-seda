@@ -25,6 +25,21 @@ interface ElectoralChartsProps {
 }
 
 export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsProps) => {
+  if (!partyResults || partyResults.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Distribución Porcentual</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            No hay datos de partidos para mostrar en el gráfico.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Preparar datos para gráficos - tomar los primeros 10 partidos
   const topParties = partyResults.slice(0, 10);
 
@@ -32,7 +47,7 @@ export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsPro
     name: result.party.siglas,
     fullName: result.party.name,
     value: result.totalVotes,
-    fill: result.party.color || '#6B7280', // Color por defecto si no existe
+    fill: result.party.color || '#6B7280',
     percentage: result.percentage
   }));
 
@@ -54,21 +69,6 @@ export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsPro
     }
     return null;
   };
-
-  if (pieChartData.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Distribución Porcentual</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            No hay datos de partidos para mostrar en el gráfico.
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <div className="grid grid-cols-1 gap-6">

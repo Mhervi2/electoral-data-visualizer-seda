@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,64 +9,18 @@ import { useToast } from '@/hooks/use-toast';
 import { Search, Plus, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-
-interface PoliticalParty {
-  id: string;
-  name: string;
-  siglas: string;
-  color: string;
-}
+import { useAppData } from '@/hooks/useAppData';
 
 const PoliticalParties = () => {
   const { user } = useAuth();
-  const [parties, setParties] = useState<PoliticalParty[]>([]);
+  const { politicalParties, loading, error } = useAppData();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newPartyName, setNewPartyName] = useState('');
   const [newPartySiglas, setNewPartySiglas] = useState('');
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchParties();
-  }, []);
-
-  const fetchParties = async () => {
-    try {
-      console.log('Fetching political parties...');
-      setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('political_parties')
-        .select('*')
-        .order('siglas');
-
-      if (error) {
-        console.error('Error fetching parties:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "No se pudieron cargar los partidos políticos.",
-        });
-        setParties([]);
-      } else {
-        console.log('Political parties fetched:', data?.length || 0);
-        setParties(data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching parties:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Ocurrió un error al cargar los partidos políticos.",
-      });
-      setParties([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredParties = parties.filter(party =>
+  const filteredParties = politicalParties.filter(party =>
     party.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     party.siglas.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -91,7 +45,6 @@ const PoliticalParties = () => {
     }
 
     try {
-      // Get the current user's auth ID
       const { data: { user: authUser } } = await supabase.auth.getUser();
       
       if (!authUser) {
@@ -147,6 +100,24 @@ const PoliticalParties = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-red-600">Error de Conexión</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              Reintentar
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -155,7 +126,7 @@ const PoliticalParties = () => {
             Partidos Políticos
           </h1>
           <p className="text-muted-foreground mt-2">
-            Partidos que participan en el proceso electoral actual
+            {politicalParties.length} partidos disponibles para el proceso electoral
           </p>
         </div>
         
@@ -229,7 +200,7 @@ const PoliticalParties = () => {
               <div className="flex items-center space-x-3">
                 <div
                   className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-                  style={{ backgroundColor: party.color }}
+                  style={{ backgroundColor: party.color || '#6B7280' }}
                 >
                   {party.siglas}
                 </div>
@@ -251,14 +222,21 @@ const PoliticalParties = () => {
         ))}
       </div>
 
-      {filteredParties.length === 0 && (
+      {filteredParties.length === 0 && politicalParties.length > 0 && (
         <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-muted-foreground">
-              {searchTerm ? 
-                "No se encontraron partidos que coincidan con tu búsqueda." :
-                "No hay partidos políticos disponibles."
-              }
+              No se encontraron partidos que coincidan con tu búsqueda.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {politicalParties.length === 0 && (
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground">
+              No hay partidos políticos disponibles en este momento.
             </p>
           </CardContent>
         </Card>
