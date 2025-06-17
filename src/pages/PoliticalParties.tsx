@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,66 +9,25 @@ import { useToast } from '@/hooks/use-toast';
 import { Search, Plus, Users, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-
-interface PoliticalParty {
-  id: string;
-  name: string;
-  siglas: string;
-  color: string;
-}
+import { useOptimizedActaData } from '@/hooks/useOptimizedActaData';
 
 const PoliticalParties = () => {
   const { user } = useAuth();
-  const [parties, setParties] = useState<PoliticalParty[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newPartyName, setNewPartyName] = useState('');
   const [newPartySiglas, setNewPartySiglas] = useState('');
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const fetchParties = async () => {
-    try {
-      console.log('Fetching political parties...');
-      setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('political_parties')
-        .select('id, name, siglas, color')
-        .order('siglas', { ascending: true });
+  const { 
+    politicalParties, 
+    loading, 
+    error, 
+    refetchParties 
+  } = useOptimizedActaData();
 
-      if (error) {
-        console.error('Error fetching parties:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: `No se pudieron cargar los partidos políticos: ${error.message}`,
-        });
-        setParties([]);
-        return;
-      }
-
-      console.log('Political parties fetched:', data?.length || 0);
-      setParties(data || []);
-    } catch (error) {
-      console.error('Error fetching parties:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Ocurrió un error al cargar los partidos políticos.",
-      });
-      setParties([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchParties();
-  }, []);
-
-  const filteredParties = parties.filter(party =>
+  const filteredParties = politicalParties.filter(party =>
     party.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     party.siglas.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -155,6 +114,24 @@ const PoliticalParties = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="p-4 border border-red-300 rounded-lg bg-red-50">
+        <h3 className="text-red-800 font-medium">Error al cargar los partidos políticos</h3>
+        <p className="text-red-600 text-sm mt-1">{error}</p>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={refetchParties}
+          className="mt-2"
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -168,7 +145,7 @@ const PoliticalParties = () => {
         </div>
         
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={fetchParties} disabled={loading}>
+          <Button variant="outline" onClick={refetchParties} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
           </Button>
@@ -287,7 +264,7 @@ const PoliticalParties = () => {
               }
             </p>
             {!searchTerm && (
-              <Button variant="outline" onClick={fetchParties} className="mt-4">
+              <Button variant="outline" onClick={refetchParties} className="mt-4">
                 Reintentar carga
               </Button>
             )}
@@ -309,6 +286,9 @@ const PoliticalParties = () => {
             Si detectas la falta de algún partido o encuentras información incorrecta,
             utiliza el botón "Sugerir Nuevo Partido" para notificarlo.
           </p>
+          <div className="mt-4 text-xs text-green-600">
+            ✅ {politicalParties.length} partidos cargados correctamente
+          </div>
         </CardContent>
       </Card>
     </div>

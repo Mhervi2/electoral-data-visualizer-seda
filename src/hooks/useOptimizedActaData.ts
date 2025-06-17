@@ -1,6 +1,6 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, getConnectionStatus } from '@/integrations/supabase/client';
 import { MpcaData, PoliticalParty, Election } from '@/types/acta';
 import { useToast } from '@/hooks/use-toast';
 
@@ -11,6 +11,9 @@ const RETRY_DELAY = (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex,
 export const useOptimizedActaData = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Check connection status before starting queries
+  console.log('Supabase connection status:', getConnectionStatus());
 
   const {
     data: mpcaData = [],
@@ -86,6 +89,7 @@ export const useOptimizedActaData = () => {
 
   const refetchAll = async () => {
     try {
+      console.log('Refetching all data...');
       await Promise.allSettled([
         refetchMpca(),
         refetchParties(),
@@ -108,6 +112,15 @@ export const useOptimizedActaData = () => {
   const loading = mpcaLoading || partiesLoading || electionsLoading;
   const error = mpcaError || partiesError || electionsError;
   const errorMessage = error ? getErrorMessage(error) : null;
+
+  // Log current data status
+  console.log('OptimizedActaData status:', {
+    loading,
+    error: errorMessage,
+    mpcaCount: mpcaData.length,
+    partiesCount: politicalParties.length,
+    electionsCount: elections.length
+  });
 
   return {
     mpcaData,
@@ -173,7 +186,7 @@ const fetchPoliticalParties = async (): Promise<PoliticalParty[]> => {
   try {
     const { data, error } = await supabase
       .from('political_parties')
-      .select('id, name, siglas')
+      .select('id, name, siglas, color')
       .order('siglas', { ascending: true });
     
     clearTimeout(timeoutId);
@@ -192,6 +205,7 @@ const fetchPoliticalParties = async (): Promise<PoliticalParty[]> => {
       id: party.id,
       name: party.name || '',
       siglas: party.siglas || '',
+      color: party.color || '#6B7280',
     }));
   } catch (error: any) {
     clearTimeout(timeoutId);
