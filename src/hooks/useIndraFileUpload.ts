@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,11 +30,17 @@ export const useIndraFileUpload = () => {
       const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
       if (values.length !== headers.length) continue;
 
-      const row: IndraRow = {};
+      // Initialize row with required properties
+      const row: Partial<IndraRow> = {};
+      
       headers.forEach((header, index) => {
         row[header] = values[index];
       });
-      rows.push(row);
+
+      // Check if required properties exist
+      if (row.codmun && row.mesa) {
+        rows.push(row as IndraRow);
+      }
     }
 
     return rows;
