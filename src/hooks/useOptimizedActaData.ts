@@ -27,15 +27,13 @@ export const useOptimizedActaData = () => {
     gcTime: QUERY_CACHE_TIME,
     retry: 3,
     retryDelay: RETRY_DELAY,
-    meta: {
-      onError: (error: any) => {
-        console.error('MPCA data fetch error:', error);
-        toast({
-          variant: "destructive",
-          title: "Error al cargar municipios",
-          description: "Reintentando automáticamente...",
-        });
-      }
+    onError: (error: any) => {
+      console.error('MPCA data fetch error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error al cargar municipios",
+        description: "Reintentando automáticamente...",
+      });
     }
   });
 
@@ -46,20 +44,31 @@ export const useOptimizedActaData = () => {
     refetch: refetchParties
   } = useQuery({
     queryKey: ['political-parties'],
-    queryFn: fetchPoliticalParties,
+    queryFn: async () => {
+      console.log('Starting political parties query...');
+      try {
+        const result = await fetchPoliticalParties();
+        console.log('Political parties query result:', result);
+        return result;
+      } catch (error) {
+        console.error('Political parties query failed:', error);
+        throw error;
+      }
+    },
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_CACHE_TIME,
     retry: 3,
     retryDelay: RETRY_DELAY,
-    meta: {
-      onError: (error: any) => {
-        console.error('Political parties fetch error:', error);
-        toast({
-          variant: "destructive",
-          title: "Error al cargar partidos",
-          description: "Reintentando automáticamente...",
-        });
-      }
+    onError: (error: any) => {
+      console.error('Political parties fetch error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error al cargar partidos",
+        description: getErrorMessage(error),
+      });
+    },
+    onSuccess: (data) => {
+      console.log('Political parties loaded successfully:', data);
     }
   });
 
@@ -75,15 +84,13 @@ export const useOptimizedActaData = () => {
     gcTime: QUERY_CACHE_TIME,
     retry: 3,
     retryDelay: RETRY_DELAY,
-    meta: {
-      onError: (error: any) => {
-        console.error('Elections fetch error:', error);
-        toast({
-          variant: "destructive",
-          title: "Error al cargar elecciones",
-          description: "Reintentando automáticamente...",
-        });
-      }
+    onError: (error: any) => {
+      console.error('Elections fetch error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error al cargar elecciones",
+        description: "Reintentando automáticamente...",
+      });
     }
   });
 
@@ -113,13 +120,26 @@ export const useOptimizedActaData = () => {
   const error = mpcaError || partiesError || electionsError;
   const errorMessage = error ? getErrorMessage(error) : null;
 
-  // Log current data status
-  console.log('OptimizedActaData status:', {
+  // Enhanced logging for debugging
+  console.log('OptimizedActaData detailed status:', {
     loading,
     error: errorMessage,
-    mpcaCount: mpcaData.length,
-    partiesCount: politicalParties.length,
-    electionsCount: elections.length
+    mpcaData: {
+      count: mpcaData.length,
+      loading: mpcaLoading,
+      error: mpcaError ? getErrorMessage(mpcaError) : null
+    },
+    politicalParties: {
+      count: politicalParties.length,
+      loading: partiesLoading,
+      error: partiesError ? getErrorMessage(partiesError) : null,
+      data: politicalParties
+    },
+    elections: {
+      count: elections.length,
+      loading: electionsLoading,
+      error: electionsError ? getErrorMessage(electionsError) : null
+    }
   });
 
   return {
