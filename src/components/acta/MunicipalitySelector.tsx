@@ -7,18 +7,22 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Check, ChevronsUpDown, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MpcaData } from '@/types/acta';
-import { useMpcaData } from '@/hooks/useMpcaData';
 
 interface MunicipalitySelectorProps {
+  mpcaData: MpcaData[];
+  loading: boolean;
+  error: string | null;
   selectedMunicipalityId: string;
   onMunicipalitySelect: (municipalityId: string, municipalityData: MpcaData | null) => void;
 }
 
 export const MunicipalitySelector = ({ 
+  mpcaData,
+  loading,
+  error,
   selectedMunicipalityId, 
   onMunicipalitySelect 
 }: MunicipalitySelectorProps) => {
-  const { mpcaData, loading, error } = useMpcaData();
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
 
@@ -28,7 +32,7 @@ export const MunicipalitySelector = ({
   );
 
   const filteredMunicipalities = useMemo(() => {
-    if (!searchValue.trim()) return mpcaData.slice(0, 100); // Limit initial results
+    if (!searchValue.trim()) return mpcaData.slice(0, 100);
     
     const search = searchValue.toLowerCase().trim();
     return mpcaData.filter((mpca) => {
@@ -36,7 +40,7 @@ export const MunicipalitySelector = ({
       const provinciaMatch = mpca.provincia?.toLowerCase().includes(search);
       const caMatch = mpca.ca?.toLowerCase().includes(search);
       return municipioMatch || provinciaMatch || caMatch;
-    }).slice(0, 100); // Limit search results
+    }).slice(0, 100);
   }, [mpcaData, searchValue]);
 
   const handleSelect = (municipality: MpcaData) => {

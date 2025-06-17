@@ -6,6 +6,9 @@ import { MpcaData } from '@/types/acta';
 import { MunicipalitySelector } from './MunicipalitySelector';
 
 interface MesaIdentificationProps {
+  mpcaData: MpcaData[];
+  mpcaLoading: boolean;
+  mpcaError: string | null;
   selectedMpcaRecord: MpcaData | null;
   municipio: string;
   distrito: string;
@@ -17,6 +20,9 @@ interface MesaIdentificationProps {
 }
 
 export const MesaIdentification = ({
+  mpcaData,
+  mpcaLoading,
+  mpcaError,
   selectedMpcaRecord,
   municipio,
   distrito,
@@ -35,6 +41,9 @@ export const MesaIdentification = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <MunicipalitySelector
+              mpcaData={mpcaData}
+              loading={mpcaLoading}
+              error={mpcaError}
               selectedMunicipalityId={municipio}
               onMunicipalitySelect={onMunicipalityChange}
             />

@@ -81,7 +81,6 @@ export const useElectoralAggregation = () => {
   const buildQuery = (baseQuery: any) => {
     let query = baseQuery;
 
-    // Apply hierarchical filters using the correct column names
     if (filters.autonomousCommunity.trim()) {
       query = query.ilike('comunidad_autonoma', `%${filters.autonomousCommunity.trim()}%`);
     }
@@ -112,7 +111,6 @@ export const useElectoralAggregation = () => {
       setLoading(true);
       console.log('Fetching aggregated results with filters:', filters);
 
-      // First, get a count to avoid large queries
       let countQuery = supabase
         .from('electoral_acts_with_municipalities')
         .select('id', { count: 'exact', head: true });
@@ -137,10 +135,8 @@ export const useElectoralAggregation = () => {
         return;
       }
 
-      // Limit the query if too many results
       const limit = count && count > 1000 ? 1000 : undefined;
 
-      // Build the query for aggregated data
       let aggregatedQuery = supabase
         .from('electoral_acts_with_municipalities')
         .select(`
@@ -164,7 +160,6 @@ export const useElectoralAggregation = () => {
         aggregatedQuery = aggregatedQuery.limit(limit);
       }
 
-      // Build the query for individual actas
       let individualQuery = supabase
         .from('electoral_acts_with_municipalities')
         .select(`
@@ -191,7 +186,6 @@ export const useElectoralAggregation = () => {
         individualQuery = individualQuery.limit(Math.min(limit, 100));
       }
 
-      // Execute both queries
       const [{ data: acts, error: actsError }, { data: individualActas, error: individualError }] = await Promise.all([
         aggregatedQuery,
         individualQuery
@@ -220,7 +214,6 @@ export const useElectoralAggregation = () => {
       console.log('Acts loaded:', acts?.length || 0);
       console.log('Individual actas loaded:', individualActas?.length || 0);
 
-      // Aggregate the results
       const aggregated = aggregateElectoralData(acts || [], individualActas || []);
       setAggregatedResults(aggregated);
 
@@ -244,7 +237,6 @@ export const useElectoralAggregation = () => {
     const validVotes = totalVotes - blankVotes - nullVotes;
     const participation = totalCensus > 0 ? (totalVotes / totalCensus) * 100 : 0;
 
-    // Aggregate party votes by source
     const partyVotesMap = new Map<string, { party: any; sourceResults: Map<string, number>; totalVotes: number }>();
     
     acts.forEach(act => {
@@ -274,7 +266,6 @@ export const useElectoralAggregation = () => {
       }
     });
 
-    // Calculate valid votes by source for percentage calculations
     const validVotesBySource = new Map<string, number>();
     filters.sourceTypes.forEach(sourceType => {
       const sourceValidVotes = acts
@@ -304,7 +295,6 @@ export const useElectoralAggregation = () => {
       })
       .sort((a, b) => b.totalVotes - a.totalVotes);
 
-    // Source comparison
     const sourceMap = new Map<string, { totalVotes: number; count: number }>();
     acts.forEach(act => {
       const source = act.source_type || 'unknown';
