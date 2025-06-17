@@ -112,28 +112,7 @@ export const useElectoralAggregation = () => {
       setLoading(true);
       console.log('Fetching aggregated results with filters:', filters);
 
-      // Build the query for aggregated data
-      let aggregatedQuery = supabase
-        .from('electoral_acts_with_municipalities')
-        .select(`
-          census_total,
-          total_voters,
-          blank_votes,
-          null_votes,
-          source_type,
-          party_votes (
-            votes,
-            political_parties (
-              name,
-              siglas,
-              color
-            )
-          )
-        `);
-
-      aggregatedQuery = buildQuery(aggregatedQuery);
-
-      // Build the query for individual actas
+      // Build the query for individual actas first
       let individualQuery = supabase
         .from('electoral_acts_with_municipalities')
         .select(`
@@ -157,21 +136,7 @@ export const useElectoralAggregation = () => {
 
       individualQuery = buildQuery(individualQuery);
 
-      // Execute both queries
-      const [{ data: acts, error: actsError }, { data: individualActas, error: individualError }] = await Promise.all([
-        aggregatedQuery,
-        individualQuery
-      ]);
-
-      if (actsError) {
-        console.error('Error fetching electoral acts:', actsError);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "No se pudieron cargar los resultados electorales.",
-        });
-        return;
-      }
+      const { data: individualActas, error: individualError } = await individualQuery;
 
       if (individualError) {
         console.error('Error fetching individual actas:', individualError);
@@ -183,11 +148,54 @@ export const useElectoralAggregation = () => {
         return;
       }
 
-      console.log('Acts loaded:', acts?.length || 0);
       console.log('Individual actas loaded:', individualActas?.length || 0);
 
+      // Now fetch the party votes for aggregation
+      let partyVotesQuery = supabase
+        .from('party_votes')
+        .select(`
+          votes,
+          political_parties (
+            name,
+            siglas,
+            color
+          ),
+          electoral_act_id
+        `);
+
+      const { data: allPartyVotes, error: partyVotesError } = await partyVotesQuery;
+
+      if (partyVotesError) {
+        console.error('Error fetching party votes:', partyVotesError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudieron cargar los votos de partidos.",
+        });
+        return;
+      }
+
+      console.log('Party votes loaded:', allPartyVotes?.length || 0);
+
+      // Filter party votes to match our electoral acts
+      const actIds = new Set(individualActas?.map(act => act.id) || []);
+      const filteredPartyVotes = allPartyVotes?.filter(pv => actIds.has(pv.electoral_act_id)) || [];
+
+      // Build acts with party votes for aggregation
+      const actsWithPartyVotes = (individualActas || []).map(act => ({
+        ...act,
+        party_votes: filteredPartyVotes
+          .filter(pv => pv.electoral_act_id === act.id)
+          .map(pv => ({
+            votes: pv.votes,
+            political_parties: pv.political_parties
+          }))
+      }));
+
+      console.log('Acts with party votes:', actsWithPartyVotes.length);
+
       // Aggregate the results
-      const aggregated = aggregateElectoralData(acts || [], individualActas || []);
+      const aggregated = aggregateElectoralData(actsWithPartyVotes, individualActas || []);
       setAggregatedResults(aggregated);
 
     } catch (error) {
