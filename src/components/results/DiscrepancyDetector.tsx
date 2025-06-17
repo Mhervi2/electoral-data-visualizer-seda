@@ -17,7 +17,6 @@ interface DiscrepancyData {
     total_voters: number;
     blank_votes: number;
     null_votes: number;
-    party_votes: { [party: string]: number };
   }[];
   differences: string[];
 }
@@ -33,8 +32,9 @@ const DiscrepancyDetector = () => {
   const detectDiscrepancies = async () => {
     try {
       console.log('Detecting discrepancies...');
+      setLoading(true);
       
-      // Get all electoral acts using a simpler query
+      // Obtener todas las actas electorales
       const { data: acts, error } = await supabase
         .from('electoral_acts_with_municipalities')
         .select(`
@@ -48,10 +48,9 @@ const DiscrepancyDetector = () => {
           blank_votes,
           null_votes,
           source_type,
-          municipio,
-          provincia,
-          comunidad_autonoma
-        `);
+          municipio
+        `)
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching acts for discrepancy detection:', error);
@@ -67,11 +66,11 @@ const DiscrepancyDetector = () => {
         return;
       }
 
-      // Group acts by location (municipality, district, section, table)
+      // Agrupar actas por ubicación (municipality, district, section, table)
       const groupedActs = new Map<string, any[]>();
       
       acts.forEach(act => {
-        const key = `${act.municipality_idm}-${act.district}-${act.section}-${act.table_letter}`;
+        const key = `${act.municipality_idm || 'unknown'}-${act.district}-${act.section}-${act.table_letter}`;
         if (!groupedActs.has(key)) {
           groupedActs.set(key, []);
         }
@@ -80,8 +79,8 @@ const DiscrepancyDetector = () => {
 
       const foundDiscrepancies: DiscrepancyData[] = [];
 
-      // Check for discrepancies in each group
-      groupedActs.forEach((locationActs, key) => {
+      // Verificar discrepancias en cada grupo
+      groupedActs.forEach((locationActs) => {
         if (locationActs.length > 1) {
           const differences: string[] = [];
           const firstAct = locationActs[0];
@@ -89,7 +88,7 @@ const DiscrepancyDetector = () => {
           for (let i = 1; i < locationActs.length; i++) {
             const compareAct = locationActs[i];
             
-            // Compare basic data
+            // Comparar datos básicos
             if (firstAct.census_total !== compareAct.census_total) {
               differences.push(`Censo: ${firstAct.source_type}: ${firstAct.census_total}, ${compareAct.source_type}: ${compareAct.census_total}`);
             }
@@ -118,8 +117,7 @@ const DiscrepancyDetector = () => {
                 census_total: act.census_total,
                 total_voters: act.total_voters,
                 blank_votes: act.blank_votes,
-                null_votes: act.null_votes,
-                party_votes: {} // Simplified for now
+                null_votes: act.null_votes
               })),
               differences
             });

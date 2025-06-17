@@ -81,7 +81,6 @@ export const useElectoralAggregation = () => {
   const buildQuery = (baseQuery: any) => {
     let query = baseQuery;
 
-    // Apply hierarchical filters using the correct column names
     if (filters.autonomousCommunity.trim()) {
       query = query.ilike('comunidad_autonoma', `%${filters.autonomousCommunity.trim()}%`);
     }
@@ -112,26 +111,10 @@ export const useElectoralAggregation = () => {
       setLoading(true);
       console.log('Fetching aggregated results with filters:', filters);
 
-      // Build the query for individual actas first
+      // Primero obtenemos las actas individuales
       let individualQuery = supabase
         .from('electoral_acts_with_municipalities')
-        .select(`
-          id,
-          municipality_idm,
-          district,
-          section,
-          table_letter,
-          census_total,
-          total_voters,
-          blank_votes,
-          null_votes,
-          source_type,
-          image_url,
-          created_at,
-          municipio,
-          provincia,
-          comunidad_autonoma
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       individualQuery = buildQuery(individualQuery);
@@ -143,59 +126,57 @@ export const useElectoralAggregation = () => {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "No se pudieron cargar las actas individuales.",
+          description: "No se pudieron cargar las actas electorales.",
         });
+        setAggregatedResults(null);
         return;
       }
 
       console.log('Individual actas loaded:', individualActas?.length || 0);
 
-      // Now fetch the party votes for aggregation
-      let partyVotesQuery = supabase
-        .from('party_votes')
-        .select(`
-          votes,
-          political_parties (
-            name,
-            siglas,
-            color
-          ),
-          electoral_act_id
-        `);
-
-      const { data: allPartyVotes, error: partyVotesError } = await partyVotesQuery;
-
-      if (partyVotesError) {
-        console.error('Error fetching party votes:', partyVotesError);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "No se pudieron cargar los votos de partidos.",
+      // Si no hay actas, devolvemos resultado vacío
+      if (!individualActas || individualActas.length === 0) {
+        setAggregatedResults({
+          totalVotes: 0,
+          totalCensus: 0,
+          participation: 0,
+          blankVotes: 0,
+          nullVotes: 0,
+          validVotes: 0,
+          partyResults: [],
+          sourceComparison: [],
+          selectedSources: filters.sourceTypes,
+          individualActas: []
         });
         return;
       }
 
-      console.log('Party votes loaded:', allPartyVotes?.length || 0);
+      // Obtenemos los votos de partidos para estas actas
+      const actIds = individualActas.map(act => act.id);
+      
+      const { data: partyVotes, error: partyVotesError } = await supabase
+        .from('party_votes')
+        .select(`
+          votes,
+          electoral_act_id,
+          political_parties (
+            id,
+            name,
+            siglas,
+            color
+          )
+        `)
+        .in('electoral_act_id', actIds);
 
-      // Filter party votes to match our electoral acts
-      const actIds = new Set(individualActas?.map(act => act.id) || []);
-      const filteredPartyVotes = allPartyVotes?.filter(pv => actIds.has(pv.electoral_act_id)) || [];
+      if (partyVotesError) {
+        console.error('Error fetching party votes:', partyVotesError);
+        // Continuamos sin votos de partidos
+      }
 
-      // Build acts with party votes for aggregation
-      const actsWithPartyVotes = (individualActas || []).map(act => ({
-        ...act,
-        party_votes: filteredPartyVotes
-          .filter(pv => pv.electoral_act_id === act.id)
-          .map(pv => ({
-            votes: pv.votes,
-            political_parties: pv.political_parties
-          }))
-      }));
+      console.log('Party votes loaded:', partyVotes?.length || 0);
 
-      console.log('Acts with party votes:', actsWithPartyVotes.length);
-
-      // Aggregate the results
-      const aggregated = aggregateElectoralData(actsWithPartyVotes, individualActas || []);
+      // Agregamos los datos
+      const aggregated = aggregateElectoralData(individualActas, partyVotes || []);
       setAggregatedResults(aggregated);
 
     } catch (error) {
@@ -205,12 +186,14 @@ export const useElectoralAggregation = () => {
         title: "Error",
         description: "Ocurrió un error al cargar los resultados electorales.",
       });
+      setAggregatedResults(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const aggregateElectoralData = (acts: any[], individualActas: ElectoralAct[]): AggregatedResults => {
+  const aggregateElectoralData = (acts: any[], partyVotes: any[]): AggregatedResults => {
+    // Cálculos básicos
     const totalCensus = acts.reduce((sum, act) => sum + (act.census_total || 0), 0);
     const totalVotes = acts.reduce((sum, act) => sum + (act.total_voters || 0), 0);
     const blankVotes = acts.reduce((sum, act) => sum + (act.blank_votes || 0), 0);
@@ -218,37 +201,38 @@ export const useElectoralAggregation = () => {
     const validVotes = totalVotes - blankVotes - nullVotes;
     const participation = totalCensus > 0 ? (totalVotes / totalCensus) * 100 : 0;
 
-    // Aggregate party votes by source
-    const partyVotesMap = new Map<string, { party: any; sourceResults: Map<string, number>; totalVotes: number }>();
+    // Agregación de votos por partido y fuente
+    const partyVotesMap = new Map<string, { 
+      party: any; 
+      sourceResults: Map<string, number>; 
+      totalVotes: number 
+    }>();
     
-    acts.forEach(act => {
-      if (act.party_votes && Array.isArray(act.party_votes)) {
-        act.party_votes.forEach((pv: any) => {
-          if (pv.political_parties) {
-            const partyKey = pv.political_parties.siglas;
-            const sourceType = act.source_type || 'unknown';
-            const votes = pv.votes || 0;
-            
-            const existing = partyVotesMap.get(partyKey);
-            if (existing) {
-              existing.totalVotes += votes;
-              const currentSourceVotes = existing.sourceResults.get(sourceType) || 0;
-              existing.sourceResults.set(sourceType, currentSourceVotes + votes);
-            } else {
-              const sourceResults = new Map<string, number>();
-              sourceResults.set(sourceType, votes);
-              partyVotesMap.set(partyKey, {
-                party: pv.political_parties,
-                sourceResults,
-                totalVotes: votes
-              });
-            }
-          }
-        });
+    partyVotes.forEach(pv => {
+      if (pv.political_parties) {
+        const partyKey = pv.political_parties.siglas;
+        const act = acts.find(a => a.id === pv.electoral_act_id);
+        const sourceType = act?.source_type || 'unknown';
+        const votes = pv.votes || 0;
+        
+        const existing = partyVotesMap.get(partyKey);
+        if (existing) {
+          existing.totalVotes += votes;
+          const currentSourceVotes = existing.sourceResults.get(sourceType) || 0;
+          existing.sourceResults.set(sourceType, currentSourceVotes + votes);
+        } else {
+          const sourceResults = new Map<string, number>();
+          sourceResults.set(sourceType, votes);
+          partyVotesMap.set(partyKey, {
+            party: pv.political_parties,
+            sourceResults,
+            totalVotes: votes
+          });
+        }
       }
     });
 
-    // Calculate valid votes by source for percentage calculations
+    // Calculamos votos válidos por fuente para porcentajes
     const validVotesBySource = new Map<string, number>();
     filters.sourceTypes.forEach(sourceType => {
       const sourceValidVotes = acts
@@ -257,6 +241,7 @@ export const useElectoralAggregation = () => {
       validVotesBySource.set(sourceType, sourceValidVotes);
     });
 
+    // Convertimos a formato final
     const partyResults: PartyResultBySource[] = Array.from(partyVotesMap.values())
       .map(({ party, sourceResults, totalVotes }) => {
         const sourceResultsObj: { [sourceType: string]: { votes: number; percentage: number } } = {};
@@ -278,7 +263,7 @@ export const useElectoralAggregation = () => {
       })
       .sort((a, b) => b.totalVotes - a.totalVotes);
 
-    // Source comparison
+    // Comparación por fuentes
     const sourceMap = new Map<string, { totalVotes: number; count: number }>();
     acts.forEach(act => {
       const source = act.source_type || 'unknown';
@@ -297,11 +282,11 @@ export const useElectoralAggregation = () => {
       coverage: acts.length > 0 ? (data.count / acts.length) * 100 : 0
     }));
 
-    console.log('Aggregated results:', {
+    console.log('Aggregated results completed:', {
       totalVotes,
       totalCensus,
       partyResults: partyResults.length,
-      individualActas: individualActas.length
+      individualActas: acts.length
     });
 
     return {
@@ -314,7 +299,7 @@ export const useElectoralAggregation = () => {
       partyResults,
       sourceComparison,
       selectedSources: filters.sourceTypes,
-      individualActas
+      individualActas: acts
     };
   };
 

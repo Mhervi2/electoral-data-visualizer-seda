@@ -12,6 +12,7 @@ export interface PoliticalParty {
   id: string;
   name: string;
   siglas: string;
+  color: string; // Añadida propiedad color que existe en la BD
 }
 
 export interface Election {
@@ -37,6 +38,7 @@ export interface ExistingAct {
     political_parties: {
       name: string;
       siglas: string;
+      color: string; // Añadida propiedad color
     };
   }>;
 }
