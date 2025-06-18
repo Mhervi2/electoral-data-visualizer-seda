@@ -22,7 +22,7 @@ export const useAppData = () => {
 
   useEffect(() => {
     const fetchAllData = async () => {
-      console.log('🔄 Starting unified data fetch...');
+      console.log('🔄 Fetching all data from new database structure...');
       
       try {
         setData(prev => ({ ...prev, loading: true, error: null }));
@@ -98,7 +98,7 @@ export const useAppData = () => {
           error: null,
         });
 
-        console.log('🎉 All data loaded successfully!');
+        console.log('🎉 All data loaded successfully from new database!');
 
       } catch (error: any) {
         console.error('💥 Fatal error loading data:', error);

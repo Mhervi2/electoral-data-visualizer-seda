@@ -17,7 +17,7 @@ export const useExistingActChecker = () => {
     }
 
     try {
-      console.log('🔍 Checking for existing act...');
+      console.log('🔍 Checking for existing act with new database structure...');
       const { data, error } = await supabase
         .from('electoral_acts_with_municipalities')
         .select(`

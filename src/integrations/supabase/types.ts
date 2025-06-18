@@ -9,66 +9,24 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      audit_logs: {
-        Row: {
-          action: string
-          created_at: string | null
-          id: string
-          ip_address: unknown | null
-          new_values: Json | null
-          old_values: Json | null
-          record_id: string | null
-          table_name: string
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string | null
-          id?: string
-          ip_address?: unknown | null
-          new_values?: Json | null
-          old_values?: Json | null
-          record_id?: string | null
-          table_name: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string | null
-          id?: string
-          ip_address?: unknown | null
-          new_values?: Json | null
-          old_values?: Json | null
-          record_id?: string | null
-          table_name?: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       elections: {
         Row: {
           created_at: string | null
           id: string
           name: string
           status: string
-          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           name: string
           status?: string
-          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
           name?: string
           status?: string
-          updated_at?: string | null
         }
         Relationships: []
       }
@@ -100,7 +58,7 @@ export type Database = {
           municipality_idm?: number | null
           null_votes?: number
           section: string
-          source_type: string
+          source_type?: string
           submitted_by?: string | null
           table_letter: string
           total_voters: number
@@ -130,7 +88,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_electoral_acts_municipality"
+            foreignKeyName: "electoral_acts_municipality_idm_fkey"
             columns: ["municipality_idm"]
             isOneToOne: false
             referencedRelation: "mpca"
@@ -165,36 +123,6 @@ export type Database = {
           idp?: number | null
           municipio?: string | null
           provincia?: string | null
-        }
-        Relationships: []
-      }
-      party_suggestions: {
-        Row: {
-          created_at: string | null
-          id: string
-          name: string
-          reviewed_at: string | null
-          siglas: string
-          status: string
-          suggested_by: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          name: string
-          reviewed_at?: string | null
-          siglas: string
-          status?: string
-          suggested_by?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          name?: string
-          reviewed_at?: string | null
-          siglas?: string
-          status?: string
-          suggested_by?: string | null
         }
         Relationships: []
       }
@@ -268,27 +196,6 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
-        Row: {
-          created_at: string | null
-          email: string
-          id: string
-          is_admin: boolean | null
-        }
-        Insert: {
-          created_at?: string | null
-          email: string
-          id: string
-          is_admin?: boolean | null
-        }
-        Update: {
-          created_at?: string | null
-          email?: string
-          id?: string
-          is_admin?: boolean | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       electoral_acts_with_municipalities: {
@@ -320,7 +227,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_electoral_acts_municipality"
+            foreignKeyName: "electoral_acts_municipality_idm_fkey"
             columns: ["municipality_idm"]
             isOneToOne: false
             referencedRelation: "mpca"
@@ -330,16 +237,7 @@ export type Database = {
       }
     }
     Functions: {
-      log_audit_action: {
-        Args: {
-          p_action: string
-          p_table_name: string
-          p_record_id?: string
-          p_old_values?: Json
-          p_new_values?: Json
-        }
-        Returns: undefined
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

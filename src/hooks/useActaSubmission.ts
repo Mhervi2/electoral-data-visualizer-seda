@@ -10,9 +10,10 @@ export const useActaSubmission = () => {
 
   const submitActa = async (actaData: ActaData): Promise<boolean> => {
     setIsSubmitting(true);
+    console.log('📤 Submitting acta with new database structure...');
     
     try {
-      // Submit without requiring authentication
+      // Submit electoral act (public access, no authentication required)
       const { data: actData, error: actError } = await supabase
         .from('electoral_acts')
         .insert({
@@ -32,8 +33,14 @@ export const useActaSubmission = () => {
         .select()
         .single();
 
-      if (actError) throw actError;
+      if (actError) {
+        console.error('❌ Error submitting electoral act:', actError);
+        throw actError;
+      }
 
+      console.log('✅ Electoral act submitted successfully:', actData.id);
+
+      // Submit party votes if any
       const partyVotesData = Object.entries(actaData.votos)
         .filter(([_, votes]) => votes && parseInt(votes) > 0)
         .map(([partyId, votes]) => ({
@@ -47,22 +54,26 @@ export const useActaSubmission = () => {
           .from('party_votes')
           .insert(partyVotesData);
 
-        if (votesError) throw votesError;
+        if (votesError) {
+          console.error('❌ Error submitting party votes:', votesError);
+          throw votesError;
+        }
+        console.log(`✅ ${partyVotesData.length} party votes submitted successfully`);
       }
 
       toast({
-        title: "Acta enviada",
-        description: "El acta electoral ha sido enviada correctamente.",
+        title: "Acta enviada correctamente",
+        description: "El acta electoral ha sido registrada en el sistema.",
       });
 
       return true;
 
     } catch (error) {
-      console.error('Error submitting act:', error);
+      console.error('💥 Error submitting act:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "No se pudo enviar el acta. Inténtalo de nuevo.",
+        title: "Error al enviar el acta",
+        description: "No se pudo enviar el acta. Por favor, inténtalo de nuevo.",
       });
       return false;
     } finally {

@@ -12,35 +12,13 @@ export interface PoliticalParty {
   id: string;
   name: string;
   siglas: string;
-  color: string; // Añadida propiedad color que existe en la BD
+  color: string;
 }
 
 export interface Election {
   id: string;
   name: string;
   status: string;
-}
-
-export interface ExistingAct {
-  id: string;
-  municipality: { name: string };
-  district: string;
-  section: string;
-  table_letter: string;
-  source_type: string;
-  created_at: string;
-  census_total: number;
-  total_voters: number;
-  blank_votes: number;
-  null_votes: number;
-  party_votes: Array<{
-    votes: number;
-    political_parties: {
-      name: string;
-      siglas: string;
-      color: string; // Añadida propiedad color
-    };
-  }>;
 }
 
 export interface ActaData {
@@ -56,4 +34,26 @@ export interface ActaData {
   votos: { [key: string]: string };
   imagen?: File;
   imageUrl?: string;
+}
+
+export interface ExistingAct {
+  id: string;
+  district: string;
+  section: string;
+  table_letter: string;
+  census_total: number;
+  total_voters: number;
+  blank_votes: number;
+  null_votes: number;
+  source_type: string;
+  created_at: string;
+  municipality: { name: string };
+  party_votes: {
+    votes: number;
+    political_parties: {
+      name: string;
+      siglas: string;
+      color: string;
+    };
+  }[];
 }
