@@ -29,6 +29,8 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
     // Convertir "all" a cadena vacía para mantener la compatibilidad
     const actualValue = value === "all" ? "" : value;
     
+    console.log(`🔄 Filter changed - ${key}:`, actualValue);
+    
     // Los selects se aplican inmediatamente
     const newFilters = { 
       ...filters, 
@@ -37,31 +39,38 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
 
     // Limpiar filtros dependientes cuando se cambie un filtro padre
     if (key === 'autonomousCommunity') {
+      console.log('🧹 Clearing dependent filters for CA change');
       newFilters.province = '';
       newFilters.municipality = '';
       newFilters.district = '';
       newFilters.section = '';
       newFilters.table = '';
     } else if (key === 'province') {
+      console.log('🧹 Clearing dependent filters for Province change');
       newFilters.municipality = '';
       newFilters.district = '';
       newFilters.section = '';
       newFilters.table = '';
     } else if (key === 'municipality') {
+      console.log('🧹 Clearing dependent filters for Municipality change');
       newFilters.district = '';
       newFilters.section = '';
       newFilters.table = '';
     } else if (key === 'district') {
+      console.log('🧹 Clearing dependent filters for District change');
       newFilters.section = '';
       newFilters.table = '';
     } else if (key === 'section') {
+      console.log('🧹 Clearing dependent filters for Section change');
       newFilters.table = '';
     }
 
+    console.log('📤 Sending new filters:', newFilters);
     onFiltersChange(newFilters);
   };
 
   const handleSourceTypesChange = (value: string[]) => {
+    console.log('🔄 Source types changed:', value);
     // Los toggles se aplican inmediatamente sin debounce
     onFiltersChange({ ...filters, sourceTypes: value });
   };

@@ -80,26 +80,41 @@ export const useElectoralAggregation = () => {
   const buildQuery = (baseQuery: any) => {
     let query = baseQuery;
 
-    // Usar filtros exactos para los valores seleccionados
-    if (filters.autonomousCommunity.trim()) {
-      query = query.eq('comunidad_autonoma', filters.autonomousCommunity.trim());
+    console.log('🔧 Building query with filters:', filters);
+
+    // Usar filtros exactos para los valores seleccionados (con trim para consistencia)
+    if (filters.autonomousCommunity?.trim()) {
+      const trimmedValue = filters.autonomousCommunity.trim();
+      console.log('🎯 Applying CA filter:', trimmedValue);
+      query = query.eq('comunidad_autonoma', trimmedValue);
     }
-    if (filters.province.trim()) {
-      query = query.eq('provincia', filters.province.trim());
+    if (filters.province?.trim()) {
+      const trimmedValue = filters.province.trim();
+      console.log('🎯 Applying Province filter:', trimmedValue);
+      query = query.eq('provincia', trimmedValue);
     }
-    if (filters.municipality.trim()) {
-      query = query.eq('municipio', filters.municipality.trim());
+    if (filters.municipality?.trim()) {
+      const trimmedValue = filters.municipality.trim();
+      console.log('🎯 Applying Municipality filter:', trimmedValue);
+      query = query.eq('municipio', trimmedValue);
     }
-    if (filters.district.trim()) {
-      query = query.eq('district', filters.district.trim());
+    if (filters.district?.trim()) {
+      const trimmedValue = filters.district.trim();
+      console.log('🎯 Applying District filter:', trimmedValue);
+      query = query.eq('district', trimmedValue);
     }
-    if (filters.section.trim()) {
-      query = query.eq('section', filters.section.trim());
+    if (filters.section?.trim()) {
+      const trimmedValue = filters.section.trim();
+      console.log('🎯 Applying Section filter:', trimmedValue);
+      query = query.eq('section', trimmedValue);
     }
-    if (filters.table.trim()) {
-      query = query.eq('table_letter', filters.table.trim());
+    if (filters.table?.trim()) {
+      const trimmedValue = filters.table.trim();
+      console.log('🎯 Applying Table filter:', trimmedValue);
+      query = query.eq('table_letter', trimmedValue);
     }
     if (filters.sourceTypes.length > 0) {
+      console.log('🎯 Applying Source Types filter:', filters.sourceTypes);
       query = query.in('source_type', filters.sourceTypes);
     }
 
@@ -109,7 +124,7 @@ export const useElectoralAggregation = () => {
   const fetchAggregatedResults = async () => {
     try {
       setLoading(true);
-      console.log('📊 Fetching aggregated results with exact filters:', filters);
+      console.log('📊 Fetching aggregated results with filters:', filters);
 
       // Get individual electoral acts first
       let individualQuery = supabase
@@ -136,6 +151,7 @@ export const useElectoralAggregation = () => {
 
       // If no acts, return empty result
       if (!individualActas || individualActas.length === 0) {
+        console.log('ℹ️ No actas found matching current filters');
         setAggregatedResults({
           totalVotes: 0,
           totalCensus: 0,

@@ -39,33 +39,49 @@ export const useAvailableFilters = (currentFilters: Filters) => {
   const fetchFilterOptions = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Fetching available filter options with current filters:', currentFilters);
+      console.log('🔍 Fetching available filter options with current filters:', {
+        ...currentFilters,
+        municipality: debouncedMunicipality
+      });
 
       // Construir la consulta base
       let query = supabase
         .from('electoral_acts_with_municipalities')
         .select('comunidad_autonoma, provincia, municipio, district, section, table_letter');
 
-      // Aplicar filtros existentes para obtener opciones válidas
-      if (currentFilters.autonomousCommunity) {
-        query = query.eq('comunidad_autonoma', currentFilters.autonomousCommunity);
+      // Aplicar filtros existentes para obtener opciones válidas (con trim para consistencia)
+      if (currentFilters.autonomousCommunity?.trim()) {
+        const trimmedValue = currentFilters.autonomousCommunity.trim();
+        console.log('📍 Filtering by CA:', trimmedValue);
+        query = query.eq('comunidad_autonoma', trimmedValue);
       }
-      if (currentFilters.province) {
-        query = query.eq('provincia', currentFilters.province);
+      if (currentFilters.province?.trim()) {
+        const trimmedValue = currentFilters.province.trim();
+        console.log('📍 Filtering by Province:', trimmedValue);
+        query = query.eq('provincia', trimmedValue);
       }
-      if (debouncedMunicipality.trim()) {
-        query = query.ilike('municipio', `%${debouncedMunicipality.trim()}%`);
+      if (debouncedMunicipality?.trim()) {
+        const trimmedValue = debouncedMunicipality.trim();
+        console.log('📍 Filtering by Municipality:', trimmedValue);
+        query = query.ilike('municipio', `%${trimmedValue}%`);
       }
-      if (currentFilters.district) {
-        query = query.eq('district', currentFilters.district);
+      if (currentFilters.district?.trim()) {
+        const trimmedValue = currentFilters.district.trim();
+        console.log('📍 Filtering by District:', trimmedValue);
+        query = query.eq('district', trimmedValue);
       }
-      if (currentFilters.section) {
-        query = query.eq('section', currentFilters.section);
+      if (currentFilters.section?.trim()) {
+        const trimmedValue = currentFilters.section.trim();
+        console.log('📍 Filtering by Section:', trimmedValue);
+        query = query.eq('section', trimmedValue);
       }
-      if (currentFilters.table) {
-        query = query.eq('table_letter', currentFilters.table);
+      if (currentFilters.table?.trim()) {
+        const trimmedValue = currentFilters.table.trim();
+        console.log('📍 Filtering by Table:', trimmedValue);
+        query = query.eq('table_letter', trimmedValue);
       }
       if (currentFilters.sourceTypes.length > 0) {
+        console.log('📍 Filtering by Source Types:', currentFilters.sourceTypes);
         query = query.in('source_type', currentFilters.sourceTypes);
       }
 
@@ -79,35 +95,35 @@ export const useAvailableFilters = (currentFilters: Filters) => {
       console.log('✅ Raw filter data loaded:', data?.length || 0);
 
       if (data) {
-        // Extraer valores únicos para cada filtro
+        // Extraer valores únicos para cada filtro (con trim para limpiar)
         const uniqueOptions: FilterOptions = {
           autonomousCommunities: [...new Set(data
-            .map(item => item.comunidad_autonoma)
+            .map(item => item.comunidad_autonoma?.trim())
             .filter(Boolean)
             .sort()
           )],
           provinces: [...new Set(data
-            .map(item => item.provincia)
+            .map(item => item.provincia?.trim())
             .filter(Boolean)
             .sort()
           )],
           municipalities: [...new Set(data
-            .map(item => item.municipio)
+            .map(item => item.municipio?.trim())
             .filter(Boolean)
             .sort()
           )],
           districts: [...new Set(data
-            .map(item => item.district)
+            .map(item => item.district?.trim())
             .filter(Boolean)
             .sort()
           )],
           sections: [...new Set(data
-            .map(item => item.section)
+            .map(item => item.section?.trim())
             .filter(Boolean)
             .sort()
           )],
           tables: [...new Set(data
-            .map(item => item.table_letter)
+            .map(item => item.table_letter?.trim())
             .filter(Boolean)
             .sort()
           )]
@@ -146,23 +162,14 @@ export const useAvailableFilters = (currentFilters: Filters) => {
   // Memoizar las opciones filtradas para evitar recálculos innecesarios
   const filteredOptions = useMemo(() => {
     return {
-      // Comunidades autónomas siempre disponibles
       autonomousCommunities: options.autonomousCommunities,
-      
-      // Provincias filtradas por CA seleccionada
-      provinces: currentFilters.autonomousCommunity 
-        ? options.provinces 
-        : options.provinces,
-        
-      // Municipios filtrados por provincia seleccionada
+      provinces: options.provinces,
       municipalities: options.municipalities,
-      
-      // Distritos, secciones y mesas filtrados por selecciones anteriores
       districts: options.districts,
       sections: options.sections,
       tables: options.tables
     };
-  }, [options, currentFilters.autonomousCommunity, currentFilters.province]);
+  }, [options]);
 
   return {
     options: filteredOptions,
