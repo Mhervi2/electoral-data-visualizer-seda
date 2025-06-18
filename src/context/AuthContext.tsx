@@ -39,50 +39,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         
         if (session?.user) {
-          // Fetch user profile from our profiles table
-          try {
-            const { data: profile, error } = await supabase
-              .from('profiles')
-              .select('email, is_admin')
-              .eq('id', session.user.id)
-              .single();
-            
-            if (profile && !error) {
-              console.log('User profile loaded:', profile);
-              setUser({
-                email: profile.email,
-                isAdmin: profile.is_admin || false
-              });
-            } else {
-              console.error('Error fetching profile:', error);
-              // If no profile exists, create one
-              if (error?.code === 'PGRST116') {
-                console.log('Creating new profile for user:', session.user.email);
-                const { error: insertError } = await supabase
-                  .from('profiles')
-                  .insert({
-                    id: session.user.id,
-                    email: session.user.email || '',
-                    is_admin: session.user.email === 'superadmin@seda.es'
-                  });
-                
-                if (!insertError) {
-                  setUser({
-                    email: session.user.email || '',
-                    isAdmin: session.user.email === 'superadmin@seda.es'
-                  });
-                } else {
-                  console.error('Error creating profile:', insertError);
-                  setUser(null);
-                }
-              } else {
-                setUser(null);
-              }
-            }
-          } catch (error) {
-            console.error('Error in profile fetch:', error);
-            setUser(null);
-          }
+          // Simplified user profile without database dependency
+          console.log('User authenticated:', session.user.email);
+          setUser({
+            email: session.user.email || '',
+            isAdmin: session.user.email === 'superadmin@seda.es'
+          });
         } else {
           setUser(null);
         }

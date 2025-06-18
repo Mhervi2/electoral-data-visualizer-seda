@@ -4,14 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Play, Square, AlertTriangle } from 'lucide-react';
+import { Play, Square } from 'lucide-react';
 
 interface Election {
   id: string;
   name: string;
   status: string;
   created_at: string;
-  updated_at?: string;
 }
 
 interface ElectionStatusManagerProps {
@@ -30,7 +29,6 @@ const ElectionStatusManager = ({ election, onStatusChange }: ElectionStatusManag
         .from('elections')
         .update({ 
           status: newStatus,
-          updated_at: new Date().toISOString()
         })
         .eq('id', election.id);
 
@@ -38,15 +36,6 @@ const ElectionStatusManager = ({ election, onStatusChange }: ElectionStatusManag
         console.error('Error updating election status:', error);
         throw error;
       }
-
-      // Log audit action
-      await supabase.rpc('log_audit_action', {
-        p_action: 'UPDATE_ELECTION_STATUS',
-        p_table_name: 'elections',
-        p_record_id: election.id,
-        p_old_values: { status: election.status },
-        p_new_values: { status: newStatus }
-      });
 
       toast({
         title: "Estado actualizado",

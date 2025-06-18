@@ -1,96 +1,18 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Users } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext';
+import { Search, Users } from 'lucide-react';
 import { useAppData } from '@/hooks/useAppData';
 
 const PoliticalParties = () => {
-  const { user } = useAuth();
   const { politicalParties, loading, error } = useAppData();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newPartyName, setNewPartyName] = useState('');
-  const [newPartySiglas, setNewPartySiglas] = useState('');
-  const { toast } = useToast();
 
   const filteredParties = politicalParties.filter(party =>
     party.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     party.siglas.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleSuggestParty = async () => {
-    if (!newPartyName.trim() || !newPartySiglas.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Por favor, completa todos los campos.",
-      });
-      return;
-    }
-
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Debes iniciar sesión para sugerir un partido.",
-      });
-      return;
-    }
-
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      
-      if (!authUser) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "No se pudo verificar la sesión del usuario.",
-        });
-        return;
-      }
-
-      const { error } = await supabase
-        .from('party_suggestions')
-        .insert({
-          name: newPartyName.trim(),
-          siglas: newPartySiglas.trim(),
-          suggested_by: authUser.id
-        });
-
-      if (error) {
-        console.error('Error submitting suggestion:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "No se pudo enviar la sugerencia. Inténtalo de nuevo.",
-        });
-        return;
-      }
-
-      toast({
-        title: "Sugerencia enviada",
-        description: `Hemos recibido tu sugerencia para añadir "${newPartyName} (${newPartySiglas})". Los administradores la revisarán pronto.`,
-      });
-
-      setNewPartyName('');
-      setNewPartySiglas('');
-      setIsDialogOpen(false);
-    } catch (error) {
-      console.error('Error submitting suggestion:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No se pudo enviar la sugerencia. Inténtalo de nuevo.",
-      });
-    }
-  };
 
   if (loading) {
     return (
@@ -109,9 +31,12 @@ const PoliticalParties = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+            >
               Reintentar
-            </Button>
+            </button>
           </CardContent>
         </Card>
       </div>
@@ -129,52 +54,6 @@ const PoliticalParties = () => {
             {politicalParties.length} partidos disponibles para el proceso electoral
           </p>
         </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Sugerir Nuevo Partido
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Sugerir Nuevo Partido</DialogTitle>
-              <DialogDescription>
-                Si falta algún partido político en el listado, puedes sugerirlo aquí.
-                Los administradores revisarán tu sugerencia.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="party-name">Nombre del Partido *</Label>
-                <Input
-                  id="party-name"
-                  value={newPartyName}
-                  onChange={(e) => setNewPartyName(e.target.value)}
-                  placeholder="Ej: Nuevo Partido Democrático"
-                />
-              </div>
-              <div>
-                <Label htmlFor="party-siglas">Siglas *</Label>
-                <Input
-                  id="party-siglas"
-                  value={newPartySiglas}
-                  onChange={(e) => setNewPartySiglas(e.target.value)}
-                  placeholder="Ej: NPD"
-                />
-              </div>
-              <div className="flex space-x-2">
-                <Button onClick={handleSuggestParty} className="flex-1">
-                  Enviar Sugerencia
-                </Button>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1">
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
 
       {/* Buscador */}
@@ -253,8 +132,7 @@ const PoliticalParties = () => {
         <CardContent>
           <p className="text-sm text-muted-foreground">
             La lista de partidos políticos es gestionada por los administradores del sistema.
-            Si detectas la falta de algún partido o encuentras información incorrecta,
-            utiliza el botón "Sugerir Nuevo Partido" para notificarlo.
+            En esta versión simplificada, los partidos se gestionan directamente en la base de datos.
           </p>
         </CardContent>
       </Card>
