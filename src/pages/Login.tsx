@@ -19,11 +19,11 @@ const Login = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (!isLoading && user?.isAdmin) {
+    if (user?.isAdmin) {
       const redirect = searchParams.get('redirect') || '/admin';
       navigate(redirect);
     }
-  }, [user, isLoading, navigate, searchParams]);
+  }, [user, navigate, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +42,7 @@ const Login = () => {
         toast({
           variant: "destructive",
           title: "Error de autenticación",
-          description: "Credenciales inválidas o no tienes permisos de administrador.",
+          description: "Credenciales inválidas. Verifica tu email y contraseña.",
         });
       }
     } catch (error) {
@@ -70,9 +70,9 @@ const Login = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <img 
-            src="https://placehold.co/80x80/A80000/FFFFFF.png?text=SEDA" 
+            src="/lovable-uploads/b9e2bf6a-f33b-4c47-901a-cb1b67b22c1a.png" 
             alt="SEDA Electoral Logo" 
-            className="h-20 w-20 mx-auto"
+            className="h-20 w-20 mx-auto object-contain"
             data-ai-hint="SEDA Electoral logo"
           />
           <div>
@@ -137,8 +137,7 @@ const Login = () => {
             <p className="text-sm text-muted-foreground">
               <strong>Para acceder como administrador:</strong><br />
               Usuario: <strong>superadmin@seda.es</strong><br />
-              Contraseña: <strong>AdminFuerte#2024</strong><br />
-              Este login es exclusivo para administradores.
+              Contraseña: <strong>AdminFuerte#2024</strong>
             </p>
           </div>
         </CardContent>

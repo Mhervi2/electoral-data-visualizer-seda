@@ -1,7 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import React, { createContext, useContext, useState } from 'react';
 
 interface UserProfile {
   isAdmin: boolean;
@@ -10,7 +8,6 @@ interface UserProfile {
 
 interface AuthContextType {
   user: UserProfile | null;
-  session: Session | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
@@ -28,41 +25,7 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        
-        if (session?.user) {
-          // For now, use email-based admin check until profiles table is available
-          const userProfile: UserProfile = {
-            email: session.user.email || '',
-            isAdmin: session.user.email === 'superadmin@seda.es'
-          };
-          
-          console.log('User profile loaded:', userProfile);
-          setUser(userProfile);
-        } else {
-          setUser(null);
-        }
-        
-        setIsLoading(false);
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.email);
-      // The onAuthStateChange will handle setting the user
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const [isLoading, setIsLoading] = useState(false);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
@@ -70,39 +33,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Attempting login for:', email);
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('Login error:', error.message);
+      // Simple hardcoded authentication for admin panel
+      if (email === 'superadmin@seda.es' && password === 'AdminFuerte#2024') {
+        const userProfile: UserProfile = {
+          email: email,
+          isAdmin: true
+        };
+        
+        console.log('Login successful for:', email);
+        setUser(userProfile);
+        
+        // Store in localStorage for persistence
+        localStorage.setItem('admin_user', JSON.stringify(userProfile));
+        
+        setIsLoading(false);
+        return true;
+      } else {
+        console.log('Invalid credentials for:', email);
         setIsLoading(false);
         return false;
       }
-
-      if (data.user && data.session) {
-        console.log('Login successful for:', email);
-        // The onAuthStateChange will handle setting the user
-        return true;
-      }
     } catch (error) {
       console.error('Login exception:', error);
+      setIsLoading(false);
+      return false;
     }
-    
-    setIsLoading(false);
-    return false;
   };
 
-  const logout = async () => {
+  const logout = () => {
     console.log('Logging out...');
-    await supabase.auth.signOut();
     setUser(null);
-    setSession(null);
+    localStorage.removeItem('admin_user');
   };
+
+  // Check for existing session on component mount
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem('admin_user');
+    if (storedUser) {
+      try {
+        const userProfile = JSON.parse(storedUser);
+        console.log('Restored user session:', userProfile);
+        setUser(userProfile);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('admin_user');
+      }
+    }
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

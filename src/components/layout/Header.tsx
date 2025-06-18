@@ -34,6 +34,10 @@ const Header = () => {
     return 'home';
   };
 
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <header className="border-b bg-card">
       {/* Top section with logo and actions */}
@@ -62,7 +66,7 @@ const Header = () => {
             </Button>
             
             {user?.isAdmin ? (
-              <Button variant="ghost" size="sm" onClick={logout}>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4" />
               </Button>
             ) : (
