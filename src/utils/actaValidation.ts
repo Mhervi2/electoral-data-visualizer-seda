@@ -2,6 +2,15 @@
 import { ActaData } from '@/types/acta';
 
 export const validateActaData = (actaData: ActaData): { isValid: boolean; message?: string } => {
+  // Validate mesa identifier format
+  const mesaPattern = /^\d{1,2}-\d{3}-[A-Z]$/;
+  if (!mesaPattern.test(actaData.mesaIdentifier)) {
+    return {
+      isValid: false,
+      message: "El identificador de mesa debe tener el formato: Distrito-Sección-Mesa (ej: 1-001-A)"
+    };
+  }
+
   const censo = parseInt(actaData.censo) || 0;
   const votantes = parseInt(actaData.votantes) || 0;
   const blancos = parseInt(actaData.blancos) || 0;

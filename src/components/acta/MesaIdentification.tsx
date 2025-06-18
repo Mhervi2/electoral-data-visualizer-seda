@@ -8,9 +8,7 @@ import { MunicipalitySelector } from './MunicipalitySelector';
 interface MesaIdentificationProps {
   selectedMpcaRecord: MpcaData | null;
   municipio: string;
-  distrito: string;
-  seccion: string;
-  mesa: string;
+  mesaIdentifier: string;
   onMunicipalityChange: (municipalityId: string, municipalityData: MpcaData | null) => void;
   onInputChange: (field: string, value: string) => void;
   onBlur: () => void;
@@ -19,13 +17,22 @@ interface MesaIdentificationProps {
 export const MesaIdentification = ({
   selectedMpcaRecord,
   municipio,
-  distrito,
-  seccion,
-  mesa,
+  mesaIdentifier,
   onMunicipalityChange,
   onInputChange,
   onBlur,
 }: MesaIdentificationProps) => {
+  const validateMesaFormat = (value: string) => {
+    // Formato esperado: X-XXX-X (distrito-sección-mesa)
+    const pattern = /^\d{1,2}-\d{3}-[A-Z]$/;
+    return pattern.test(value);
+  };
+
+  const handleMesaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    onInputChange('mesaIdentifier', value);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -62,40 +69,27 @@ export const MesaIdentification = ({
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <Label htmlFor="distrito">Distrito *</Label>
-            <Input
-              id="distrito"
-              value={distrito}
-              onChange={(e) => onInputChange('distrito', e.target.value)}
-              onBlur={onBlur}
-              placeholder="Ej: 01"
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="seccion">Sección *</Label>
-            <Input
-              id="seccion"
-              value={seccion}
-              onChange={(e) => onInputChange('seccion', e.target.value)}
-              onBlur={onBlur}
-              placeholder="Ej: 001"
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="mesa">Mesa *</Label>
-            <Input
-              id="mesa"
-              value={mesa}
-              onChange={(e) => onInputChange('mesa', e.target.value)}
-              onBlur={onBlur}
-              placeholder="Ej: A"
-              required
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="mesaIdentifier">
+            Identificador de Mesa *
+            <span className="text-sm text-muted-foreground ml-2">
+              (Formato: Distrito-Sección-Mesa, ej: 1-001-A)
+            </span>
+          </Label>
+          <Input
+            id="mesaIdentifier"
+            value={mesaIdentifier}
+            onChange={handleMesaChange}
+            onBlur={onBlur}
+            placeholder="Ej: 1-001-A"
+            required
+            className={!validateMesaFormat(mesaIdentifier) && mesaIdentifier ? "border-destructive" : ""}
+          />
+          {!validateMesaFormat(mesaIdentifier) && mesaIdentifier && (
+            <p className="text-sm text-destructive">
+              Formato incorrecto. Use: Distrito-Sección-Mesa (ej: 1-001-A)
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

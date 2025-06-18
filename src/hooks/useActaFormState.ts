@@ -7,9 +7,7 @@ export const useActaFormState = () => {
   const [actaData, setActaData] = useState<ActaData>({
     electionId: '',
     municipio: '',
-    distrito: '',
-    seccion: '',
-    mesa: '',
+    mesaIdentifier: '',
     censo: '',
     votantes: '',
     blancos: '',
@@ -38,9 +36,7 @@ export const useActaFormState = () => {
     setActaData({
       electionId: '',
       municipio: '',
-      distrito: '',
-      seccion: '',
-      mesa: '',
+      mesaIdentifier: '',
       censo: '',
       votantes: '',
       blancos: '',

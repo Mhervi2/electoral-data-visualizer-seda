@@ -73,9 +73,7 @@ export const SubmitActaForm = () => {
         <MesaIdentification 
           selectedMpcaRecord={selectedMpcaRecord}
           municipio={actaData.municipio}
-          distrito={actaData.distrito}
-          seccion={actaData.seccion}
-          mesa={actaData.mesa}
+          mesaIdentifier={actaData.mesaIdentifier}
           onMunicipalityChange={handleMunicipalityChange}
           onInputChange={handleInputChange}
           onBlur={checkExistingAct}

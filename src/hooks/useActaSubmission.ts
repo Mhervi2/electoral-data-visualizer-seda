@@ -10,7 +10,7 @@ export const useActaSubmission = () => {
 
   const submitActa = async (actaData: ActaData): Promise<boolean> => {
     setIsSubmitting(true);
-    console.log('📤 Submitting acta with new database structure...');
+    console.log('📤 Submitting acta with mesa identifier...');
     
     try {
       // Submit electoral act (public access, no authentication required)
@@ -19,9 +19,7 @@ export const useActaSubmission = () => {
         .insert({
           election_id: actaData.electionId,
           municipality_idm: parseInt(actaData.municipio),
-          district: actaData.distrito,
-          section: actaData.seccion,
-          table_letter: actaData.mesa,
+          mesa_identifier: actaData.mesaIdentifier,
           census_total: parseInt(actaData.censo),
           total_voters: parseInt(actaData.votantes),
           blank_votes: parseInt(actaData.blancos),

@@ -35,48 +35,42 @@ export type Database = {
           blank_votes: number
           census_total: number
           created_at: string | null
-          district: string
           election_id: string | null
           id: string
           image_url: string | null
+          mesa_identifier: string
           municipality_idm: number | null
           null_votes: number
-          section: string
           source_type: string
           submitted_by: string | null
-          table_letter: string
           total_voters: number
         }
         Insert: {
           blank_votes?: number
           census_total: number
           created_at?: string | null
-          district: string
           election_id?: string | null
           id?: string
           image_url?: string | null
+          mesa_identifier: string
           municipality_idm?: number | null
           null_votes?: number
-          section: string
           source_type?: string
           submitted_by?: string | null
-          table_letter: string
           total_voters: number
         }
         Update: {
           blank_votes?: number
           census_total?: number
           created_at?: string | null
-          district?: string
           election_id?: string | null
           id?: string
           image_url?: string | null
+          mesa_identifier?: string
           municipality_idm?: number | null
           null_votes?: number
-          section?: string
           source_type?: string
           submitted_by?: string | null
-          table_letter?: string
           total_voters?: number
         }
         Relationships: [
@@ -228,18 +222,16 @@ export type Database = {
           census_total: number | null
           comunidad_autonoma: string | null
           created_at: string | null
-          district: string | null
           election_id: string | null
           id: string | null
           image_url: string | null
+          mesa_identifier: string | null
           municipality_idm: number | null
           municipio: string | null
           null_votes: number | null
           provincia: string | null
-          section: string | null
           source_type: string | null
           submitted_by: string | null
-          table_letter: string | null
           total_voters: number | null
         }
         Relationships: [

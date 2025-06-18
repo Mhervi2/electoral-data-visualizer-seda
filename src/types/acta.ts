@@ -24,9 +24,7 @@ export interface Election {
 export interface ActaData {
   electionId: string;
   municipio: string;
-  distrito: string;
-  seccion: string;
-  mesa: string;
+  mesaIdentifier: string; // Nuevo campo unificado
   censo: string;
   votantes: string;
   blancos: string;
@@ -38,9 +36,7 @@ export interface ActaData {
 
 export interface ExistingAct {
   id: string;
-  district: string;
-  section: string;
-  table_letter: string;
+  mesa_identifier: string; // Nuevo campo unificado
   census_total: number;
   total_voters: number;
   blank_votes: number;

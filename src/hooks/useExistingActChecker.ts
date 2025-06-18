@@ -12,19 +12,17 @@ export const useExistingActChecker = () => {
   const [showExistingActDialog, setShowExistingActDialog] = useState(false);
 
   const checkExistingAct = async (actaData: ActaData): Promise<boolean> => {
-    if (!actaData.electionId || !actaData.municipio || !actaData.distrito || !actaData.seccion || !actaData.mesa) {
+    if (!actaData.electionId || !actaData.municipio || !actaData.mesaIdentifier) {
       return false;
     }
 
     try {
-      console.log('🔍 Checking for existing act with new database structure...');
+      console.log('🔍 Checking for existing act with mesa identifier...');
       const { data, error } = await supabase
         .from('electoral_acts_with_municipalities')
         .select(`
           id,
-          district,
-          section,
-          table_letter,
+          mesa_identifier,
           source_type,
           created_at,
           census_total,
@@ -39,9 +37,7 @@ export const useExistingActChecker = () => {
         `)
         .eq('election_id', actaData.electionId)
         .eq('municipality_idm', parseInt(actaData.municipio))
-        .eq('district', actaData.distrito)
-        .eq('section', actaData.seccion)
-        .eq('table_letter', actaData.mesa);
+        .eq('mesa_identifier', actaData.mesaIdentifier);
 
       if (error) {
         console.error('❌ Error checking existing act:', error);
@@ -76,11 +72,13 @@ export const useExistingActChecker = () => {
   };
 
   const navigateToResults = (selectedMpcaRecord: MpcaData | null, actaData: ActaData) => {
+    // Parse mesa identifier to extract individual components for URL
+    const mesaParts = actaData.mesaIdentifier.split('-');
     const params = new URLSearchParams({
       municipality: selectedMpcaRecord?.municipio || '',
-      district: actaData.distrito,
-      section: actaData.seccion,
-      table: actaData.mesa
+      district: mesaParts[0] || '',
+      section: mesaParts[1] || '',
+      table: mesaParts[2] || ''
     });
     
     toast({
