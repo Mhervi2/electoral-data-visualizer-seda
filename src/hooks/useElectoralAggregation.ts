@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -81,14 +80,15 @@ export const useElectoralAggregation = () => {
   const buildQuery = (baseQuery: any) => {
     let query = baseQuery;
 
+    // Usar filtros exactos para los valores seleccionados
     if (filters.autonomousCommunity.trim()) {
-      query = query.ilike('comunidad_autonoma', `%${filters.autonomousCommunity.trim()}%`);
+      query = query.eq('comunidad_autonoma', filters.autonomousCommunity.trim());
     }
     if (filters.province.trim()) {
-      query = query.ilike('provincia', `%${filters.province.trim()}%`);
+      query = query.eq('provincia', filters.province.trim());
     }
     if (filters.municipality.trim()) {
-      query = query.ilike('municipio', `%${filters.municipality.trim()}%`);
+      query = query.eq('municipio', filters.municipality.trim());
     }
     if (filters.district.trim()) {
       query = query.eq('district', filters.district.trim());
@@ -109,7 +109,7 @@ export const useElectoralAggregation = () => {
   const fetchAggregatedResults = async () => {
     try {
       setLoading(true);
-      console.log('📊 Fetching aggregated results with new database structure:', filters);
+      console.log('📊 Fetching aggregated results with exact filters:', filters);
 
       // Get individual electoral acts first
       let individualQuery = supabase

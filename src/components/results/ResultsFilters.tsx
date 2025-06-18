@@ -1,13 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Loader2 } from 'lucide-react';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useLocationOptions } from '@/hooks/useLocationOptions';
+import { useAvailableFilters } from '@/hooks/useAvailableFilters';
 
 interface ResultsFiltersProps {
   filters: {
@@ -24,58 +22,48 @@ interface ResultsFiltersProps {
 }
 
 export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: ResultsFiltersProps) => {
-  // Estado local para los inputs de texto (mantenemos solo los que siguen siendo inputs)
-  const [localFilters, setLocalFilters] = useState({
-    municipality: filters.municipality,
-    district: filters.district,
-    section: filters.section,
-    table: filters.table,
-  });
-
-  // Obtener opciones de ubicación
-  const { autonomousCommunities, provinces, loading: optionsLoading } = useLocationOptions(filters.autonomousCommunity);
-
-  // Debounce para los filtros de texto (600ms de retraso)
-  const debouncedFilters = useDebounce(localFilters, 600);
-
-  // Actualizar filtros globales cuando cambien los valores debounced
-  useEffect(() => {
-    onFiltersChange((prev: any) => ({
-      ...prev,
-      ...debouncedFilters
-    }));
-  }, [debouncedFilters, onFiltersChange]);
-
-  // Sincronizar estado local cuando cambien los filtros externos
-  useEffect(() => {
-    setLocalFilters({
-      municipality: filters.municipality,
-      district: filters.district,
-      section: filters.section,
-      table: filters.table,
-    });
-  }, [filters.municipality, filters.district, filters.section, filters.table]);
-
-  const handleLocalFilterChange = (key: string, value: string) => {
-    setLocalFilters(prev => ({ ...prev, [key]: value }));
-  };
+  // Usar el nuevo hook para obtener opciones basadas en datos reales
+  const { options, loading: optionsLoading } = useAvailableFilters(filters);
 
   const handleSelectChange = (key: string, value: string) => {
     // Convertir "all" a cadena vacía para mantener la compatibilidad
     const actualValue = value === "all" ? "" : value;
     
     // Los selects se aplican inmediatamente
-    onFiltersChange((prev: any) => ({ 
-      ...prev, 
-      [key]: actualValue,
-      // Si se cambia la comunidad autónoma, limpiar la provincia
-      ...(key === 'autonomousCommunity' ? { province: '' } : {})
-    }));
+    const newFilters = { 
+      ...filters, 
+      [key]: actualValue
+    };
+
+    // Limpiar filtros dependientes cuando se cambie un filtro padre
+    if (key === 'autonomousCommunity') {
+      newFilters.province = '';
+      newFilters.municipality = '';
+      newFilters.district = '';
+      newFilters.section = '';
+      newFilters.table = '';
+    } else if (key === 'province') {
+      newFilters.municipality = '';
+      newFilters.district = '';
+      newFilters.section = '';
+      newFilters.table = '';
+    } else if (key === 'municipality') {
+      newFilters.district = '';
+      newFilters.section = '';
+      newFilters.table = '';
+    } else if (key === 'district') {
+      newFilters.section = '';
+      newFilters.table = '';
+    } else if (key === 'section') {
+      newFilters.table = '';
+    }
+
+    onFiltersChange(newFilters);
   };
 
   const handleSourceTypesChange = (value: string[]) => {
     // Los toggles se aplican inmediatamente sin debounce
-    onFiltersChange((prev: any) => ({ ...prev, sourceTypes: value }));
+    onFiltersChange({ ...filters, sourceTypes: value });
   };
 
   return (
@@ -101,7 +89,7 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las CA</SelectItem>
-                {autonomousCommunities.map((ca) => (
+                {options.autonomousCommunities.map((ca) => (
                   <SelectItem key={ca} value={ca}>
                     {ca}
                   </SelectItem>
@@ -109,6 +97,7 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
               </SelectContent>
             </Select>
           </div>
+          
           <div>
             <Label htmlFor="province-filter">Provincia</Label>
             <Select 
@@ -121,7 +110,7 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las provincias</SelectItem>
-                {provinces.map((province) => (
+                {options.provinces.map((province) => (
                   <SelectItem key={province} value={province}>
                     {province}
                   </SelectItem>
@@ -129,41 +118,89 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
               </SelectContent>
             </Select>
           </div>
+          
           <div>
             <Label htmlFor="municipality-filter">Municipio</Label>
-            <Input
-              id="municipality-filter"
-              placeholder="Buscar municipio..."
-              value={localFilters.municipality}
-              onChange={(e) => handleLocalFilterChange('municipality', e.target.value)}
-            />
+            <Select 
+              value={filters.municipality || "all"} 
+              onValueChange={(value) => handleSelectChange('municipality', value)}
+              disabled={!filters.province}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar municipio..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los municipios</SelectItem>
+                {options.municipalities.map((municipality) => (
+                  <SelectItem key={municipality} value={municipality}>
+                    {municipality}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+          
           <div>
             <Label htmlFor="district-filter">Distrito</Label>
-            <Input
-              id="district-filter"
-              placeholder="Ej: 01"
-              value={localFilters.district}
-              onChange={(e) => handleLocalFilterChange('district', e.target.value)}
-            />
+            <Select 
+              value={filters.district || "all"} 
+              onValueChange={(value) => handleSelectChange('district', value)}
+              disabled={!filters.municipality}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar distrito..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los distritos</SelectItem>
+                {options.districts.map((district) => (
+                  <SelectItem key={district} value={district}>
+                    {district}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+          
           <div>
             <Label htmlFor="section-filter">Sección</Label>
-            <Input
-              id="section-filter"
-              placeholder="Ej: 001"
-              value={localFilters.section}
-              onChange={(e) => handleLocalFilterChange('section', e.target.value)}
-            />
+            <Select 
+              value={filters.section || "all"} 
+              onValueChange={(value) => handleSelectChange('section', value)}
+              disabled={!filters.district}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar sección..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las secciones</SelectItem>
+                {options.sections.map((section) => (
+                  <SelectItem key={section} value={section}>
+                    {section}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+          
           <div>
             <Label htmlFor="table-filter">Mesa</Label>
-            <Input
-              id="table-filter"
-              placeholder="Ej: A"
-              value={localFilters.table}
-              onChange={(e) => handleLocalFilterChange('table', e.target.value)}
-            />
+            <Select 
+              value={filters.table || "all"} 
+              onValueChange={(value) => handleSelectChange('table', value)}
+              disabled={!filters.section}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar mesa..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las mesas</SelectItem>
+                {options.tables.map((table) => (
+                  <SelectItem key={table} value={table}>
+                    {table}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         
