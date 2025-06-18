@@ -6,24 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Image, ChevronDown } from 'lucide-react';
 import { ActDetailsDialog } from './ActDetailsDialog';
-
-interface ElectoralAct {
-  id: string;
-  municipality_idm: number;
-  district: string;
-  section: string;
-  table_letter: string;
-  census_total: number;
-  total_voters: number;
-  blank_votes: number;
-  null_votes: number;
-  source_type: string;
-  image_url?: string;
-  created_at: string;
-  municipio?: string;
-  provincia?: string;
-  comunidad_autonoma?: string;
-}
+import { ElectoralAct } from '@/types/acta';
 
 interface IndividualActsListProps {
   individualActas: ElectoralAct[];
@@ -69,6 +52,15 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
     return location;
   };
 
+  const parseMesaIdentifier = (mesaIdentifier: string) => {
+    const parts = mesaIdentifier.split('-');
+    return {
+      district: parts[0] || '',
+      section: parts[1] || '',
+      table: parts[2] || ''
+    };
+  };
+
   const displayedActas = individualActas.slice(0, displayCount);
   const hasMore = individualActas.length > displayCount;
 
@@ -107,40 +99,43 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayedActas.map((acta) => (
-                  <TableRow 
-                    key={acta.id}
-                    className="cursor-pointer hover:bg-accent/50"
-                    onClick={() => handleActaClick(acta)}
-                  >
-                    <TableCell>
-                      <div className="text-sm">
-                        <div className="font-medium">{getLocationDisplay(acta)}</div>
-                        <div className="text-muted-foreground">
-                          D:{acta.district} S:{acta.section}
+                {displayedActas.map((acta) => {
+                  const { district, section, table } = parseMesaIdentifier(acta.mesa_identifier);
+                  return (
+                    <TableRow 
+                      key={acta.id}
+                      className="cursor-pointer hover:bg-accent/50"
+                      onClick={() => handleActaClick(acta)}
+                    >
+                      <TableCell>
+                        <div className="text-sm">
+                          <div className="font-medium">{getLocationDisplay(acta)}</div>
+                          <div className="text-muted-foreground">
+                            D:{district} S:{section}
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">{acta.table_letter}</TableCell>
-                    <TableCell>{acta.census_total}</TableCell>
-                    <TableCell>{acta.total_voters}</TableCell>
-                    <TableCell>
-                      <Badge variant={getSourceTypeBadgeVariant(acta.source_type) as any}>
-                        {getSourceTypeLabel(acta.source_type)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(acta.created_at).toLocaleDateString('es-ES')}</TableCell>
-                    <TableCell className="text-right">
-                      {acta.image_url ? (
-                        <ActDetailsDialog act={acta} />
-                      ) : (
-                        <Button size="sm" variant="outline" disabled>
-                          <Image className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell className="font-medium">{table}</TableCell>
+                      <TableCell>{acta.census_total}</TableCell>
+                      <TableCell>{acta.total_voters}</TableCell>
+                      <TableCell>
+                        <Badge variant={getSourceTypeBadgeVariant(acta.source_type) as any}>
+                          {getSourceTypeLabel(acta.source_type)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(acta.created_at).toLocaleDateString('es-ES')}</TableCell>
+                      <TableCell className="text-right">
+                        {acta.image_url ? (
+                          <ActDetailsDialog act={acta} />
+                        ) : (
+                          <Button size="sm" variant="outline" disabled>
+                            <Image className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
             

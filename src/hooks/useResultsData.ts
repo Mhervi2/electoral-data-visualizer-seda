@@ -3,32 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-interface ElectoralAct {
-  id: string;
-  municipality_idm: number;
-  district: string;
-  section: string;
-  table_letter: string;
-  census_total: number;
-  total_voters: number;
-  blank_votes: number;
-  null_votes: number;
-  source_type: string;
-  image_url?: string;
-  created_at: string;
-  municipio?: string;
-  provincia?: string;
-  comunidad_autonoma?: string;
-  party_votes?: { 
-    party: { 
-      name: string; 
-      siglas: string; 
-      color: string; 
-    }; 
-    votes: number; 
-  }[];
-}
+import { ElectoralAct } from '@/types/acta';
 
 interface Discrepancy {
   municipality: string;
@@ -61,6 +36,15 @@ export const useResultsData = () => {
     sourceType: 'all'
   });
 
+  const parseMesaIdentifier = (mesaIdentifier: string) => {
+    const parts = mesaIdentifier.split('-');
+    return {
+      district: parts[0] || '',
+      section: parts[1] || '',
+      table: parts[2] || ''
+    };
+  };
+
   const fetchElectoralActs = async () => {
     try {
       console.log('Fetching electoral acts with filters:', filters);
@@ -85,15 +69,24 @@ export const useResultsData = () => {
         query = query.ilike('municipio', `%${filters.municipality.trim()}%`);
       }
       
+      // For mesa_identifier filtering, we need to construct the identifier
+      let mesaIdentifierFilter = '';
       if (filters.district.trim()) {
-        query = query.eq('district', filters.district.trim());
+        mesaIdentifierFilter += filters.district.trim();
       }
       if (filters.section.trim()) {
-        query = query.eq('section', filters.section.trim());
+        if (mesaIdentifierFilter) mesaIdentifierFilter += '-';
+        mesaIdentifierFilter += filters.section.trim();
       }
       if (filters.table.trim()) {
-        query = query.eq('table_letter', filters.table.trim());
+        if (mesaIdentifierFilter) mesaIdentifierFilter += '-';
+        mesaIdentifierFilter += filters.table.trim();
       }
+      
+      if (mesaIdentifierFilter) {
+        query = query.ilike('mesa_identifier', `%${mesaIdentifierFilter}%`);
+      }
+      
       if (filters.sourceType.trim() && filters.sourceType !== 'all') {
         query = query.eq('source_type', filters.sourceType.trim());
       }

@@ -6,32 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Image, Eye } from 'lucide-react';
 import { ActDetailsDialog } from './ActDetailsDialog';
-
-interface ElectoralAct {
-  id: string;
-  municipality_idm: number;
-  district: string;
-  section: string;
-  table_letter: string;
-  census_total: number;
-  total_voters: number;
-  blank_votes: number;
-  null_votes: number;
-  source_type: string;
-  image_url?: string;
-  created_at: string;
-  municipio?: string;
-  provincia?: string;
-  comunidad_autonoma?: string;
-  party_votes?: { 
-    party: { 
-      name: string; 
-      siglas: string; 
-      color: string; 
-    }; 
-    votes: number; 
-  }[];
-}
+import { ElectoralAct } from '@/types/acta';
 
 interface ResultsTableProps {
   electoralActs: ElectoralAct[];
@@ -74,6 +49,15 @@ export const ResultsTable = ({ electoralActs }: ResultsTableProps) => {
     return location;
   };
 
+  const parseMesaIdentifier = (mesaIdentifier: string) => {
+    const parts = mesaIdentifier.split('-');
+    return {
+      district: parts[0] || '',
+      section: parts[1] || '',
+      table: parts[2] || ''
+    };
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -103,37 +87,40 @@ export const ResultsTable = ({ electoralActs }: ResultsTableProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {electoralActs.map((act) => (
-                <TableRow key={act.id}>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div className="font-medium">{getLocationDisplay(act)}</div>
-                      <div className="text-muted-foreground">
-                        D:{act.district} S:{act.section}
+              {electoralActs.map((act) => {
+                const { district, section, table } = parseMesaIdentifier(act.mesa_identifier);
+                return (
+                  <TableRow key={act.id}>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className="font-medium">{getLocationDisplay(act)}</div>
+                        <div className="text-muted-foreground">
+                          D:{district} S:{section}
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{act.table_letter}</TableCell>
-                  <TableCell>{act.census_total}</TableCell>
-                  <TableCell>{act.total_voters}</TableCell>
-                  <TableCell>
-                    <Badge variant={getSourceTypeBadgeVariant(act.source_type) as any}>
-                      {getSourceTypeLabel(act.source_type)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{new Date(act.created_at).toLocaleDateString('es-ES')}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      {act.image_url && (
-                        <ActDetailsDialog act={act} />
-                      )}
-                      <Button size="sm" variant="outline">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell className="font-medium">{table}</TableCell>
+                    <TableCell>{act.census_total}</TableCell>
+                    <TableCell>{act.total_voters}</TableCell>
+                    <TableCell>
+                      <Badge variant={getSourceTypeBadgeVariant(act.source_type) as any}>
+                        {getSourceTypeLabel(act.source_type)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(act.created_at).toLocaleDateString('es-ES')}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        {act.image_url && (
+                          <ActDetailsDialog act={act} />
+                        )}
+                        <Button size="sm" variant="outline">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
