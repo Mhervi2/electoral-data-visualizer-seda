@@ -21,9 +21,7 @@ interface PartyResultBySource {
 interface ElectoralAct {
   id: string;
   municipality_idm: number;
-  district: string;
-  section: string;
-  table_letter: string;
+  mesa_identifier: string;
   census_total: number;
   total_voters: number;
   blank_votes: number;
@@ -77,6 +75,15 @@ export const useElectoralAggregation = () => {
     sourceTypes: ['user']
   });
 
+  const parseMesaIdentifier = (mesaIdentifier: string) => {
+    const parts = mesaIdentifier.split('-');
+    return {
+      district: parts[0] || '',
+      section: parts[1] || '',
+      table: parts[2] || ''
+    };
+  };
+
   const buildQuery = (baseQuery: any) => {
     let query = baseQuery;
 
@@ -98,20 +105,35 @@ export const useElectoralAggregation = () => {
       console.log('🎯 Applying Municipality filter:', trimmedValue);
       query = query.eq('municipio', trimmedValue);
     }
-    if (filters.district?.trim()) {
-      const trimmedValue = filters.district.trim();
-      console.log('🎯 Applying District filter:', trimmedValue);
-      query = query.eq('district', trimmedValue);
-    }
-    if (filters.section?.trim()) {
-      const trimmedValue = filters.section.trim();
-      console.log('🎯 Applying Section filter:', trimmedValue);
-      query = query.eq('section', trimmedValue);
-    }
-    if (filters.table?.trim()) {
-      const trimmedValue = filters.table.trim();
-      console.log('🎯 Applying Table filter:', trimmedValue);
-      query = query.eq('table_letter', trimmedValue);
+    if (filters.district?.trim() || filters.section?.trim() || filters.table?.trim()) {
+      // Si tenemos filtros de mesa específicos, necesitamos filtrar por mesa_identifier
+      const targetMesaPattern = `${filters.district?.trim() || '\\d{1,2}'}-${filters.section?.trim() || '\\d{3}'}-${filters.table?.trim() || '[A-Z]'}`;
+      console.log('🎯 Applying Mesa filter pattern:', targetMesaPattern);
+      
+      // Para filtros exactos, construimos el identificador exacto
+      if (filters.district?.trim() && filters.section?.trim() && filters.table?.trim()) {
+        const exactMesa = `${filters.district.trim()}-${filters.section.trim()}-${filters.table.trim()}`;
+        query = query.eq('mesa_identifier', exactMesa);
+      } else {
+        // Para filtros parciales, usamos LIKE con patrones
+        let likePattern = '';
+        if (filters.district?.trim()) {
+          likePattern += `${filters.district.trim()}-`;
+        } else {
+          likePattern += '%';
+        }
+        if (filters.section?.trim()) {
+          likePattern += `${filters.section.trim()}-`;
+        } else {
+          likePattern += '%';
+        }
+        if (filters.table?.trim()) {
+          likePattern += filters.table.trim();
+        } else {
+          likePattern += '%';
+        }
+        query = query.like('mesa_identifier', likePattern);
+      }
     }
     if (filters.sourceTypes.length > 0) {
       console.log('🎯 Applying Source Types filter:', filters.sourceTypes);

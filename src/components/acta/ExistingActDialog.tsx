@@ -29,6 +29,15 @@ export const ExistingActDialog = ({ open, onOpenChange, existingAct, onNavigateT
     }
   };
 
+  const parseMesaIdentifier = (mesaIdentifier: string) => {
+    const parts = mesaIdentifier.split('-');
+    return {
+      district: parts[0] || '',
+      section: parts[1] || '',
+      table: parts[2] || ''
+    };
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -48,9 +57,17 @@ export const ExistingActDialog = ({ open, onOpenChange, existingAct, onNavigateT
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p><strong>Municipio:</strong> {existingAct.municipality?.name}</p>
-                  <p><strong>Distrito:</strong> {existingAct.district}</p>
-                  <p><strong>Sección:</strong> {existingAct.section}</p>
-                  <p><strong>Mesa:</strong> {existingAct.table_letter}</p>
+                  <p><strong>Mesa:</strong> {existingAct.mesa_identifier}</p>
+                  {(() => {
+                    const { district, section, table } = parseMesaIdentifier(existingAct.mesa_identifier);
+                    return (
+                      <>
+                        <p><strong>Distrito:</strong> {district}</p>
+                        <p><strong>Sección:</strong> {section}</p>
+                        <p><strong>Mesa:</strong> {table}</p>
+                      </>
+                    );
+                  })()}
                 </div>
                 <div>
                   <p><strong>Fuente:</strong> {getSourceTypeLabel(existingAct.source_type)}</p>

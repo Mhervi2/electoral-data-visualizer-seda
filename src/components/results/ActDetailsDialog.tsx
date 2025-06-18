@@ -7,9 +7,7 @@ import { Image } from 'lucide-react';
 interface ElectoralAct {
   id: string;
   municipality_idm: number;
-  district: string;
-  section: string;
-  table_letter: string;
+  mesa_identifier: string;
   census_total: number;
   total_voters: number;
   blank_votes: number;
@@ -51,6 +49,17 @@ export const ActDetailsDialog = ({ act }: ActDetailsDialogProps) => {
     return location;
   };
 
+  const parseMesaIdentifier = (mesaIdentifier: string) => {
+    const parts = mesaIdentifier.split('-');
+    return {
+      district: parts[0] || '',
+      section: parts[1] || '',
+      table: parts[2] || ''
+    };
+  };
+
+  const { district, section, table } = parseMesaIdentifier(act.mesa_identifier);
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -62,7 +71,7 @@ export const ActDetailsDialog = ({ act }: ActDetailsDialogProps) => {
         <DialogHeader>
           <DialogTitle>Imagen del Acta</DialogTitle>
           <DialogDescription>
-            Mesa {act.table_letter} - {getLocationDisplay(act)} D:{act.district} S:{act.section}
+            Mesa {act.mesa_identifier} ({table}) - {getLocationDisplay(act)} D:{district} S:{section}
           </DialogDescription>
         </DialogHeader>
         {act.image_url && (

@@ -36,6 +36,15 @@ export const useAvailableFilters = (currentFilters: Filters) => {
   // Debounce los filtros de texto para evitar consultas excesivas
   const debouncedMunicipality = useDebounce(currentFilters.municipality, 300);
 
+  const parseMesaIdentifier = (mesaIdentifier: string) => {
+    const parts = mesaIdentifier.split('-');
+    return {
+      district: parts[0] || '',
+      section: parts[1] || '',
+      table: parts[2] || ''
+    };
+  };
+
   const fetchFilterOptions = async () => {
     try {
       setLoading(true);
@@ -47,7 +56,7 @@ export const useAvailableFilters = (currentFilters: Filters) => {
       // Construir la consulta base
       let query = supabase
         .from('electoral_acts_with_municipalities')
-        .select('comunidad_autonoma, provincia, municipio, district, section, table_letter');
+        .select('comunidad_autonoma, provincia, municipio, mesa_identifier');
 
       // Aplicar filtros existentes para obtener opciones válidas (con trim para consistencia)
       if (currentFilters.autonomousCommunity?.trim()) {
@@ -65,21 +74,6 @@ export const useAvailableFilters = (currentFilters: Filters) => {
         console.log('📍 Filtering by Municipality:', trimmedValue);
         query = query.ilike('municipio', `%${trimmedValue}%`);
       }
-      if (currentFilters.district?.trim()) {
-        const trimmedValue = currentFilters.district.trim();
-        console.log('📍 Filtering by District:', trimmedValue);
-        query = query.eq('district', trimmedValue);
-      }
-      if (currentFilters.section?.trim()) {
-        const trimmedValue = currentFilters.section.trim();
-        console.log('📍 Filtering by Section:', trimmedValue);
-        query = query.eq('section', trimmedValue);
-      }
-      if (currentFilters.table?.trim()) {
-        const trimmedValue = currentFilters.table.trim();
-        console.log('📍 Filtering by Table:', trimmedValue);
-        query = query.eq('table_letter', trimmedValue);
-      }
       if (currentFilters.sourceTypes.length > 0) {
         console.log('📍 Filtering by Source Types:', currentFilters.sourceTypes);
         query = query.in('source_type', currentFilters.sourceTypes);
@@ -96,6 +90,35 @@ export const useAvailableFilters = (currentFilters: Filters) => {
 
       if (data) {
         // Extraer valores únicos para cada filtro (con trim para limpiar)
+        const districts = new Set<string>();
+        const sections = new Set<string>();
+        const tables = new Set<string>();
+
+        data.forEach(item => {
+          if (item.mesa_identifier) {
+            const { district, section, table } = parseMesaIdentifier(item.mesa_identifier);
+            
+            // Solo agregar si coincide con los filtros aplicados
+            let shouldInclude = true;
+            
+            if (currentFilters.district?.trim() && district !== currentFilters.district.trim()) {
+              shouldInclude = false;
+            }
+            if (currentFilters.section?.trim() && section !== currentFilters.section.trim()) {
+              shouldInclude = false;
+            }
+            if (currentFilters.table?.trim() && table !== currentFilters.table.trim()) {
+              shouldInclude = false;
+            }
+            
+            if (shouldInclude) {
+              if (district) districts.add(district);
+              if (section) sections.add(section);
+              if (table) tables.add(table);
+            }
+          }
+        });
+
         const uniqueOptions: FilterOptions = {
           autonomousCommunities: [...new Set(data
             .map(item => item.comunidad_autonoma?.trim())
@@ -112,21 +135,9 @@ export const useAvailableFilters = (currentFilters: Filters) => {
             .filter(Boolean)
             .sort()
           )],
-          districts: [...new Set(data
-            .map(item => item.district?.trim())
-            .filter(Boolean)
-            .sort()
-          )],
-          sections: [...new Set(data
-            .map(item => item.section?.trim())
-            .filter(Boolean)
-            .sort()
-          )],
-          tables: [...new Set(data
-            .map(item => item.table_letter?.trim())
-            .filter(Boolean)
-            .sort()
-          )]
+          districts: [...districts].sort(),
+          sections: [...sections].sort(),
+          tables: [...tables].sort()
         };
 
         console.log('📊 Unique options extracted:', {

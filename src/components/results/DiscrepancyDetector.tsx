@@ -8,9 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface DiscrepancyData {
   municipality: string;
-  district: string;
-  section: string;
-  table_letter: string;
+  mesa_identifier: string;
   acts: {
     source_type: string;
     census_total: number;
@@ -40,9 +38,7 @@ const DiscrepancyDetector = () => {
         .select(`
           id,
           municipality_idm,
-          district,
-          section,
-          table_letter,
+          mesa_identifier,
           census_total,
           total_voters,
           blank_votes,
@@ -66,11 +62,11 @@ const DiscrepancyDetector = () => {
         return;
       }
 
-      // Agrupar actas por ubicación (municipality, district, section, table)
+      // Agrupar actas por ubicación (municipality, mesa_identifier)
       const groupedActs = new Map<string, any[]>();
       
       acts.forEach(act => {
-        const key = `${act.municipality_idm || 'unknown'}-${act.district}-${act.section}-${act.table_letter}`;
+        const key = `${act.municipality_idm || 'unknown'}-${act.mesa_identifier}`;
         if (!groupedActs.has(key)) {
           groupedActs.set(key, []);
         }
@@ -109,9 +105,7 @@ const DiscrepancyDetector = () => {
           if (differences.length > 0) {
             foundDiscrepancies.push({
               municipality: firstAct.municipio || 'N/A',
-              district: firstAct.district,
-              section: firstAct.section,
-              table_letter: firstAct.table_letter,
+              mesa_identifier: firstAct.mesa_identifier,
               acts: locationActs.map(act => ({
                 source_type: act.source_type,
                 census_total: act.census_total,
@@ -153,6 +147,15 @@ const DiscrepancyDetector = () => {
       'oficial': 'destructive'
     };
     return variants[sourceType as keyof typeof variants] || 'outline';
+  };
+
+  const parseMesaIdentifier = (mesaIdentifier: string) => {
+    const parts = mesaIdentifier.split('-');
+    return {
+      district: parts[0] || '',
+      section: parts[1] || '',
+      table: parts[2] || ''
+    };
   };
 
   if (loading) {
@@ -200,37 +203,40 @@ const DiscrepancyDetector = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {discrepancies.map((discrepancy, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  <div className="text-sm">
-                    <div className="font-medium">{discrepancy.municipality}</div>
-                    <div className="text-muted-foreground">
-                      D:{discrepancy.district} S:{discrepancy.section} M:{discrepancy.table_letter}
+            {discrepancies.map((discrepancy, index) => {
+              const { district, section, table } = parseMesaIdentifier(discrepancy.mesa_identifier);
+              return (
+                <TableRow key={index}>
+                  <TableCell>
+                    <div className="text-sm">
+                      <div className="font-medium">{discrepancy.municipality}</div>
+                      <div className="text-muted-foreground">
+                        Mesa: {discrepancy.mesa_identifier} (D:{district} S:{section} M:{table})
+                      </div>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {discrepancy.acts.map((act, actIndex) => (
-                      <Badge 
-                        key={actIndex} 
-                        variant={getSourceTypeBadgeVariant(act.source_type) as any}
-                      >
-                        {getSourceTypeLabel(act.source_type)}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-sm text-destructive">
-                  <ul className="list-disc list-inside space-y-1">
-                    {discrepancy.differences.map((diff, diffIndex) => (
-                      <li key={diffIndex}>{diff}</li>
-                    ))}
-                  </ul>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {discrepancy.acts.map((act, actIndex) => (
+                        <Badge 
+                          key={actIndex} 
+                          variant={getSourceTypeBadgeVariant(act.source_type) as any}
+                        >
+                          {getSourceTypeLabel(act.source_type)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-destructive">
+                    <ul className="list-disc list-inside space-y-1">
+                      {discrepancy.differences.map((diff, diffIndex) => (
+                        <li key={diffIndex}>{diff}</li>
+                      ))}
+                    </ul>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>

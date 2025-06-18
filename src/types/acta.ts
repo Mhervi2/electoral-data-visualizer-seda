@@ -24,7 +24,7 @@ export interface Election {
 export interface ActaData {
   electionId: string;
   municipio: string;
-  mesaIdentifier: string; // Nuevo campo unificado
+  mesaIdentifier: string;
   censo: string;
   votantes: string;
   blancos: string;
@@ -36,7 +36,7 @@ export interface ActaData {
 
 export interface ExistingAct {
   id: string;
-  mesa_identifier: string; // Nuevo campo unificado
+  mesa_identifier: string;
   census_total: number;
   total_voters: number;
   blank_votes: number;
@@ -52,4 +52,20 @@ export interface ExistingAct {
       color: string;
     };
   }[];
+}
+
+export interface ElectoralAct {
+  id: string;
+  municipality_idm: number;
+  mesa_identifier: string;
+  census_total: number;
+  total_voters: number;
+  blank_votes: number;
+  null_votes: number;
+  source_type: string;
+  image_url?: string;
+  created_at: string;
+  municipio?: string;
+  provincia?: string;
+  comunidad_autonoma?: string;
 }
