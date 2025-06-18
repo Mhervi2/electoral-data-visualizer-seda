@@ -31,6 +31,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchUserProfile = async (userId: string, email: string) => {
+    try {
+      console.log('Fetching user profile for:', email);
+      
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        // Fallback to email-based admin check if profile doesn't exist
+        return {
+          email,
+          isAdmin: email === 'superadmin@seda.es'
+        };
+      }
+
+      const userProfile: UserProfile = {
+        email,
+        isAdmin: profile?.is_admin || false
+      };
+      
+      console.log('User profile loaded:', userProfile);
+      return userProfile;
+    } catch (error) {
+      console.error('Exception fetching profile:', error);
+      // Fallback to email-based admin check
+      return {
+        email,
+        isAdmin: email === 'superadmin@seda.es'
+      };
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -39,13 +75,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         
         if (session?.user) {
-          // For now, use email-based admin check until profiles table is available
-          const userProfile: UserProfile = {
-            email: session.user.email || '',
-            isAdmin: session.user.email === 'superadmin@seda.es'
-          };
-          
-          console.log('User profile loaded:', userProfile);
+          const userProfile = await fetchUserProfile(
+            session.user.id,
+            session.user.email || ''
+          );
           setUser(userProfile);
         } else {
           setUser(null);
