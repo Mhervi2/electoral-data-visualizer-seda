@@ -39,27 +39,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         
         if (session?.user) {
-          // Fetch user profile from database
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('email, is_admin')
-            .eq('id', session.user.id)
-            .single();
-
-          if (error) {
-            console.error('Error fetching user profile:', error);
-            // Fallback for superadmin
-            setUser({
-              email: session.user.email || '',
-              isAdmin: session.user.email === 'superadmin@seda.es'
-            });
-          } else {
-            console.log('User profile loaded:', profile);
-            setUser({
-              email: profile.email,
-              isAdmin: profile.is_admin
-            });
-          }
+          // For now, use email-based admin check until profiles table is available
+          const userProfile: UserProfile = {
+            email: session.user.email || '',
+            isAdmin: session.user.email === 'superadmin@seda.es'
+          };
+          
+          console.log('User profile loaded:', userProfile);
+          setUser(userProfile);
         } else {
           setUser(null);
         }
