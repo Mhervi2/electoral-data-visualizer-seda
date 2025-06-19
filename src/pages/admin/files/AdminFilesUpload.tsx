@@ -10,6 +10,7 @@ import { Upload, ArrowLeft, FileText, CheckCircle, AlertCircle } from 'lucide-re
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useSecureFileUpload } from '@/hooks/useSecureFileUpload';
+import { useAppData } from '@/hooks/useAppData';
 
 interface ProcessingResult {
   success: boolean;
@@ -23,14 +24,10 @@ interface ProcessingResult {
 const AdminFilesUpload = () => {
   const { toast } = useToast();
   const { uploadFile, uploading } = useSecureFileUpload();
+  const { elections, loading: electionsLoading } = useAppData();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<ProcessingResult | null>(null);
-  
-  const [mockElections] = useState([
-    { id: '1', name: 'Elecciones Municipales 2023' },
-    { id: '2', name: 'Elecciones Generales 2023' }
-  ]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -177,18 +174,23 @@ const AdminFilesUpload = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="election">Elección Asociada *</Label>
-              <Select name="election" required>
+              <Select name="election" required disabled={electionsLoading}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona la elección" />
+                  <SelectValue placeholder={electionsLoading ? "Cargando elecciones..." : "Selecciona la elección"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockElections.map((election) => (
+                  {elections.map((election) => (
                     <SelectItem key={election.id} value={election.id}>
                       {election.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {elections.length === 0 && !electionsLoading && (
+                <p className="text-sm text-muted-foreground text-amber-600">
+                  No hay elecciones activas disponibles. Crea una elección primero.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -240,7 +242,7 @@ const AdminFilesUpload = () => {
               type="submit" 
               size="lg" 
               className="w-full" 
-              disabled={processing || uploading || !selectedFile}
+              disabled={processing || uploading || !selectedFile || elections.length === 0}
             >
               {processing ? (
                 <>
