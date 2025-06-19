@@ -116,5 +116,19 @@ export const useSecureFileUpload = () => {
     }
   };
 
-  return { uploadFile, uploading };
+  // New method specifically for Excel files
+  const uploadExcelFile = async (file: File): Promise<string | null> => {
+    return uploadFile(file, 'electoral-files', {
+      maxSizeInMB: 50, // Excel files can be larger
+      allowedTypes: [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/vnd.ms-excel', // .xls
+        'text/csv' // .csv
+      ],
+      folder: 'excel',
+      requireAuth: true
+    });
+  };
+
+  return { uploadFile, uploadExcelFile, uploading };
 };
