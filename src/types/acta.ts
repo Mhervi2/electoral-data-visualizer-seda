@@ -21,6 +21,11 @@ export interface Election {
   status: string;
 }
 
+export interface MailVoter {
+  dni: string;
+  firstName: string;
+}
+
 export interface ActaData {
   electionId: string;
   municipio: string;
@@ -32,6 +37,7 @@ export interface ActaData {
   votos: { [key: string]: string };
   imagen?: File;
   imageUrl?: string;
+  mailVoters: MailVoter[];
 }
 
 export interface ExistingAct {

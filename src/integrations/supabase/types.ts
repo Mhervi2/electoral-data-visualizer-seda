@@ -90,6 +90,45 @@ export type Database = {
           },
         ]
       }
+      mail_votes: {
+        Row: {
+          created_at: string | null
+          dni: string
+          electoral_act_id: string | null
+          first_name: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dni: string
+          electoral_act_id?: string | null
+          first_name: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          dni?: string
+          electoral_act_id?: string | null
+          first_name?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_votes_electoral_act_id_fkey"
+            columns: ["electoral_act_id"]
+            isOneToOne: false
+            referencedRelation: "electoral_acts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mail_votes_electoral_act_id_fkey"
+            columns: ["electoral_act_id"]
+            isOneToOne: false
+            referencedRelation: "electoral_acts_with_municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mpca: {
         Row: {
           ca: string | null

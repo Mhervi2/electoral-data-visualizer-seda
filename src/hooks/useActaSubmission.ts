@@ -59,6 +59,29 @@ export const useActaSubmission = () => {
         console.log(`✅ ${partyVotesData.length} party votes submitted successfully`);
       }
 
+      // Submit mail voters if any
+      if (actaData.mailVoters && actaData.mailVoters.length > 0) {
+        const mailVotersData = actaData.mailVoters
+          .filter(voter => voter.dni.trim() && voter.firstName.trim())
+          .map(voter => ({
+            electoral_act_id: actData.id,
+            dni: voter.dni.trim(),
+            first_name: voter.firstName.trim()
+          }));
+
+        if (mailVotersData.length > 0) {
+          const { error: mailVotersError } = await supabase
+            .from('mail_votes')
+            .insert(mailVotersData);
+
+          if (mailVotersError) {
+            console.error('❌ Error submitting mail voters:', mailVotersError);
+            throw mailVotersError;
+          }
+          console.log(`✅ ${mailVotersData.length} mail voters submitted successfully`);
+        }
+      }
+
       toast({
         title: "Acta enviada correctamente",
         description: "El acta electoral ha sido registrada en el sistema.",

@@ -13,6 +13,7 @@ export const useSubmitActa = () => {
     handleMunicipalityChange,
     handleInputChange,
     handleVoteChange,
+    handleMailVotersChange,
     resetForm
   } = useActaFormState();
 
@@ -69,6 +70,7 @@ export const useSubmitActa = () => {
     handleMunicipalityChange,
     handleInputChange,
     handleVoteChange,
+    handleMailVotersChange,
     checkExistingAct: handleCheckExistingAct,
     submitActa,
     navigateToResults: handleNavigateToResults

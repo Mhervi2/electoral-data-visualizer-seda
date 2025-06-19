@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Image, ChevronDown } from 'lucide-react';
 import { ActDetailsDialog } from './ActDetailsDialog';
+import { MailVotersDialog } from './MailVotersDialog';
 import { ElectoralAct } from '@/types/acta';
 
 interface IndividualActsListProps {
@@ -95,7 +96,7 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
                   <TableHead>Votantes</TableHead>
                   <TableHead>Fuente</TableHead>
                   <TableHead>Fecha</TableHead>
-                  <TableHead className="text-right">Imagen</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -125,13 +126,19 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
                       </TableCell>
                       <TableCell>{new Date(acta.created_at).toLocaleDateString('es-ES')}</TableCell>
                       <TableCell className="text-right">
-                        {acta.image_url ? (
-                          <ActDetailsDialog act={acta} />
-                        ) : (
-                          <Button size="sm" variant="outline" disabled>
-                            <Image className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                          {acta.image_url ? (
+                            <ActDetailsDialog act={acta} />
+                          ) : (
+                            <Button size="sm" variant="outline" disabled>
+                              <Image className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <MailVotersDialog 
+                            actId={acta.id} 
+                            mesaIdentifier={acta.mesa_identifier}
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

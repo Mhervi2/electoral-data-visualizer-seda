@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ActaData, MpcaData } from '@/types/acta';
+import { ActaData, MpcaData, MailVoter } from '@/types/acta';
 
 export const useActaFormState = () => {
   const [selectedMpcaRecord, setSelectedMpcaRecord] = useState<MpcaData | null>(null);
@@ -13,6 +13,7 @@ export const useActaFormState = () => {
     blancos: '',
     nulos: '',
     votos: {},
+    mailVoters: [],
   });
 
   const handleMunicipalityChange = (municipalityId: string, municipalityData: MpcaData | null) => {
@@ -32,6 +33,10 @@ export const useActaFormState = () => {
     }));
   };
 
+  const handleMailVotersChange = (mailVoters: MailVoter[]) => {
+    setActaData(prev => ({ ...prev, mailVoters }));
+  };
+
   const resetForm = () => {
     setActaData({
       electionId: '',
@@ -42,6 +47,7 @@ export const useActaFormState = () => {
       blancos: '',
       nulos: '',
       votos: {},
+      mailVoters: [],
     });
     setSelectedMpcaRecord(null);
   };
@@ -52,6 +58,7 @@ export const useActaFormState = () => {
     handleMunicipalityChange,
     handleInputChange,
     handleVoteChange,
+    handleMailVotersChange,
     resetForm
   };
 };

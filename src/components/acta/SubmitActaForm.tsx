@@ -9,6 +9,7 @@ import { MesaIdentification } from './MesaIdentification';
 import { ImageUploadSection } from './ImageUploadSection';
 import { ResultsData } from './ResultsData';
 import { PartyVotes } from './PartyVotes';
+import { MailVotersSection } from './MailVotersSection';
 import { ExistingActDialog } from './ExistingActDialog';
 
 export const SubmitActaForm = () => {
@@ -24,6 +25,7 @@ export const SubmitActaForm = () => {
     handleMunicipalityChange,
     handleInputChange,
     handleVoteChange,
+    handleMailVotersChange,
     checkExistingAct,
     submitActa,
     navigateToResults
@@ -98,6 +100,11 @@ export const SubmitActaForm = () => {
           politicalParties={politicalParties}
           votos={actaData.votos}
           onVoteChange={handleVoteChange}
+        />
+
+        <MailVotersSection 
+          mailVoters={actaData.mailVoters}
+          onMailVotersChange={handleMailVotersChange}
         />
 
         <Button type="submit" className="w-full" disabled={isSubmitting || uploading}>
