@@ -95,21 +95,18 @@ export type Database = {
           created_at: string | null
           dni: string
           electoral_act_id: string | null
-          first_name: string
           id: string
         }
         Insert: {
           created_at?: string | null
           dni: string
           electoral_act_id?: string | null
-          first_name: string
           id?: string
         }
         Update: {
           created_at?: string | null
           dni?: string
           electoral_act_id?: string | null
-          first_name?: string
           id?: string
         }
         Relationships: [

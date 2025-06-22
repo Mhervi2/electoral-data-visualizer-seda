@@ -59,14 +59,13 @@ export const useActaSubmission = () => {
         console.log(`✅ ${partyVotesData.length} party votes submitted successfully`);
       }
 
-      // Submit mail voters if any
+      // Submit mail voters if any (only DNI now)
       if (actaData.mailVoters && actaData.mailVoters.length > 0) {
         const mailVotersData = actaData.mailVoters
-          .filter(voter => voter.dni.trim() && voter.firstName.trim())
+          .filter(voter => voter.dni.trim())
           .map(voter => ({
             electoral_act_id: actData.id,
-            dni: voter.dni.trim(),
-            first_name: voter.firstName.trim()
+            dni: voter.dni.trim()
           }));
 
         if (mailVotersData.length > 0) {

@@ -14,7 +14,7 @@ interface MailVotersSectionProps {
 
 export const MailVotersSection = ({ mailVoters, onMailVotersChange }: MailVotersSectionProps) => {
   const addMailVoter = () => {
-    onMailVotersChange([...mailVoters, { dni: '', firstName: '' }]);
+    onMailVotersChange([...mailVoters, { dni: '' }]);
   };
 
   const removeMailVoter = (index: number) => {
@@ -65,19 +65,6 @@ export const MailVotersSection = ({ mailVoters, onMailVotersChange }: MailVoters
                     placeholder="12345678A"
                     value={voter.dni}
                     onChange={(e) => updateMailVoter(index, 'dni', e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div className="flex-1">
-                  <Label htmlFor={`firstName-${index}`} className="text-sm font-medium">
-                    Nombre
-                  </Label>
-                  <Input
-                    id={`firstName-${index}`}
-                    type="text"
-                    placeholder="Juan"
-                    value={voter.firstName}
-                    onChange={(e) => updateMailVoter(index, 'firstName', e.target.value)}
                     className="mt-1"
                   />
                 </div>

@@ -12,11 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Mail, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { maskDniRandomly } from '@/utils/dniMask';
 
 interface MailVoter {
   id: string;
   dni: string;
-  first_name: string;
   created_at: string;
 }
 
@@ -81,7 +81,7 @@ export const MailVotersDialog = ({ actId, mesaIdentifier }: MailVotersDialogProp
           Voto por Correo
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -112,15 +112,13 @@ export const MailVotersDialog = ({ actId, mesaIdentifier }: MailVotersDialogProp
               <TableHeader>
                 <TableRow>
                   <TableHead>DNI</TableHead>
-                  <TableHead>Nombre</TableHead>
                   <TableHead>Fecha de Registro</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {mailVoters.map((voter) => (
                   <TableRow key={voter.id}>
-                    <TableCell className="font-mono">{voter.dni}</TableCell>
-                    <TableCell className="font-medium">{voter.first_name}</TableCell>
+                    <TableCell className="font-mono">{maskDniRandomly(voter.dni)}</TableCell>
                     <TableCell>
                       {new Date(voter.created_at).toLocaleDateString('es-ES', {
                         year: 'numeric',

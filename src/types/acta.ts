@@ -23,7 +23,6 @@ export interface Election {
 
 export interface MailVoter {
   dni: string;
-  firstName: string;
 }
 
 export interface ActaData {
