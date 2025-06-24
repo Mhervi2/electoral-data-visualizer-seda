@@ -10,12 +10,13 @@ import {
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS preflight requests FIRST, before any other processing
   if (req.method === 'OPTIONS') {
     console.log('Handling CORS preflight request')
     return new Response(null, { 
@@ -24,18 +25,66 @@ serve(async (req) => {
     })
   }
 
+  // Only process non-OPTIONS requests
+  if (req.method !== 'POST') {
+    console.log(`Method ${req.method} not allowed`)
+    return new Response(
+      JSON.stringify({ error: 'Método no permitido' }),
+      { 
+        status: 405, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
+  }
+
+  let requestBody;
   try {
     console.log(`Processing ${req.method} request`)
     
+    // Parse JSON body safely
+    const bodyText = await req.text()
+    if (!bodyText) {
+      throw new Error('Request body is empty')
+    }
+    
+    requestBody = JSON.parse(bodyText)
+    console.log(`Request body parsed successfully for action: ${requestBody.action}`)
+    
+  } catch (bodyError) {
+    console.error('Error parsing request body:', bodyError)
+    return new Response(
+      JSON.stringify({ 
+        error: 'Invalid JSON in request body',
+        details: bodyError instanceof Error ? bodyError.message : 'Unknown error'
+      }),
+      { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
+  }
+
+  try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { action, email, registrationData, authenticationData } = await req.json()
+    const { action, email, registrationData, authenticationData } = requestBody
+    
+    if (!action || !email) {
+      return new Response(
+        JSON.stringify({ error: 'Action and email are required' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
     console.log(`Action: ${action}, Email: ${email}`)
 
-    const origin = req.headers.get('origin') ?? ''
+    const origin = req.headers.get('origin') ?? req.headers.get('referer') ?? ''
     const rpID = new URL(Deno.env.get('SUPABASE_URL') ?? '').hostname
     
     console.log(`Origin: ${origin}, RPID: ${rpID}`)
@@ -43,7 +92,6 @@ serve(async (req) => {
     if (action === 'register-start') {
       console.log('Generating registration options')
       
-      // Generar opciones para el registro optimizadas para móviles
       const options = await generateRegistrationOptions({
         rpName: 'SEDA Electoral',
         rpID: rpID,
@@ -71,14 +119,23 @@ serve(async (req) => {
     if (action === 'register-complete') {
       console.log('Verifying registration response')
       
+      if (!registrationData) {
+        return new Response(
+          JSON.stringify({ verified: false, error: 'Registration data is required' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+      
       try {
-        // Verificar y guardar la credencial
         const verification = await verifyRegistrationResponse({
           response: registrationData,
           expectedChallenge: registrationData.challenge,
           expectedOrigin: origin,
           expectedRPID: rpID,
-          requireUserVerification: false, // Más flexible para móviles
+          requireUserVerification: false,
         })
 
         console.log(`Verification result: ${verification.verified}`)
@@ -86,7 +143,6 @@ serve(async (req) => {
         if (verification.verified && verification.registrationInfo) {
           const { credentialID, credentialPublicKey, counter } = verification.registrationInfo
 
-          // Convertir credentialID a base64 usando TextDecoder
           const credentialIdBase64 = btoa(String.fromCharCode(...new Uint8Array(credentialID)))
           const publicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(credentialPublicKey)))
 
@@ -104,7 +160,17 @@ serve(async (req) => {
 
           if (insertError) {
             console.error('Database insert error:', insertError)
-            throw insertError
+            return new Response(
+              JSON.stringify({ 
+                verified: false, 
+                error: 'Error saving credential to database',
+                details: insertError.message 
+              }),
+              { 
+                status: 500, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+              }
+            )
           }
 
           console.log('Credential saved successfully')
@@ -123,8 +189,15 @@ serve(async (req) => {
       } catch (verifyError) {
         console.error('Registration verification error:', verifyError)
         return new Response(
-          JSON.stringify({ verified: false, error: 'Error en la verificación del registro' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ 
+            verified: false, 
+            error: 'Error en la verificación del registro',
+            details: verifyError instanceof Error ? verifyError.message : 'Unknown error'
+          }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
         )
       }
     }
@@ -132,7 +205,6 @@ serve(async (req) => {
     if (action === 'auth-start') {
       console.log('Generating authentication options')
       
-      // Obtener credenciales del usuario
       const { data: credentials, error: fetchError } = await supabaseClient
         .from('biometric_credentials')
         .select('credential_id')
@@ -140,7 +212,16 @@ serve(async (req) => {
 
       if (fetchError) {
         console.error('Error fetching credentials:', fetchError)
-        throw fetchError
+        return new Response(
+          JSON.stringify({ 
+            error: 'Error fetching credentials',
+            details: fetchError.message 
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
       }
 
       console.log(`Found ${credentials?.length || 0} credentials`)
@@ -154,7 +235,7 @@ serve(async (req) => {
       }) || []
 
       const options = await generateAuthenticationOptions({
-        timeout: 120000, // 2 minutos para móviles
+        timeout: 120000,
         rpID: rpID,
         allowCredentials,
         userVerification: 'preferred',
@@ -171,7 +252,16 @@ serve(async (req) => {
     if (action === 'auth-complete') {
       console.log('Verifying authentication response')
       
-      // Obtener credenciales del usuario
+      if (!authenticationData) {
+        return new Response(
+          JSON.stringify({ verified: false, error: 'Authentication data is required' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+      
       const { data: credentials, error: fetchError } = await supabaseClient
         .from('biometric_credentials')
         .select('*')
@@ -179,10 +269,19 @@ serve(async (req) => {
 
       if (fetchError) {
         console.error('Error fetching credentials:', fetchError)
-        throw fetchError
+        return new Response(
+          JSON.stringify({ 
+            verified: false, 
+            error: 'Error fetching credentials',
+            details: fetchError.message 
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
       }
 
-      // Buscar la credencial correspondiente
       const credentialIdBuffer = Uint8Array.from(atob(authenticationData.id), c => c.charCodeAt(0))
       const credentialIdBase64 = btoa(String.fromCharCode(...credentialIdBuffer))
       
@@ -211,13 +310,12 @@ serve(async (req) => {
             credentialPublicKey: Uint8Array.from(atob(credential.public_key), c => c.charCodeAt(0)),
             counter: credential.counter,
           },
-          requireUserVerification: false, // Más flexible para móviles
+          requireUserVerification: false,
         })
 
         console.log(`Authentication verification result: ${verification.verified}`)
 
         if (verification.verified) {
-          // Actualizar contador y última vez usado
           await supabaseClient
             .from('biometric_credentials')
             .update({
@@ -242,8 +340,15 @@ serve(async (req) => {
       } catch (authError) {
         console.error('Authentication verification error:', authError)
         return new Response(
-          JSON.stringify({ verified: false, error: 'Error en la verificación de autenticación' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ 
+            verified: false, 
+            error: 'Error en la verificación de autenticación',
+            details: authError instanceof Error ? authError.message : 'Unknown error'
+          }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
         )
       }
     }
@@ -251,7 +356,10 @@ serve(async (req) => {
     console.log(`Invalid action: ${action}`)
     return new Response(
       JSON.stringify({ error: 'Acción no válida' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     )
 
   } catch (error) {
@@ -261,7 +369,10 @@ serve(async (req) => {
         error: 'Error interno del servidor',
         details: error instanceof Error ? error.message : 'Error desconocido'
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     )
   }
 })
