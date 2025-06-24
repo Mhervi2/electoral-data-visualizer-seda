@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, user, isLoading } = useAuth();
+  const { login, user, isLoading, biometric } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -56,6 +56,23 @@ const Login = () => {
     }
   };
 
+  const handleBiometricSuccess = () => {
+    toast({
+      title: "Inicio de sesión biométrico exitoso",
+      description: "Bienvenido al panel de administración.",
+    });
+    const redirect = searchParams.get('redirect') || '/admin';
+    navigate(redirect);
+  };
+
+  const handleBiometricError = (error: string) => {
+    toast({
+      variant: "destructive",
+      title: "Error de autenticación biométrica",
+      description: error,
+    });
+  };
+
   // Show loading while checking auth state
   if (isLoading) {
     return (
@@ -86,6 +103,27 @@ const Login = () => {
         </CardHeader>
         
         <CardContent>
+          {/* Botón de acceso biométrico */}
+          {biometric.isSupported && email === 'superadmin@seda.es' && (
+            <div className="mb-6">
+              <BiometricLoginButton
+                email={email}
+                onSuccess={handleBiometricSuccess}
+                onError={handleBiometricError}
+              />
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    O continúa con
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Correo Electrónico</Label>
