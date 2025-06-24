@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,7 +23,6 @@ import AdminElectionsNew from "./pages/admin/elections/AdminElectionsNew";
 import AdminFiles from "./pages/admin/files/AdminFiles";
 import AdminFilesUpload from "./pages/admin/files/AdminFilesUpload";
 import NotFound from "./pages/NotFound";
-import BiometricSettings from "./pages/admin/BiometricSettings";
 
 const queryClient = new QueryClient();
 
@@ -45,7 +45,6 @@ const App = () => (
               <Route path="elections/new" element={<AdminElectionsNew />} />
               <Route path="files" element={<AdminFiles />} />
               <Route path="files/upload" element={<AdminFilesUpload />} />
-              <Route path="biometric" element={<BiometricSettings />} />
             </Route>
             
             {/* Public routes with layout */}
