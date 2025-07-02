@@ -70,10 +70,10 @@ const Login = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <img 
-            src="/lovable-uploads/ff6b99b1-5bf2-4e2b-960b-eb67982cd85f.png" 
-            alt="SEDA Electoral - Logo oficial para acceso de administradores" 
+            src="/lovable-uploads/c96e6df3-8a63-4954-a3a6-e96a03f71bf5.png" 
+            alt="SEDA Electoral - Logo oficial con símbolo de voto para acceso de administradores" 
             className="h-20 w-20 mx-auto object-contain"
-            data-ai-hint="SEDA Electoral official logo for administrator access"
+            data-ai-hint="SEDA Electoral official logo with vote symbol for administrator access"
           />
           <div>
             <CardTitle className="text-2xl font-space-grotesk text-primary">

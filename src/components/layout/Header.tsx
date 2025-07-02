@@ -46,10 +46,10 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
               <img 
-                src="/lovable-uploads/ff6b99b1-5bf2-4e2b-960b-eb67982cd85f.png" 
-                alt="SEDA Electoral - Logo oficial con diseño moderno y profesional" 
+                src="/lovable-uploads/c96e6df3-8a63-4954-a3a6-e96a03f71bf5.png" 
+                alt="SEDA Electoral - Logo oficial con símbolo de voto y diseño profesional" 
                 className="h-12 w-12 object-contain"
-                data-ai-hint="SEDA Electoral official logo with modern professional design"
+                data-ai-hint="SEDA Electoral official logo with vote symbol and professional design"
               />
               <div>
                 <h1 className="text-xl font-bold text-primary font-space-grotesk">SEDA Electoral</h1>
