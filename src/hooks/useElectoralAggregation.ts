@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -52,6 +53,7 @@ interface AggregatedResults {
 }
 
 interface Filters {
+  electionId: string;
   autonomousCommunity: string;
   province: string;
   municipality: string;
@@ -66,6 +68,7 @@ export const useElectoralAggregation = () => {
   const [loading, setLoading] = useState(true);
   const [aggregatedResults, setAggregatedResults] = useState<AggregatedResults | null>(null);
   const [filters, setFilters] = useState<Filters>({
+    electionId: '',
     autonomousCommunity: '',
     province: '',
     municipality: '',
@@ -88,6 +91,13 @@ export const useElectoralAggregation = () => {
     let query = baseQuery;
 
     console.log('🔧 Building query with filters:', filters);
+
+    // Filter by election first if specified
+    if (filters.electionId?.trim()) {
+      const trimmedValue = filters.electionId.trim();
+      console.log('🎯 Applying Election filter:', trimmedValue);
+      query = query.eq('election_id', trimmedValue);
+    }
 
     // Usar filtros exactos para los valores seleccionados (con trim para consistencia)
     if (filters.autonomousCommunity?.trim()) {
@@ -343,7 +353,7 @@ export const useElectoralAggregation = () => {
 
   useEffect(() => {
     fetchAggregatedResults();
-  }, [filters.autonomousCommunity, filters.province, filters.municipality, filters.district, filters.section, filters.table, filters.sourceTypes]);
+  }, [filters.electionId, filters.autonomousCommunity, filters.province, filters.municipality, filters.district, filters.section, filters.table, filters.sourceTypes]);
 
   return {
     aggregatedResults,

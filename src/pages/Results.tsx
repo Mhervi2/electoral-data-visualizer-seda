@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BarChart3 } from 'lucide-react';
@@ -27,6 +26,7 @@ const Results = () => {
   // Initialize filters from URL params
   useEffect(() => {
     const urlFilters = {
+      electionId: searchParams.get('electionId') || '',
       autonomousCommunity: searchParams.get('autonomousCommunity') || '',
       province: searchParams.get('province') || '',
       municipality: searchParams.get('municipality') || '',
