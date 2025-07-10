@@ -15,14 +15,6 @@ interface SourceMetrics {
 
 interface ElectoralSummaryTableProps {
   sourceMetrics: SourceMetrics[];
-  totalMetrics: {
-    totalCensus: number;
-    totalVotes: number;
-    participation: number;
-    blankVotes: number;
-    nullVotes: number;
-    validVotes: number;
-  };
 }
 
 const sourceDisplayNames: { [key: string]: string } = {
@@ -32,7 +24,7 @@ const sourceDisplayNames: { [key: string]: string } = {
   oficial: 'Oficial'
 };
 
-export const ElectoralSummaryTable = ({ sourceMetrics, totalMetrics }: ElectoralSummaryTableProps) => {
+export const ElectoralSummaryTable = ({ sourceMetrics }: ElectoralSummaryTableProps) => {
   const metrics = [
     { key: 'totalCensus', label: 'Censo Total', format: (value: number) => value.toLocaleString() },
     { key: 'totalVotes', label: 'Total Votantes', format: (value: number) => value.toLocaleString() },
@@ -54,31 +46,25 @@ export const ElectoralSummaryTable = ({ sourceMetrics, totalMetrics }: Electoral
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="font-semibold">Métrica</TableHead>
-                {sourceMetrics.map((source) => (
-                  <TableHead key={source.source} className="text-center font-semibold">
-                    {sourceDisplayNames[source.source] || source.source}
+                <TableHead className="font-semibold">Fuente</TableHead>
+                {metrics.map((metric) => (
+                  <TableHead key={metric.key} className="text-center font-semibold">
+                    {metric.label}
                   </TableHead>
                 ))}
-                <TableHead className="text-center font-semibold bg-muted/50">
-                  Total
-                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {metrics.map((metric) => (
-                <TableRow key={metric.key}>
+              {sourceMetrics.map((source) => (
+                <TableRow key={source.source}>
                   <TableCell className="font-medium">
-                    {metric.label}
+                    {sourceDisplayNames[source.source] || source.source}
                   </TableCell>
-                  {sourceMetrics.map((source) => (
-                    <TableCell key={source.source} className="text-center">
+                  {metrics.map((metric) => (
+                    <TableCell key={metric.key} className="text-center">
                       {metric.format(source[metric.key as keyof SourceMetrics] as number)}
                     </TableCell>
                   ))}
-                  <TableCell className="text-center font-semibold bg-muted/50">
-                    {metric.format(totalMetrics[metric.key as keyof typeof totalMetrics])}
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -203,6 +203,7 @@ export const useElectoralAggregation = () => {
           validVotes: 0,
           partyResults: [],
           sourceComparison: [],
+          sourceMetrics: [],
           selectedSources: filters.sourceTypes,
           individualActas: []
         });

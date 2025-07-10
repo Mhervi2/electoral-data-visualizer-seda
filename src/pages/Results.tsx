@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BarChart3 } from 'lucide-react';
@@ -109,14 +108,6 @@ const Results = () => {
           {/* Summary Table by Source */}
           <ElectoralSummaryTable
             sourceMetrics={aggregatedResults.sourceMetrics}
-            totalMetrics={{
-              totalCensus: aggregatedResults.totalCensus,
-              totalVotes: aggregatedResults.totalVotes,
-              participation: aggregatedResults.participation,
-              blankVotes: aggregatedResults.blankVotes,
-              nullVotes: aggregatedResults.nullVotes,
-              validVotes: aggregatedResults.validVotes
-            }}
           />
 
           {/* Charts */}
