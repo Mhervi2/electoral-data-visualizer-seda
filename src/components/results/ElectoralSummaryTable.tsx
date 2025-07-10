@@ -1,7 +1,8 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getSourceTooltip } from '@/utils/sourceTooltips';
 
 interface SourceMetrics {
   source: string;
@@ -34,43 +35,65 @@ export const ElectoralSummaryTable = ({ sourceMetrics }: ElectoralSummaryTablePr
     { key: 'nullVotes', label: 'Votos Nulos', format: (value: number) => value.toLocaleString() }
   ];
 
+  const renderSourceName = (source: SourceMetrics) => {
+    const displayName = sourceDisplayNames[source.source] || source.source;
+    const tooltip = getSourceTooltip(source.source);
+    
+    if (tooltip) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">{displayName}</span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    
+    return displayName;
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">
-          Resumen Electoral por Fuente de Datos
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="font-semibold">Fuente</TableHead>
-                {metrics.map((metric) => (
-                  <TableHead key={metric.key} className="text-center font-semibold">
-                    {metric.label}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sourceMetrics.map((source) => (
-                <TableRow key={source.source}>
-                  <TableCell className="font-medium">
-                    {sourceDisplayNames[source.source] || source.source}
-                  </TableCell>
+    <TooltipProvider>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">
+            Resumen Electoral por Fuente de Datos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-semibold">Fuente</TableHead>
                   {metrics.map((metric) => (
-                    <TableCell key={metric.key} className="text-center">
-                      {metric.format(source[metric.key as keyof SourceMetrics] as number)}
-                    </TableCell>
+                    <TableHead key={metric.key} className="text-center font-semibold">
+                      {metric.label}
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+              </TableHeader>
+              <TableBody>
+                {sourceMetrics.map((source) => (
+                  <TableRow key={source.source}>
+                    <TableCell className="font-medium">
+                      {renderSourceName(source)}
+                    </TableCell>
+                    {metrics.map((metric) => (
+                      <TableCell key={metric.key} className="text-center">
+                        {metric.format(source[metric.key as keyof SourceMetrics] as number)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 };

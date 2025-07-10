@@ -1,7 +1,8 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getSourceTooltip } from '@/utils/sourceTooltips';
 
 interface PartyResultBySource {
   party: {
@@ -36,67 +37,89 @@ export const ResultsDetailsTable = ({ partyResults, totalVotes, selectedSources 
     return labels[sourceType as keyof typeof labels] || sourceType;
   };
 
+  const renderSourceHeader = (sourceType: string, suffix: string) => {
+    const label = getSourceLabel(sourceType);
+    const tooltip = getSourceTooltip(sourceType);
+    
+    if (tooltip) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">{label} {suffix}</span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    
+    return `${label} ${suffix}`;
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Resultados Detallados por Partido</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Partido</TableHead>
-                <TableHead>Siglas</TableHead>
-                <TableHead className="text-right">Total Votos</TableHead>
-                <TableHead className="text-right">% Total</TableHead>
-                {selectedSources.map(sourceType => (
-                  <TableHead key={sourceType} className="text-right">
-                    {getSourceLabel(sourceType)} (Votos)
-                  </TableHead>
-                ))}
-                {selectedSources.map(sourceType => (
-                  <TableHead key={`${sourceType}-percent`} className="text-right">
-                    {getSourceLabel(sourceType)} (%)
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {partyResults.map((result, index) => (
-                <TableRow key={result.party.siglas}>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <div 
-                        className="w-4 h-4 rounded-full" 
-                        style={{ backgroundColor: result.party.color }}
-                      />
-                      <span className="font-medium">{result.party.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{result.party.siglas}</TableCell>
-                  <TableCell className="text-right font-mono">
-                    {result.totalVotes.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {result.percentage.toFixed(2)}%
-                  </TableCell>
+    <TooltipProvider>
+      <Card>
+        <CardHeader>
+          <CardTitle>Resultados Detallados por Partido</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Partido</TableHead>
+                  <TableHead>Siglas</TableHead>
+                  <TableHead className="text-right">Total Votos</TableHead>
+                  <TableHead className="text-right">% Total</TableHead>
                   {selectedSources.map(sourceType => (
-                    <TableCell key={sourceType} className="text-right font-mono">
-                      {(result.sourceResults[sourceType]?.votes || 0).toLocaleString()}
-                    </TableCell>
+                    <TableHead key={sourceType} className="text-right">
+                      {renderSourceHeader(sourceType, '(Votos)')}
+                    </TableHead>
                   ))}
                   {selectedSources.map(sourceType => (
-                    <TableCell key={`${sourceType}-percent`} className="text-right font-mono">
-                      {(result.sourceResults[sourceType]?.percentage || 0).toFixed(2)}%
-                    </TableCell>
+                    <TableHead key={`${sourceType}-percent`} className="text-right">
+                      {renderSourceHeader(sourceType, '(%)')}
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+              </TableHeader>
+              <TableBody>
+                {partyResults.map((result, index) => (
+                  <TableRow key={result.party.siglas}>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <div 
+                          className="w-4 h-4 rounded-full" 
+                          style={{ backgroundColor: result.party.color }}
+                        />
+                        <span className="font-medium">{result.party.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{result.party.siglas}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {result.totalVotes.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {result.percentage.toFixed(2)}%
+                    </TableCell>
+                    {selectedSources.map(sourceType => (
+                      <TableCell key={sourceType} className="text-right font-mono">
+                        {(result.sourceResults[sourceType]?.votes || 0).toLocaleString()}
+                      </TableCell>
+                    ))}
+                    {selectedSources.map(sourceType => (
+                      <TableCell key={`${sourceType}-percent`} className="text-right font-mono">
+                        {(result.sourceResults[sourceType]?.percentage || 0).toFixed(2)}%
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 };
