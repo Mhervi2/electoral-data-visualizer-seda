@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BarChart3 } from 'lucide-react';
@@ -5,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useElectoralAggregation } from '@/hooks/useElectoralAggregation';
 import { ResultsFilters } from '@/components/results/ResultsFilters';
-import { ElectoralSummary } from '@/components/results/ElectoralSummary';
+import { ElectoralSummaryTable } from '@/components/results/ElectoralSummaryTable';
 import { ElectoralCharts } from '@/components/results/ElectoralCharts';
 import { ResultsDetailsTable } from '@/components/results/ResultsDetailsTable';
 import { IndividualActsList } from '@/components/results/IndividualActsList';
@@ -105,14 +106,17 @@ const Results = () => {
 
       {aggregatedResults && (
         <>
-          {/* Summary Cards */}
-          <ElectoralSummary
-            totalVotes={aggregatedResults.totalVotes}
-            totalCensus={aggregatedResults.totalCensus}
-            participation={aggregatedResults.participation}
-            blankVotes={aggregatedResults.blankVotes}
-            nullVotes={aggregatedResults.nullVotes}
-            validVotes={aggregatedResults.validVotes}
+          {/* Summary Table by Source */}
+          <ElectoralSummaryTable
+            sourceMetrics={aggregatedResults.sourceMetrics}
+            totalMetrics={{
+              totalCensus: aggregatedResults.totalCensus,
+              totalVotes: aggregatedResults.totalVotes,
+              participation: aggregatedResults.participation,
+              blankVotes: aggregatedResults.blankVotes,
+              nullVotes: aggregatedResults.nullVotes,
+              validVotes: aggregatedResults.validVotes
+            }}
           />
 
           {/* Charts */}

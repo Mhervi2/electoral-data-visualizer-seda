@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -35,6 +34,16 @@ interface ElectoralAct {
   comunidad_autonoma?: string;
 }
 
+interface SourceMetrics {
+  source: string;
+  totalCensus: number;
+  totalVotes: number;
+  participation: number;
+  blankVotes: number;
+  nullVotes: number;
+  validVotes: number;
+}
+
 interface AggregatedResults {
   totalVotes: number;
   totalCensus: number;
@@ -48,6 +57,7 @@ interface AggregatedResults {
     totalVotes: number;
     coverage: number;
   }[];
+  sourceMetrics: SourceMetrics[];
   selectedSources: string[];
   individualActas: ElectoralAct[];
 }
@@ -250,6 +260,27 @@ export const useElectoralAggregation = () => {
     const validVotes = totalVotes - nullVotes;
     const participation = totalCensus > 0 ? (totalVotes / totalCensus) * 100 : 0;
 
+    // Calculate metrics by source
+    const sourceMetrics: SourceMetrics[] = filters.sourceTypes.map(sourceType => {
+      const sourceActs = acts.filter(act => act.source_type === sourceType);
+      const sourceTotalCensus = sourceActs.reduce((sum, act) => sum + (act.census_total || 0), 0);
+      const sourceTotalVotes = sourceActs.reduce((sum, act) => sum + (act.total_voters || 0), 0);
+      const sourceBlankVotes = sourceActs.reduce((sum, act) => sum + (act.blank_votes || 0), 0);
+      const sourceNullVotes = sourceActs.reduce((sum, act) => sum + (act.null_votes || 0), 0);
+      const sourceValidVotes = sourceTotalVotes - sourceNullVotes;
+      const sourceParticipation = sourceTotalCensus > 0 ? (sourceTotalVotes / sourceTotalCensus) * 100 : 0;
+
+      return {
+        source: sourceType,
+        totalCensus: sourceTotalCensus,
+        totalVotes: sourceTotalVotes,
+        participation: sourceParticipation,
+        blankVotes: sourceBlankVotes,
+        nullVotes: sourceNullVotes,
+        validVotes: sourceValidVotes
+      };
+    });
+
     // Aggregate votes by party and source
     const partyVotesMap = new Map<string, { 
       party: any; 
@@ -336,6 +367,7 @@ export const useElectoralAggregation = () => {
       totalCensus,
       validVotes: `${validVotes} (incluye votos en blanco)`,
       partyResults: partyResults.length,
+      sourceMetrics: sourceMetrics.length,
       individualActas: acts.length
     });
 
@@ -348,6 +380,7 @@ export const useElectoralAggregation = () => {
       validVotes,
       partyResults,
       sourceComparison,
+      sourceMetrics,
       selectedSources: filters.sourceTypes,
       individualActas: acts
     };
