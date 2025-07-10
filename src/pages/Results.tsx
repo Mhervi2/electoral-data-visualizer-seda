@@ -115,6 +115,7 @@ const Results = () => {
             <ElectoralCharts
               partyResults={aggregatedResults.partyResults}
               totalVotes={aggregatedResults.validVotes}
+              selectedSources={aggregatedResults.selectedSources}
             />
           )}
 

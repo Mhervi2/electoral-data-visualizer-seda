@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { getSourceTooltip } from '@/utils/sourceTooltips';
 
 interface PartyResultBySource {
   party: {
@@ -22,9 +23,10 @@ interface PartyResultBySource {
 interface ElectoralChartsProps {
   partyResults: PartyResultBySource[];
   totalVotes: number;
+  selectedSources: string[];
 }
 
-export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsProps) => {
+export const ElectoralCharts = ({ partyResults, totalVotes, selectedSources }: ElectoralChartsProps) => {
   if (!partyResults || partyResults.length === 0) {
     return (
       <Card>
@@ -40,16 +42,29 @@ export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsPro
     );
   }
 
-  // Preparar datos para gráficos - tomar los primeros 10 partidos
-  const topParties = partyResults.slice(0, 10);
+  const getSourceDisplayName = (sourceType: string) => {
+    const displayNames: { [key: string]: string } = {
+      'user': 'Usuario',
+      'indra': 'INDRA',
+      'escrutinio': 'Escrutinio',
+      'oficial': 'Oficial'
+    };
+    return displayNames[sourceType] || sourceType;
+  };
 
-  const pieChartData = topParties.map(result => ({
-    name: result.party.siglas,
-    fullName: result.party.name,
-    value: result.totalVotes,
-    fill: result.party.color || '#6B7280',
-    percentage: result.percentage
-  }));
+  const createPieChartData = (sourceType: string) => {
+    return partyResults
+      .map(result => ({
+        name: result.party.siglas,
+        fullName: result.party.name,
+        value: result.sourceResults[sourceType]?.votes || 0,
+        fill: result.party.color || '#6B7280',
+        percentage: result.sourceResults[sourceType]?.percentage || 0
+      }))
+      .filter(item => item.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10); // Limit to top 10 parties per chart
+  };
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -70,48 +85,83 @@ export const ElectoralCharts = ({ partyResults, totalVotes }: ElectoralChartsPro
     return null;
   };
 
+  // Determine grid layout based on number of sources
+  const getGridCols = () => {
+    if (selectedSources.length === 1) return 'grid-cols-1';
+    if (selectedSources.length === 2) return 'grid-cols-1 md:grid-cols-2';
+    return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+  };
+
   return (
-    <div className="grid grid-cols-1 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Distribución Porcentual</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieChartData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  dataKey="value"
-                  label={({ name, percentage }) => `${name} ${percentage.toFixed(1)}%`}
-                  labelLine={false}
-                  fontSize={11}
-                >
-                  {pieChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} stroke="none" />
+    <Card>
+      <CardHeader>
+        <CardTitle>Distribución Porcentual por Fuente</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className={`grid ${getGridCols()} gap-6`}>
+          {selectedSources.map(sourceType => {
+            const pieChartData = createPieChartData(sourceType);
+            const sourceDisplayName = getSourceDisplayName(sourceType);
+            const tooltipText = getSourceTooltip(sourceType);
+            
+            if (pieChartData.length === 0) {
+              return (
+                <div key={sourceType} className="text-center py-8">
+                  <h3 className="text-lg font-semibold mb-2">{sourceDisplayName}</h3>
+                  {tooltipText && (
+                    <p className="text-xs text-muted-foreground mb-4">{tooltipText}</p>
+                  )}
+                  <p className="text-muted-foreground">Sin datos disponibles</p>
+                </div>
+              );
+            }
+
+            return (
+              <div key={sourceType} className="text-center">
+                <h3 className="text-lg font-semibold mb-2">{sourceDisplayName}</h3>
+                {tooltipText && (
+                  <p className="text-xs text-muted-foreground mb-4">{tooltipText}</p>
+                )}
+                
+                <div className="h-[280px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieChartData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        dataKey="value"
+                        label={({ name, percentage }) => `${name} ${percentage.toFixed(1)}%`}
+                        labelLine={false}
+                        fontSize={10}
+                      >
+                        {pieChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} stroke="none" />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                <div className="flex flex-wrap justify-center gap-2 mt-4">
+                  {pieChartData.slice(0, 6).map((entry) => (
+                    <div key={entry.name} className="flex items-center gap-1 text-xs">
+                      <div 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: entry.fill }}
+                      />
+                      <span className="text-gray-700 font-medium">{entry.name}</span>
+                      <span className="text-gray-500">({entry.percentage.toFixed(1)}%)</span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex flex-wrap justify-center gap-3 mt-4">
-            {pieChartData.slice(0, 8).map((entry) => (
-              <div key={entry.name} className="flex items-center gap-2 text-xs">
-                <div 
-                  className="w-3 h-3 rounded-full" 
-                  style={{ backgroundColor: entry.fill }}
-                />
-                <span className="text-gray-700 font-medium">{entry.name}</span>
-                <span className="text-gray-500">({entry.percentage.toFixed(1)}%)</span>
+                </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
