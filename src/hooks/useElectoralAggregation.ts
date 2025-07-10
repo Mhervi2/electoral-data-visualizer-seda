@@ -246,7 +246,8 @@ export const useElectoralAggregation = () => {
     const totalVotes = acts.reduce((sum, act) => sum + (act.total_voters || 0), 0);
     const blankVotes = acts.reduce((sum, act) => sum + (act.blank_votes || 0), 0);
     const nullVotes = acts.reduce((sum, act) => sum + (act.null_votes || 0), 0);
-    const validVotes = totalVotes - blankVotes - nullVotes;
+    // FIXED: Valid votes now include blank votes (only exclude null votes)
+    const validVotes = totalVotes - nullVotes;
     const participation = totalCensus > 0 ? (totalVotes / totalCensus) * 100 : 0;
 
     // Aggregate votes by party and source
@@ -280,12 +281,12 @@ export const useElectoralAggregation = () => {
       }
     });
 
-    // Calculate valid votes by source for percentages
+    // Calculate valid votes by source for percentages (now includes blank votes)
     const validVotesBySource = new Map<string, number>();
     filters.sourceTypes.forEach(sourceType => {
       const sourceValidVotes = acts
         .filter(act => act.source_type === sourceType)
-        .reduce((sum, act) => sum + (act.total_voters - act.blank_votes - act.null_votes), 0);
+        .reduce((sum, act) => sum + (act.total_voters - act.null_votes), 0);
       validVotesBySource.set(sourceType, sourceValidVotes);
     });
 
@@ -333,6 +334,7 @@ export const useElectoralAggregation = () => {
     console.log('📊 Aggregated results completed:', {
       totalVotes,
       totalCensus,
+      validVotes: `${validVotes} (incluye votos en blanco)`,
       partyResults: partyResults.length,
       individualActas: acts.length
     });
