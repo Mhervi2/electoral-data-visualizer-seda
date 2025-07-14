@@ -2,7 +2,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.211be3cf8b5c412f874bd5ed3c9cfc58',
+  appId: 'com.seda.electoral',
   appName: 'electoral-data-visualizer-seda',
   webDir: 'dist',
   server: {
