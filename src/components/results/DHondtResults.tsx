@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ProvincialResult, AutonomousResult } from '@/utils/dhondtCalculations';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
+import { DHondtCharts } from './DHondtCharts';
 
 interface DHondtResultsProps {
   provincialResults?: ProvincialResult[];
@@ -17,23 +18,32 @@ export const DHondtResults = ({ provincialResults, autonomousResults, title }: D
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {title}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Info className="h-4 w-4 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Distribución de escaños calculada según el método D'Hondt</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="space-y-6">
+      {/* Charts Section */}
+      <DHondtCharts 
+        provincialResults={provincialResults}
+        autonomousResults={autonomousResults}
+        title={`${title} - Distribución Gráfica`}
+      />
+      
+      {/* Tables Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {title} - Tablas Detalladas
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Distribución de escaños calculada según el método D'Hondt</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
         {provincialResults && (
           <div className="space-y-6">
             {provincialResults.map((result) => (
@@ -126,7 +136,8 @@ export const DHondtResults = ({ provincialResults, autonomousResults, title }: D
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
