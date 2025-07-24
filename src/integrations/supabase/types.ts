@@ -288,6 +288,41 @@ export type Database = {
         }
         Relationships: []
       }
+      provincial_seats: {
+        Row: {
+          created_at: string
+          election_id: string | null
+          id: string
+          provincia: string
+          seats: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          election_id?: string | null
+          id?: string
+          provincia: string
+          seats: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          election_id?: string | null
+          id?: string
+          provincia?: string
+          seats?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provincial_seats_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "elections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       electoral_acts_with_municipalities: {

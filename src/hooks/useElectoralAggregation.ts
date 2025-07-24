@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { calculateProvincialSeats, aggregateAutonomousSeats, ProvincialResult, AutonomousResult } from '@/utils/dhondtCalculations';
 
 interface PartyResultBySource {
   party: {
@@ -60,6 +61,8 @@ interface AggregatedResults {
   sourceMetrics: SourceMetrics[];
   selectedSources: string[];
   individualActas: ElectoralAct[];
+  provincialSeats?: ProvincialResult[];
+  autonomousSeats?: AutonomousResult[];
 }
 
 interface Filters {
@@ -234,8 +237,19 @@ export const useElectoralAggregation = () => {
 
       console.log('✅ Party votes loaded:', partyVotes?.length || 0);
 
+      // Get provincial seats data
+      const { data: provincialSeats } = await supabase
+        .from('provincial_seats')
+        .select('provincia, seats')
+        .or(`election_id.eq.${filters.electionId || 'null'},election_id.is.null`);
+
+      // Get MPCA data for autonomous community aggregation
+      const { data: mpcaData } = await supabase
+        .from('mpca')
+        .select('provincia, ca');
+
       // Aggregate the data
-      const aggregated = aggregateElectoralData(individualActas, partyVotes || []);
+      const aggregated = aggregateElectoralData(individualActas, partyVotes || [], provincialSeats || [], mpcaData || []);
       setAggregatedResults(aggregated);
 
     } catch (error) {
@@ -251,7 +265,7 @@ export const useElectoralAggregation = () => {
     }
   };
 
-  const aggregateElectoralData = (acts: any[], partyVotes: any[]): AggregatedResults => {
+  const aggregateElectoralData = (acts: any[], partyVotes: any[], provincialSeats: any[] = [], mpcaData: any[] = []): AggregatedResults => {
     // Basic calculations
     const totalCensus = acts.reduce((sum, act) => sum + (act.census_total || 0), 0);
     const totalVotes = acts.reduce((sum, act) => sum + (act.total_voters || 0), 0);
@@ -363,6 +377,53 @@ export const useElectoralAggregation = () => {
       coverage: acts.length > 0 ? (data.count / acts.length) * 100 : 0
     }));
 
+    // Calculate D'Hondt results if we have provincial data and appropriate filtering
+    let dhondtProvincialResults: ProvincialResult[] | undefined;
+    let dhondtAutonomousResults: AutonomousResult[] | undefined;
+
+    const shouldCalculateSeats = provincialSeats.length > 0 && partyVotes.length > 0;
+    const isProvincialLevel = filters.province && !filters.municipality && !filters.district;
+    const isAutonomousLevel = filters.autonomousCommunity && !filters.province;
+
+    if (shouldCalculateSeats && (isProvincialLevel || isAutonomousLevel)) {
+      // Prepare data for D'Hondt calculation
+      const partyVotesForDHondt = partyVotes
+        .map(pv => {
+          const act = acts.find(a => a.id === pv.electoral_act_id);
+          return {
+            party_id: pv.political_parties?.id,
+            votes: pv.votes || 0,
+            provincia: act?.provincia
+          };
+        })
+        .filter(pv => pv.party_id && pv.provincia);
+
+      const politicalParties = Array.from(new Set(partyVotes.map(pv => pv.political_parties).filter(Boolean)));
+
+      if (isProvincialLevel && filters.province) {
+        // Calculate for specific province
+        const provinceSeats = provincialSeats.filter(ps => ps.provincia === filters.province);
+        const provinceVotes = partyVotesForDHondt.filter(pv => pv.provincia === filters.province);
+        
+        if (provinceSeats.length > 0 && provinceVotes.length > 0) {
+          dhondtProvincialResults = calculateProvincialSeats(provinceVotes, politicalParties, provinceSeats);
+        }
+      } else if (isAutonomousLevel && filters.autonomousCommunity) {
+        // Calculate for all provinces in the autonomous community
+        const communityProvinces = mpcaData
+          .filter(m => m.ca === filters.autonomousCommunity)
+          .map(m => m.provincia);
+        
+        const communitySeats = provincialSeats.filter(ps => communityProvinces.includes(ps.provincia));
+        const communityVotes = partyVotesForDHondt.filter(pv => communityProvinces.includes(pv.provincia));
+        
+        if (communitySeats.length > 0 && communityVotes.length > 0) {
+          dhondtProvincialResults = calculateProvincialSeats(communityVotes, politicalParties, communitySeats);
+          dhondtAutonomousResults = aggregateAutonomousSeats(dhondtProvincialResults, mpcaData);
+        }
+      }
+    }
+
     console.log('📊 Aggregated results completed:', {
       totalVotes,
       totalCensus,
@@ -383,7 +444,9 @@ export const useElectoralAggregation = () => {
       sourceComparison,
       sourceMetrics,
       selectedSources: filters.sourceTypes,
-      individualActas: acts
+      individualActas: acts,
+      provincialSeats: dhondtProvincialResults,
+      autonomousSeats: dhondtAutonomousResults
     };
   };
 

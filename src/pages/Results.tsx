@@ -10,6 +10,7 @@ import { ElectoralCharts } from '@/components/results/ElectoralCharts';
 import { ResultsDetailsTable } from '@/components/results/ResultsDetailsTable';
 import { IndividualActsList } from '@/components/results/IndividualActsList';
 import DiscrepancyDetector from '@/components/results/DiscrepancyDetector';
+import { DHondtResults } from '@/components/results/DHondtResults';
 
 const Results = () => {
   const { user } = useAuth();
@@ -125,6 +126,21 @@ const Results = () => {
               partyResults={aggregatedResults.partyResults}
               totalVotes={aggregatedResults.validVotes}
               selectedSources={aggregatedResults.selectedSources}
+            />
+          )}
+
+          {/* D'Hondt Seat Distribution */}
+          {aggregatedResults.provincialSeats && (
+            <DHondtResults
+              provincialResults={aggregatedResults.provincialSeats}
+              title="Distribución de Escaños por Provincia (Método D'Hondt)"
+            />
+          )}
+
+          {aggregatedResults.autonomousSeats && (
+            <DHondtResults
+              autonomousResults={aggregatedResults.autonomousSeats}
+              title="Distribución de Escaños por Comunidad Autónoma (Método D'Hondt)"
             />
           )}
 
