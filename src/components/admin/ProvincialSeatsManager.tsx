@@ -11,8 +11,8 @@ import { Save, RefreshCw } from 'lucide-react';
 
 export const ProvincialSeatsManager = () => {
   const { elections } = useElections();
-  const [selectedElection, setSelectedElection] = useState<string>('');
-  const { provincialSeats, loading, updateProvincialSeat, refetch } = useProvincialSeats(selectedElection);
+  const [selectedElection, setSelectedElection] = useState<string>('default');
+  const { provincialSeats, loading, updateProvincialSeat, refetch } = useProvincialSeats(selectedElection === 'default' ? '' : selectedElection);
   const [editingSeats, setEditingSeats] = useState<Record<string, number>>({});
 
   const handleSeatChange = (provincia: string, seats: string) => {
@@ -23,7 +23,7 @@ export const ProvincialSeatsManager = () => {
   const handleSave = async (provincia: string) => {
     const seats = editingSeats[provincia];
     if (seats !== undefined && seats > 0) {
-      await updateProvincialSeat(provincia, seats, selectedElection || undefined);
+      await updateProvincialSeat(provincia, seats, selectedElection === 'default' ? undefined : selectedElection);
       setEditingSeats(prev => {
         const newState = { ...prev };
         delete newState[provincia];
@@ -64,7 +64,7 @@ export const ProvincialSeatsManager = () => {
               <SelectValue placeholder="Seleccionar elección específica o usar valores por defecto" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Valores por defecto (aplicable a todas las elecciones)</SelectItem>
+              <SelectItem value="default">Valores por defecto (aplicable a todas las elecciones)</SelectItem>
               {elections.map((election) => (
                 <SelectItem key={election.id} value={election.id}>
                   {election.name}
