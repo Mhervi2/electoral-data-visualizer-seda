@@ -15,8 +15,8 @@ const Header = () => {
     { id: 'home', label: 'Inicio', path: '/', icon: Home },
     { id: 'results', label: 'Resultados Electorales', path: '/results', icon: BarChart3 },
     { id: 'submit-acta', label: 'Enviar Acta', path: '/submit-acta', icon: UploadCloud },
-    { id: 'dhondt-calculator', label: 'Calculadora D\'Hondt', path: '/dhondt-calculator', icon: Calculator },
     { id: 'political-parties', label: 'Partidos Políticos', path: '/political-parties', icon: Users },
+    { id: 'dhondt-calculator', label: 'Calculadora D\'Hondt', path: '/dhondt-calculator', icon: Calculator },
   ];
 
   if (user?.isAdmin) {
