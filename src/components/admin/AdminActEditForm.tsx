@@ -90,6 +90,12 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
   };
 
   const handleSave = async () => {
+    // Transform party votes to the expected format for validation
+    const votos = partyVotes.reduce((acc, pv) => {
+      acc[pv.party_id] = pv.votes.toString();
+      return acc;
+    }, {} as { [key: string]: string });
+
     // Validate data
     const actaData = {
       electionId: act.election_id,
@@ -99,7 +105,7 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
       votantes: formData.total_voters.toString(),
       blancos: formData.blank_votes.toString(),
       nulos: formData.null_votes.toString(),
-      votos: {},
+      votos: votos,
       mailVoters: mailVotes,
       imageUrl: act.image_url
     };
