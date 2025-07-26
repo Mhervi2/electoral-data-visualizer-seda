@@ -23,13 +23,20 @@ export const MesaIdentification = ({
   onBlur,
 }: MesaIdentificationProps) => {
   const validateMesaFormat = (value: string) => {
-    // Formato esperado: X-XXX-X (distrito-sección-mesa)
-    const pattern = /^\d{1,2}-\d{3}-[A-Z]$/;
+    // Formato esperado: XX-XXX-X (distrito-sección-mesa)
+    const pattern = /^\d{2}-\d{3}-[A-Z]$/;
     return pattern.test(value);
   };
 
   const handleMesaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.toUpperCase();
+    let value = e.target.value.toUpperCase();
+    
+    // Auto-format district to 2 digits if needed
+    const match = value.match(/^(\d{1})-(\d{3}-[A-Z])$/);
+    if (match) {
+      value = `0${match[1]}-${match[2]}`;
+    }
+    
     onInputChange('mesaIdentifier', value);
   };
 
@@ -73,7 +80,7 @@ export const MesaIdentification = ({
           <Label htmlFor="mesaIdentifier">
             Identificador de Mesa *
             <span className="text-sm text-muted-foreground ml-2">
-              (Formato: Distrito-Sección-Mesa, ej: 1-001-A)
+              (Formato: Distrito-Sección-Mesa, ej: 01-001-A)
             </span>
           </Label>
           <Input
@@ -81,13 +88,13 @@ export const MesaIdentification = ({
             value={mesaIdentifier}
             onChange={handleMesaChange}
             onBlur={onBlur}
-            placeholder="Ej: 1-001-A"
+            placeholder="Ej: 01-001-A"
             required
             className={!validateMesaFormat(mesaIdentifier) && mesaIdentifier ? "border-destructive" : ""}
           />
           {!validateMesaFormat(mesaIdentifier) && mesaIdentifier && (
             <p className="text-sm text-destructive">
-              Formato incorrecto. Use: Distrito-Sección-Mesa (ej: 1-001-A)
+              Formato incorrecto. Use: Distrito-Sección-Mesa (ej: 01-001-A)
             </p>
           )}
         </div>

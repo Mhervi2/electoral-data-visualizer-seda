@@ -2,12 +2,41 @@
 import { ActaData } from '@/types/acta';
 
 export const validateActaData = (actaData: ActaData): { isValid: boolean; message?: string } => {
-  // Validate mesa identifier format
-  const mesaPattern = /^\d{1,2}-\d{3}-[A-Z]$/;
+  // Validate mandatory fields
+  if (!actaData.electionId) {
+    return {
+      isValid: false,
+      message: "Debe seleccionar una elección."
+    };
+  }
+
+  if (!actaData.municipio) {
+    return {
+      isValid: false,
+      message: "Debe seleccionar un municipio."
+    };
+  }
+
+  if (!actaData.mesaIdentifier) {
+    return {
+      isValid: false,
+      message: "Debe introducir el identificador de mesa."
+    };
+  }
+
+  if (!actaData.imagen && !actaData.imageUrl) {
+    return {
+      isValid: false,
+      message: "Debe subir una imagen del acta electoral."
+    };
+  }
+
+  // Validate mesa identifier format (now requires 2-digit district)
+  const mesaPattern = /^\d{2}-\d{3}-[A-Z]$/;
   if (!mesaPattern.test(actaData.mesaIdentifier)) {
     return {
       isValid: false,
-      message: "El identificador de mesa debe tener el formato: Distrito-Sección-Mesa (ej: 1-001-A)"
+      message: "El identificador de mesa debe tener el formato: Distrito-Sección-Mesa (ej: 01-001-A)"
     };
   }
 
