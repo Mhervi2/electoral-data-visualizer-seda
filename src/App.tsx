@@ -22,6 +22,7 @@ import AdminElections from "./pages/admin/elections/AdminElections";
 import AdminElectionsNew from "./pages/admin/elections/AdminElectionsNew";
 import AdminFiles from "./pages/admin/files/AdminFiles";
 import AdminFilesUpload from "./pages/admin/files/AdminFilesUpload";
+import AdminElectoralActs from "./pages/admin/AdminElectoralActs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="elections/new" element={<AdminElectionsNew />} />
               <Route path="files" element={<AdminFiles />} />
               <Route path="files/upload" element={<AdminFilesUpload />} />
+              <Route path="electoral-acts" element={<AdminElectoralActs />} />
             </Route>
             
             {/* Public routes with layout */}

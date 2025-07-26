@@ -22,7 +22,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Quick Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
             <div className="flex items-center space-x-2">
@@ -104,6 +104,23 @@ const AdminDashboard = () => {
             </CardDescription>
             <Button asChild className="w-full">
               <Link to="#seats">Gestionar Escaños</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-3">
+            <div className="flex items-center space-x-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Gestionar Actas</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <CardDescription className="mb-4">
+              Editar y revisar actas enviadas por usuarios
+            </CardDescription>
+            <Button asChild className="w-full">
+              <Link to="/admin/electoral-acts">Gestionar Actas</Link>
             </Button>
           </CardContent>
         </Card>
