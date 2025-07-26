@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ClockIcon, UserIcon, FileIcon } from 'lucide-react';
+import { ClockIcon, UserIcon, FileIcon, VoteIcon, MailIcon } from 'lucide-react';
 import { ElectoralActAdmin, ActAuditLog } from '@/hooks/useElectoralActsAdmin';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -23,17 +23,30 @@ export const AdminActAuditLog: React.FC<AdminActAuditLogProps> = ({
       blank_votes: 'Votos en Blanco',
       null_votes: 'Votos Nulos',
       mesa_identifier: 'Identificador de Mesa',
-      municipality_idm: 'Municipio'
+      municipality_idm: 'Municipio',
+      mail_votes: 'Votos por Correo'
     };
+    
+    // Handle party votes
+    if (fieldName.startsWith('party_votes_')) {
+      return 'Votos por Partido';
+    }
+    
     return fieldNames[fieldName] || fieldName;
   };
 
   const getChangeIcon = (fieldName: string) => {
+    if (fieldName.startsWith('party_votes_')) {
+      return <VoteIcon className="h-4 w-4" />;
+    }
+    
     switch (fieldName) {
       case 'mesa_identifier':
         return <FileIcon className="h-4 w-4" />;
       case 'municipality_idm':
         return <UserIcon className="h-4 w-4" />;
+      case 'mail_votes':
+        return <MailIcon className="h-4 w-4" />;
       default:
         return <ClockIcon className="h-4 w-4" />;
     }
