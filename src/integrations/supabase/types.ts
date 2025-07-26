@@ -82,6 +82,9 @@ export type Database = {
           source_type: string
           submitted_by: string | null
           total_voters: number
+          updated_at: string | null
+          updated_by: string | null
+          version: number
         }
         Insert: {
           blank_votes?: number
@@ -96,6 +99,9 @@ export type Database = {
           source_type?: string
           submitted_by?: string | null
           total_voters: number
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number
         }
         Update: {
           blank_votes?: number
@@ -110,6 +116,9 @@ export type Database = {
           source_type?: string
           submitted_by?: string | null
           total_voters?: number
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -125,6 +134,57 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mpca"
             referencedColumns: ["idm"]
+          },
+        ]
+      }
+      electoral_acts_audit_log: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string
+          electoral_act_id: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          version: number
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by: string
+          electoral_act_id: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          version: number
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string
+          electoral_act_id?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "electoral_acts_audit_log_electoral_act_id_fkey"
+            columns: ["electoral_act_id"]
+            isOneToOne: false
+            referencedRelation: "electoral_acts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "electoral_acts_audit_log_electoral_act_id_fkey"
+            columns: ["electoral_act_id"]
+            isOneToOne: false
+            referencedRelation: "electoral_acts_with_municipalities"
+            referencedColumns: ["id"]
           },
         ]
       }
