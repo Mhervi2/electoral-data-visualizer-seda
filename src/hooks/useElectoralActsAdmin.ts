@@ -155,26 +155,92 @@ export const useElectoralActsAdmin = () => {
 
   const updatePartyVotes = async (actId: string, partyVotes: { party_id: string; votes: number }[]) => {
     try {
-      // First, delete existing party votes
-      await supabase
+      // Get current party votes
+      const { data: currentVotes, error: fetchError } = await supabase
         .from('party_votes')
-        .delete()
+        .select('party_id, votes')
         .eq('electoral_act_id', actId);
 
-      // Then insert new ones
-      const partyVotesData = partyVotes.map(pv => ({
-        electoral_act_id: actId,
-        party_id: pv.party_id,
-        votes: pv.votes
-      }));
-
-      const { error } = await supabase
-        .from('party_votes')
-        .insert(partyVotesData);
-
-      if (error) {
-        console.error('Error updating party votes:', error);
+      if (fetchError) {
+        console.error('Error fetching current party votes:', fetchError);
         return false;
+      }
+
+      const currentVotesMap = new Map(
+        (currentVotes || []).map(pv => [pv.party_id, pv.votes])
+      );
+      const newVotesMap = new Map(
+        partyVotes.map(pv => [pv.party_id, pv.votes])
+      );
+
+      // Find changes
+      const toUpdate: { party_id: string; votes: number }[] = [];
+      const toInsert: { party_id: string; votes: number }[] = [];
+      const toDelete: string[] = [];
+
+      // Check for updates and inserts
+      for (const [partyId, newVotes] of newVotesMap) {
+        const currentVotes = currentVotesMap.get(partyId);
+        if (currentVotes === undefined) {
+          // New party
+          toInsert.push({ party_id: partyId, votes: newVotes });
+        } else if (currentVotes !== newVotes) {
+          // Updated votes
+          toUpdate.push({ party_id: partyId, votes: newVotes });
+        }
+      }
+
+      // Check for deletions
+      for (const [partyId] of currentVotesMap) {
+        if (!newVotesMap.has(partyId)) {
+          toDelete.push(partyId);
+        }
+      }
+
+      // Execute changes
+      if (toDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('party_votes')
+          .delete()
+          .eq('electoral_act_id', actId)
+          .in('party_id', toDelete);
+
+        if (deleteError) {
+          console.error('Error deleting party votes:', deleteError);
+          return false;
+        }
+      }
+
+      if (toUpdate.length > 0) {
+        for (const update of toUpdate) {
+          const { error: updateError } = await supabase
+            .from('party_votes')
+            .update({ votes: update.votes })
+            .eq('electoral_act_id', actId)
+            .eq('party_id', update.party_id);
+
+          if (updateError) {
+            console.error('Error updating party votes:', updateError);
+            return false;
+          }
+        }
+      }
+
+      if (toInsert.length > 0) {
+        const insertData = toInsert.map(pv => ({
+          electoral_act_id: actId,
+          party_id: pv.party_id,
+          votes: pv.votes
+        }));
+
+        const { error: insertError } = await supabase
+          .from('party_votes')
+          .insert(insertData);
+
+        if (insertError) {
+          console.error('Error inserting party votes:', insertError);
+          return false;
+        }
       }
 
       return true;
