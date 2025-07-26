@@ -10,11 +10,13 @@ import { calculateDHondt, type PartyVotes, type DHondtResult } from '@/utils/dho
 
 const DHondtCalculator = () => {
   const [totalSeats, setTotalSeats] = useState<number>(350);
+  const [minimumThreshold, setMinimumThreshold] = useState<number>(0);
   const [parties, setParties] = useState<PartyVotes[]>([
     { name: 'Partido 1', votes: 0 },
     { name: 'Partido 2', votes: 0 }
   ]);
   const [results, setResults] = useState<DHondtResult[]>([]);
+  const [excludedParties, setExcludedParties] = useState<PartyVotes[]>([]);
 
   const addParty = () => {
     setParties([...parties, { name: `Partido ${parties.length + 1}`, votes: 0 }]);
@@ -40,10 +42,24 @@ const DHondtCalculator = () => {
     const validParties = parties.filter(party => party.votes > 0);
     if (validParties.length === 0 || totalSeats <= 0) {
       setResults([]);
+      setExcludedParties([]);
       return;
     }
     
-    const dhondtResults = calculateDHondt(validParties, totalSeats);
+    const totalValidVotes = validParties.reduce((sum, party) => sum + party.votes, 0);
+    const thresholdVotes = (totalValidVotes * minimumThreshold) / 100;
+    
+    const qualifiedParties = validParties.filter(party => party.votes >= thresholdVotes);
+    const excludedByThreshold = validParties.filter(party => party.votes < thresholdVotes);
+    
+    setExcludedParties(excludedByThreshold);
+    
+    if (qualifiedParties.length === 0) {
+      setResults([]);
+      return;
+    }
+    
+    const dhondtResults = calculateDHondt(qualifiedParties, totalSeats);
     setResults(dhondtResults);
   };
 
@@ -82,6 +98,23 @@ const DHondtCalculator = () => {
                 onChange={(e) => setTotalSeats(Math.max(1, Number(e.target.value)))}
                 placeholder="Ej: 350"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="minimumThreshold">Umbral Mínimo Electoral (%)</Label>
+              <Input
+                id="minimumThreshold"
+                type="number"
+                min="0"
+                max="50"
+                step="0.1"
+                value={minimumThreshold}
+                onChange={(e) => setMinimumThreshold(Math.max(0, Math.min(50, Number(e.target.value))))}
+                placeholder="Ej: 3 (para 3%)"
+              />
+              <p className="text-xs text-muted-foreground">
+                Los partidos que no alcancen este porcentaje de votos no obtendrán representación.
+              </p>
             </div>
 
             <div className="space-y-4">
@@ -139,9 +172,19 @@ const DHondtCalculator = () => {
                 <p className="text-sm text-muted-foreground">
                   Escaños a repartir: {totalSeats}
                 </p>
+                {minimumThreshold > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Umbral mínimo: {minimumThreshold}% ({Math.floor((totalVotes * minimumThreshold) / 100).toLocaleString()} votos)
+                  </p>
+                )}
                 {results.length > 0 && (
                   <p className="text-sm text-muted-foreground">
                     Escaños asignados: {assignedSeats}
+                  </p>
+                )}
+                {excludedParties.length > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Partidos excluidos por umbral: {excludedParties.length}
                   </p>
                 )}
               </div>
@@ -186,6 +229,21 @@ const DHondtCalculator = () => {
                     ))}
                   </TableBody>
                 </Table>
+
+                {excludedParties.length > 0 && (
+                  <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <p className="text-sm text-orange-800 mb-2">
+                      <strong>Partidos excluidos por no alcanzar el umbral mínimo ({minimumThreshold}%):</strong>
+                    </p>
+                    <div className="space-y-1">
+                      {excludedParties.map((party, index) => (
+                        <p key={index} className="text-xs text-orange-700">
+                          • {party.name}: {party.votes.toLocaleString()} votos ({((party.votes / totalVotes) * 100).toFixed(2)}%)
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {assignedSeats < totalSeats && (
                   <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
