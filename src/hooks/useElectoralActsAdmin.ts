@@ -60,6 +60,11 @@ export const useElectoralActsAdmin = () => {
         .from('electoral_acts')
         .select(`
           *,
+          mpca(
+            municipio,
+            provincia,
+            ca
+          ),
           party_votes:party_votes(
             id,
             votes,
@@ -91,7 +96,15 @@ export const useElectoralActsAdmin = () => {
         return;
       }
 
-      setActs(data || []);
+      // Map the data to include municipality information
+      const mappedData = (data || []).map(act => ({
+        ...act,
+        municipio: act.mpca?.municipio || 'Sin municipio',
+        provincia: act.mpca?.provincia || 'Sin provincia',
+        comunidad_autonoma: act.mpca?.ca || 'Sin comunidad autónoma'
+      }));
+
+      setActs(mappedData);
     } catch (error) {
       console.error('Error:', error);
       toast({
