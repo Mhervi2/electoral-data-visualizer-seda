@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Search, Users } from 'lucide-react';
 import { useAppData } from '@/hooks/useAppData';
+import PartySuggestions from '@/components/admin/PartySuggestions';
 
 const PoliticalParties = () => {
   const { politicalParties, loading, error } = useAppData();
@@ -136,6 +137,9 @@ const PoliticalParties = () => {
           </p>
         </CardContent>
       </Card>
+
+      {/* Party Suggestions Section */}
+      <PartySuggestions />
     </div>
   );
 };

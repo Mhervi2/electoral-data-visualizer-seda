@@ -4,8 +4,6 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BarChart3, Upload, Users, FileText, Settings, Eye, Calculator } from 'lucide-react';
-import PartySuggestions from '@/components/admin/PartySuggestions';
-import { ProvincialSeatsManager } from '@/components/admin/ProvincialSeatsManager';
 
 const AdminDashboard = () => {
   return (
@@ -22,7 +20,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Quick Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
             <div className="flex items-center space-x-2">
@@ -57,22 +55,6 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-center space-x-2">
-              <Eye className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Resultados</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="mb-4">
-              Visualizar y verificar resultados electorales
-            </CardDescription>
-            <Button asChild className="w-full">
-              <Link to="/results">Ver Resultados</Link>
-            </Button>
-          </CardContent>
-        </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
@@ -103,7 +85,7 @@ const AdminDashboard = () => {
               Configurar escaños por provincia
             </CardDescription>
             <Button asChild className="w-full">
-              <Link to="#seats">Gestionar Escaños</Link>
+              <Link to="/admin/provincial-seats">Gestionar Escaños</Link>
             </Button>
           </CardContent>
         </Card>
@@ -125,14 +107,6 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Provincial Seats Management */}
-      <div id="seats">
-        <ProvincialSeatsManager />
-      </div>
-
-      {/* Party Suggestions Section */}
-      <PartySuggestions />
 
       {/* System Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
