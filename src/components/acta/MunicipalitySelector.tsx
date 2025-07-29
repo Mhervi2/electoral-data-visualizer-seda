@@ -31,11 +31,26 @@ export const MunicipalitySelector = ({
     if (!searchValue.trim()) return mpcaData;
     
     const search = searchValue.toLowerCase().trim();
-    return mpcaData.filter((mpca) => {
+    const filtered = mpcaData.filter((mpca) => {
       const municipioMatch = mpca.municipio?.toLowerCase().includes(search);
       const provinciaMatch = mpca.provincia?.toLowerCase().includes(search);
       const caMatch = mpca.ca?.toLowerCase().includes(search);
       return municipioMatch || provinciaMatch || caMatch;
+    });
+
+    // Sort results to prioritize exact matches
+    return filtered.sort((a, b) => {
+      const aExactMatch = a.municipio?.toLowerCase() === search;
+      const bExactMatch = b.municipio?.toLowerCase() === search;
+      const aStartsWithMatch = a.municipio?.toLowerCase().startsWith(search);
+      const bStartsWithMatch = b.municipio?.toLowerCase().startsWith(search);
+      
+      if (aExactMatch && !bExactMatch) return -1;
+      if (!aExactMatch && bExactMatch) return 1;
+      if (aStartsWithMatch && !bStartsWithMatch) return -1;
+      if (!aStartsWithMatch && bStartsWithMatch) return 1;
+      
+      return a.municipio?.localeCompare(b.municipio || '') || 0;
     });
   }, [mpcaData, searchValue]);
 
@@ -89,21 +104,21 @@ export const MunicipalitySelector = ({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
+        <PopoverContent className="w-full p-0 z-[100] bg-popover" align="start">
           <Command>
             <CommandInput 
               placeholder="Buscar municipio, provincia o comunidad..." 
               value={searchValue}
               onValueChange={setSearchValue}
             />
-            <CommandList>
+            <CommandList className="max-h-[300px] overflow-auto">
               <CommandEmpty>
                 {mpcaData.length === 0 
                   ? "No hay municipios disponibles" 
                   : "No se encontraron resultados"}
               </CommandEmpty>
               <CommandGroup>
-                {filteredMunicipalities.slice(0, 100).map((municipality) => (
+                {filteredMunicipalities.slice(0, 500).map((municipality) => (
                   <CommandItem
                     key={municipality.idm}
                     value={`${municipality.municipio} ${municipality.provincia} ${municipality.ca}`}

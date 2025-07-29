@@ -31,7 +31,7 @@ export const MunicipalityCombobox = ({
     (mpca) => mpca.idm.toString() === selectedValue
   );
 
-  // Filter municipalities based on search value
+  // Filter municipalities based on search value with optimized search
   const filteredMunicipalities = useMemo(() => {
     if (!searchValue.trim()) {
       return mpcaData;
@@ -47,9 +47,24 @@ export const MunicipalityCombobox = ({
       
       return municipioMatch || provinciaMatch || caMatch;
     });
+
+    // Sort results to prioritize exact matches
+    const sorted = filtered.sort((a, b) => {
+      const aExactMatch = a.municipio?.toLowerCase() === search;
+      const bExactMatch = b.municipio?.toLowerCase() === search;
+      const aStartsWithMatch = a.municipio?.toLowerCase().startsWith(search);
+      const bStartsWithMatch = b.municipio?.toLowerCase().startsWith(search);
+      
+      if (aExactMatch && !bExactMatch) return -1;
+      if (!aExactMatch && bExactMatch) return 1;
+      if (aStartsWithMatch && !bStartsWithMatch) return -1;
+      if (!aStartsWithMatch && bStartsWithMatch) return 1;
+      
+      return a.municipio?.localeCompare(b.municipio || '') || 0;
+    });
     
-    console.log('Filtered results:', filtered.length, 'municipalities');
-    return filtered;
+    console.log('Filtered and sorted results:', sorted.length, 'municipalities');
+    return sorted;
   }, [mpcaData, searchValue]);
 
   return (
@@ -67,21 +82,21 @@ export const MunicipalityCombobox = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
+      <PopoverContent className="w-full p-0 z-[100] bg-popover" align="start">
         <Command>
           <CommandInput 
             placeholder="Escribir nombre del municipio..." 
             value={searchValue}
             onValueChange={setSearchValue}
           />
-          <CommandList>
+          <CommandList className="max-h-[300px] overflow-auto">
             <CommandEmpty>
               {mpcaData.length === 0 
                 ? "No hay datos de municipios disponibles. Revisa la conexión a la base de datos." 
                 : "No se encontraron municipios con ese criterio."}
             </CommandEmpty>
             <CommandGroup>
-              {filteredMunicipalities.slice(0, 100).map((mpca) => (
+              {filteredMunicipalities.slice(0, 500).map((mpca) => (
                 <CommandItem
                   key={mpca.idm}
                   value={mpca.municipio}

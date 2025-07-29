@@ -8,6 +8,7 @@ import { Loader2, Vote } from 'lucide-react';
 import { useAvailableFilters } from '@/hooks/useAvailableFilters';
 import { useElections } from '@/hooks/useElections';
 import { getSourceTooltip } from '@/utils/sourceTooltips';
+import { MunicipalityFilterCombobox } from './MunicipalityFilterCombobox';
 
 interface ResultsFiltersProps {
   filters: {
@@ -207,23 +208,13 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
               
               <div>
                 <Label htmlFor="municipality-filter">Municipio</Label>
-                <Select 
-                  value={filters.municipality || "all"} 
-                  onValueChange={(value) => handleSelectChange('municipality', value)}
+                <MunicipalityFilterCombobox
+                  municipalities={options.municipalities}
+                  selectedValue={filters.municipality || "all"}
+                  onSelect={(value) => handleSelectChange('municipality', value)}
+                  placeholder="Seleccionar municipio..."
                   disabled={!filters.province}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar municipio..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los municipios</SelectItem>
-                    {options.municipalities.map((municipality) => (
-                      <SelectItem key={municipality} value={municipality}>
-                        {municipality}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
               
               <div>
