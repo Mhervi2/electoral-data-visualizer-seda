@@ -32,6 +32,7 @@ export const useAppData = () => {
           supabase
             .from('mpca')
             .select('idm, municipio, provincia, ca, idp, idca')
+            .limit(10000)
             .order('municipio', { ascending: true }),
           
           supabase
