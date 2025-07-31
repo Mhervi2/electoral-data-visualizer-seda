@@ -27,13 +27,8 @@ export const useAppData = () => {
       try {
         setData(prev => ({ ...prev, loading: true, error: null }));
 
-        // Fetch all data in parallel
-        const [mpcaResult, partiesResult, electionsResult] = await Promise.allSettled([
-          supabase
-            .from('mpca')
-            .select('idm, municipio, provincia, ca, idp, idca')
-            .limit(15000)
-            .order('municipio', { ascending: true }),
+        // Fetch parties and elections in parallel (no more MPCA preloading)
+        const [partiesResult, electionsResult] = await Promise.allSettled([
           
           supabase
             .from('political_parties')
@@ -47,22 +42,9 @@ export const useAppData = () => {
             .order('created_at', { ascending: false })
         ]);
 
-        // Process MPCA data
-        let mpcaData: MpcaData[] = [];
-        if (mpcaResult.status === 'fulfilled' && mpcaResult.value.data) {
-          mpcaData = mpcaResult.value.data.map(item => ({
-            idm: Number(item.idm),
-            municipio: item.municipio || '',
-            idp: Number(item.idp) || 0,
-            provincia: item.provincia || '',
-            idca: Number(item.idca) || 0,
-            ca: item.ca || '',
-          }));
-          console.log(`✅ MPCA data loaded: ${mpcaData.length} municipalities`);
-          console.log(`📊 First municipality: ${mpcaData[0]?.municipio}, Last: ${mpcaData[mpcaData.length - 1]?.municipio}`);
-        } else {
-          console.error('❌ MPCA data failed:', mpcaResult.status === 'rejected' ? mpcaResult.reason : 'No data');
-        }
+        // MPCA data is now loaded on-demand via server search
+        const mpcaData: MpcaData[] = [];
+        console.log('✅ MPCA data will be loaded on-demand via server search');
 
         // Process Political Parties data
         let politicalParties: PoliticalParty[] = [];
