@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -22,6 +23,7 @@ export const MunicipalityCombobox = ({
 }: MunicipalityComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const debouncedSearchValue = useDebounce(searchValue, 300);
 
   console.log('MunicipalityCombobox render - mpcaData length:', mpcaData.length);
   console.log('MunicipalityCombobox render - first item:', mpcaData[0]);
@@ -33,11 +35,12 @@ export const MunicipalityCombobox = ({
 
   // Filter municipalities based on search value with optimized search
   const filteredMunicipalities = useMemo(() => {
-    if (!searchValue.trim()) {
-      return mpcaData;
+    // Require at least 2 characters to start searching
+    if (!debouncedSearchValue.trim() || debouncedSearchValue.trim().length < 2) {
+      return [];
     }
     
-    const search = searchValue.toLowerCase().trim();
+    const search = debouncedSearchValue.toLowerCase().trim();
     console.log('Filtering with search term:', search);
     
     const filtered = mpcaData.filter((mpca) => {
@@ -65,7 +68,7 @@ export const MunicipalityCombobox = ({
     
     console.log('Filtered and sorted results:', sorted.length, 'municipalities');
     return sorted;
-  }, [mpcaData, searchValue]);
+  }, [mpcaData, debouncedSearchValue]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -85,7 +88,7 @@ export const MunicipalityCombobox = ({
       <PopoverContent className="w-full p-0 z-[100] bg-popover" align="start">
         <Command>
           <CommandInput 
-            placeholder="Escribir nombre del municipio..." 
+            placeholder="Escribe al menos 2 caracteres..." 
             value={searchValue}
             onValueChange={setSearchValue}
           />
@@ -93,10 +96,12 @@ export const MunicipalityCombobox = ({
             <CommandEmpty>
               {mpcaData.length === 0 
                 ? "No hay datos de municipios disponibles. Revisa la conexión a la base de datos." 
+                : debouncedSearchValue.length < 2
+                ? "Escribe al menos 2 caracteres para buscar..."
                 : "No se encontraron municipios con ese criterio."}
             </CommandEmpty>
             <CommandGroup>
-              {filteredMunicipalities.slice(0, 500).map((mpca) => (
+              {filteredMunicipalities.map((mpca) => (
                 <CommandItem
                   key={mpca.idm}
                   value={mpca.municipio}

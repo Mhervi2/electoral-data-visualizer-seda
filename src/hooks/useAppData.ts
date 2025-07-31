@@ -32,7 +32,7 @@ export const useAppData = () => {
           supabase
             .from('mpca')
             .select('idm, municipio, provincia, ca, idp, idca')
-            .limit(10000)
+            .limit(15000)
             .order('municipio', { ascending: true }),
           
           supabase
@@ -59,6 +59,7 @@ export const useAppData = () => {
             ca: item.ca || '',
           }));
           console.log(`✅ MPCA data loaded: ${mpcaData.length} municipalities`);
+          console.log(`📊 First municipality: ${mpcaData[0]?.municipio}, Last: ${mpcaData[mpcaData.length - 1]?.municipio}`);
         } else {
           console.error('❌ MPCA data failed:', mpcaResult.status === 'rejected' ? mpcaResult.reason : 'No data');
         }
