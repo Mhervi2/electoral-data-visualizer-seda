@@ -10,6 +10,8 @@ import { useAppData } from '@/hooks/useAppData';
 import { MunicipalitySelector } from '@/components/acta/MunicipalitySelector';
 import { validateActaData } from '@/utils/actaValidation';
 import { useToast } from '@/hooks/use-toast';
+import { DraggablePartyList } from './DraggablePartyList';
+import { usePartyOrder } from '@/hooks/usePartyOrder';
 
 interface AdminActEditFormProps {
   act: ElectoralActAdmin;
@@ -134,6 +136,26 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
   };
 
   const selectedMunicipality = mpcaData?.find(m => m.idm === formData.municipality_idm);
+  
+  // Use party order hook for draggable functionality
+  const { orderedParties, loading: orderLoading, updatePartyOrder } = usePartyOrder(
+    selectedMunicipality?.provincia,
+    politicalParties || []
+  );
+
+  // Convert votos to the format expected by DraggablePartyList
+  const votos = partyVotes.reduce((acc, pv) => {
+    acc[pv.party_id] = pv.votes.toString();
+    return acc;
+  }, {} as { [key: string]: string });
+
+  const handlePartyOrderChange = (newOrder: any[]) => {
+    updatePartyOrder(newOrder);
+  };
+
+  const handleVoteChange = (partyId: string, votes: string) => {
+    handlePartyVoteChange(partyId, votes);
+  };
 
   return (
     <div className="space-y-6">
@@ -145,16 +167,28 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
         </div>
       )}
       
-      {act.image_url && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Imagen del Acta</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <img src={act.image_url} alt="Imagen del acta" className="max-w-full h-auto rounded-lg border" />
-          </CardContent>
-        </Card>
-      )}
+      {/* Layout de 2 columnas */}
+      <div className={`${act.image_url ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : ''}`}>
+        {/* Columna izquierda - Imagen */}
+        {act.image_url && (
+          <div className="lg:sticky lg:top-4 lg:self-start">
+            <Card>
+              <CardHeader>
+                <CardTitle>Imagen del Acta</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <img 
+                  src={act.image_url} 
+                  alt="Imagen del acta" 
+                  className="w-full h-auto rounded-lg border shadow-sm" 
+                />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        
+        {/* Columna derecha - Formulario */}
+        <div className="space-y-6">
 
       <Tabs defaultValue="basic" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
@@ -244,30 +278,19 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
               <CardTitle>Votos por Partido Político</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4">
-                {politicalParties?.map((party) => {
-                  const partyVote = partyVotes.find(pv => pv.party_id === party.id);
-                  return (
-                    <div key={party.id} className="flex items-center gap-4">
-                      <div 
-                        className="w-4 h-4 rounded"
-                        style={{ backgroundColor: party.color }}
-                      ></div>
-                      <div className="flex-1">
-                        <Label>{party.name} ({party.siglas})</Label>
-                      </div>
-                      <div className="w-24">
-                        <Input
-                          type="number"
-                          value={partyVote?.votes || 0}
-                          onChange={(e) => handlePartyVoteChange(party.id, e.target.value)}
-                          min="0"
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              {orderLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Cargando orden de partidos...
+                </div>
+              ) : (
+                <DraggablePartyList
+                  parties={orderedParties}
+                  votos={votos}
+                  onVoteChange={handleVoteChange}
+                  onPartyOrderChange={handlePartyOrderChange}
+                  provincia={selectedMunicipality?.provincia}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -318,6 +341,8 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
           <Save className="h-4 w-4 mr-1" />
           Guardar Cambios
         </Button>
+      </div>
+        </div>
       </div>
     </div>
   );
