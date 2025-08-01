@@ -53,7 +53,14 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
     return location;
   };
 
-  const parseMesaIdentifier = (mesaIdentifier: string) => {
+  const parseMesaIdentifier = (mesaIdentifier: string | null | undefined) => {
+    if (!mesaIdentifier) {
+      return {
+        district: '',
+        section: '',
+        table: ''
+      };
+    }
     const parts = mesaIdentifier.split('-');
     return {
       district: parts[0] || '',

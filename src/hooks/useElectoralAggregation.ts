@@ -91,7 +91,14 @@ export const useElectoralAggregation = () => {
     sourceTypes: ['user']
   });
 
-  const parseMesaIdentifier = (mesaIdentifier: string) => {
+  const parseMesaIdentifier = (mesaIdentifier: string | null | undefined) => {
+    if (!mesaIdentifier) {
+      return {
+        district: '',
+        section: '',
+        table: ''
+      };
+    }
     const parts = mesaIdentifier.split('-');
     return {
       district: parts[0] || '',

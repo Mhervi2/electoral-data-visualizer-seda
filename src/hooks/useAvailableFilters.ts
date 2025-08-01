@@ -36,7 +36,14 @@ export const useAvailableFilters = (currentFilters: Filters) => {
   // Debounce los filtros de texto para evitar consultas excesivas
   const debouncedMunicipality = useDebounce(currentFilters.municipality, 300);
 
-  const parseMesaIdentifier = (mesaIdentifier: string) => {
+  const parseMesaIdentifier = (mesaIdentifier: string | null | undefined) => {
+    if (!mesaIdentifier) {
+      return {
+        district: '',
+        section: '',
+        table: ''
+      };
+    }
     const parts = mesaIdentifier.split('-');
     return {
       district: parts[0] || '',
