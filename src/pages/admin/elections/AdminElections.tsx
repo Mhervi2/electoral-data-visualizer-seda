@@ -135,10 +135,12 @@ const AdminElections = () => {
                         : 'Sin actualizaciones'
                       }
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="outline">
-                        Ver Detalles
-                      </Button>
+                    <TableCell className="text-right space-x-2">
+                      <Link to={`/admin/elections/${election.id}/edit`}>
+                        <Button size="sm" variant="outline">
+                          Editar
+                        </Button>
+                      </Link>
                     </TableCell>
                   </TableRow>
                 ))}

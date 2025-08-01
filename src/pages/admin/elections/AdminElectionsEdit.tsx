@@ -1,46 +1,66 @@
-
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CalendarIcon, ArrowLeft, Plus, Loader2 } from 'lucide-react';
+import { CalendarIcon, ArrowLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { usePoliticalParties } from '@/hooks/usePoliticalParties';
 import { useElectionManagement } from '@/hooks/useElectionManagement';
 
-interface Party {
-  id: string;
-  name: string;
-  acronym: string;
-  color: string;
-  logoUrl?: string;
-}
-
-const AdminElectionsNew = () => {
+const AdminElectionsEdit = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { parties, loading: partiesLoading } = usePoliticalParties();
-  const { createElection, loading: creatingElection } = useElectionManagement();
+  const { updateElection, getElectionWithParties, loading: managementLoading } = useElectionManagement();
   
+  const [loading, setLoading] = useState(true);
+  const [election, setElection] = useState<any>(null);
+  const [name, setName] = useState('');
   const [date, setDate] = useState<Date>();
+  const [electionType, setElectionType] = useState('');
+  const [scope, setScope] = useState('');
+  const [totalSeats, setTotalSeats] = useState('');
   const [selectedParties, setSelectedParties] = useState<string[]>([]);
-  const [newPartyDialog, setNewPartyDialog] = useState(false);
-  const [newParty, setNewParty] = useState({
-    name: '',
-    acronym: '',
-    color: '#A80000',
-    logoUrl: ''
-  });
+
+  useEffect(() => {
+    const loadElection = async () => {
+      if (!id) {
+        navigate('/admin/elections');
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const electionData = await getElectionWithParties(id);
+        
+        setElection(electionData);
+        setName(electionData.name || '');
+        setDate((electionData as any).election_date ? new Date((electionData as any).election_date) : undefined);
+        setElectionType((electionData as any).election_type || '');
+        setScope((electionData as any).scope || '');
+        setTotalSeats((electionData as any).total_seats?.toString() || '');
+        setSelectedParties(electionData.selectedParties || []);
+        
+      } catch (error) {
+        console.error('Error loading election:', error);
+        navigate('/admin/elections');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadElection();
+  }, [id, getElectionWithParties, navigate]);
 
   const handlePartyToggle = (partyId: string) => {
     setSelectedParties(prev => 
@@ -50,29 +70,10 @@ const AdminElectionsNew = () => {
     );
   };
 
-  const handleAddNewParty = () => {
-    if (!newParty.name || !newParty.acronym) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "El nombre y las siglas son obligatorios.",
-      });
-      return;
-    }
-
-    toast({
-      title: "Partido añadido (simulado)",
-      description: `El partido "${newParty.name}" ha sido añadido a la lista.`,
-    });
-
-    setNewParty({ name: '', acronym: '', color: '#A80000', logoUrl: '' });
-    setNewPartyDialog(false);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!date) {
+    if (!date || !id) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -81,19 +82,18 @@ const AdminElectionsNew = () => {
       return;
     }
 
-    const formData = new FormData(e.target as HTMLFormElement);
     const electionFormData = {
-      name: formData.get('name') as string,
+      name,
       election_date: date.toISOString().split('T')[0],
-      election_type: formData.get('type') as string,
-      scope: formData.get('scope') as string,
-      total_seats: parseInt(formData.get('totalSeats') as string) || 0,
-      selectedParties: selectedParties
+      election_type: electionType,
+      scope,
+      total_seats: parseInt(totalSeats) || 0,
+      selectedParties
     };
 
     try {
-      const election = await createElection(electionFormData);
-      if (election) {
+      const updatedElection = await updateElection(id, electionFormData);
+      if (updatedElection) {
         navigate('/admin/elections');
       }
     } catch (error) {
@@ -101,15 +101,36 @@ const AdminElectionsNew = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Cargando elección...</span>
+      </div>
+    );
+  }
+
+  if (!election) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-xl font-semibold">Elección no encontrada</h2>
+        <p className="text-muted-foreground mt-2">La elección que buscas no existe.</p>
+        <Button asChild className="mt-4">
+          <Link to="/admin/elections">Volver a Elecciones</Link>
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div>
-            <h1 className="text-3xl font-bold font-space-grotesk">Nueva Elección</h1>
+            <h1 className="text-3xl font-bold font-space-grotesk">Editar Elección</h1>
             <p className="text-muted-foreground">
-              Configura un nuevo proceso electoral.
+              Modifica los datos del proceso electoral.
             </p>
           </div>
         </div>
@@ -137,7 +158,8 @@ const AdminElectionsNew = () => {
                 <Label htmlFor="name">Nombre de la Elección *</Label>
                 <Input
                   id="name"
-                  name="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder="Ej: Elecciones Generales 2024"
                   required
                 />
@@ -171,7 +193,7 @@ const AdminElectionsNew = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="type">Tipo de Elecciones *</Label>
-                <Select name="type" required>
+                <Select value={electionType} onValueChange={setElectionType} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona el tipo" />
                   </SelectTrigger>
@@ -186,7 +208,7 @@ const AdminElectionsNew = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="scope">Ámbito Geográfico *</Label>
-                <Select name="scope" required>
+                <Select value={scope} onValueChange={setScope} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona el ámbito" />
                   </SelectTrigger>
@@ -203,7 +225,8 @@ const AdminElectionsNew = () => {
                 <Label htmlFor="totalSeats">Número Total de Escaños (opcional)</Label>
                 <Input
                   id="totalSeats"
-                  name="totalSeats"
+                  value={totalSeats}
+                  onChange={(e) => setTotalSeats(e.target.value)}
                   type="number"
                   min="1"
                   placeholder="Ej: 350"
@@ -219,79 +242,9 @@ const AdminElectionsNew = () => {
                 <div>
                   <CardTitle>Partidos Políticos Participantes *</CardTitle>
                   <CardDescription>
-                    Selecciona los partidos que participan en esta elección.
+                    Modifica los partidos que participan en esta elección.
                   </CardDescription>
                 </div>
-                <Dialog open={newPartyDialog} onOpenChange={setNewPartyDialog}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" variant="outline">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Añadir Nuevo
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Añadir Nuevo Partido</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="partyName">Nombre *</Label>
-                        <Input
-                          id="partyName"
-                          value={newParty.name}
-                          onChange={(e) => setNewParty(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="Nombre completo del partido"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="partyAcronym">Siglas *</Label>
-                        <Input
-                          id="partyAcronym"
-                          value={newParty.acronym}
-                          onChange={(e) => setNewParty(prev => ({ ...prev, acronym: e.target.value }))}
-                          placeholder="Ej: PP, PSOE"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="partyColor">Color</Label>
-                        <div className="flex items-center space-x-2">
-                          <Input
-                            id="partyColor"
-                            type="color"
-                            value={newParty.color}
-                            onChange={(e) => setNewParty(prev => ({ ...prev, color: e.target.value }))}
-                            className="w-16 h-10"
-                          />
-                          <div 
-                            className="w-10 h-10 rounded border"
-                            style={{ backgroundColor: newParty.color }}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="partyLogo">URL del Logo (opcional)</Label>
-                        <Input
-                          id="partyLogo"
-                          value={newParty.logoUrl}
-                          onChange={(e) => setNewParty(prev => ({ ...prev, logoUrl: e.target.value }))}
-                          placeholder="https://..."
-                        />
-                      </div>
-                      <div className="flex justify-end space-x-2">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => setNewPartyDialog(false)}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button type="button" onClick={handleAddNewParty}>
-                          Añadir Partido
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
               </div>
             </CardHeader>
             <CardContent>
@@ -336,19 +289,22 @@ const AdminElectionsNew = () => {
         </div>
 
         {/* Submit Button */}
-        <div className="flex justify-end">
+        <div className="flex justify-end space-x-4">
+          <Button asChild variant="outline">
+            <Link to="/admin/elections">Cancelar</Link>
+          </Button>
           <Button 
             type="submit" 
             size="lg" 
-            disabled={selectedParties.length === 0 || creatingElection || partiesLoading}
+            disabled={selectedParties.length === 0 || managementLoading || partiesLoading}
           >
-            {creatingElection ? (
+            {managementLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creando elección...
+                Actualizando elección...
               </>
             ) : (
-              'Crear Elección'
+              'Actualizar Elección'
             )}
           </Button>
         </div>
@@ -357,4 +313,4 @@ const AdminElectionsNew = () => {
   );
 };
 
-export default AdminElectionsNew;
+export default AdminElectionsEdit;
