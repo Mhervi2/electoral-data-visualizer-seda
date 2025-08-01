@@ -3,9 +3,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart3, Upload, Users, FileText, Settings, Eye, Calculator } from 'lucide-react';
+import { BarChart3, Upload, Users, FileText, Settings, Eye, Calculator, Shield, Download, Github } from 'lucide-react';
+import { useDataExport } from '@/hooks/useDataExport';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const AdminDashboard = () => {
+  const { exportData, isExporting } = useDataExport();
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -20,7 +24,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Quick Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
             <div className="flex items-center space-x-2">
@@ -106,6 +110,111 @@ const AdminDashboard = () => {
             </Button>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Security & Backup Section */}
+      <div className="space-y-6">
+        <div className="flex items-center space-x-3">
+          <Shield className="h-6 w-6 text-primary" />
+          <h2 className="text-2xl font-bold font-space-grotesk">Seguridad y Backup</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Data Export Card */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex items-center space-x-2">
+                <Download className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Exportar Datos</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="mb-4">
+                Descargar backup completo de la base de datos en formato CSV con logs de auditoría
+              </CardDescription>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="destructive" 
+                    className="w-full" 
+                    disabled={isExporting}
+                  >
+                    {isExporting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Exportando...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Exportar Base de Datos
+                      </>
+                    )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>⚠️ Confirmar Exportación de Datos</AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-2">
+                      <p>Estás a punto de exportar <strong>TODOS</strong> los datos de la base de datos, incluyendo:</p>
+                      <ul className="list-disc list-inside text-sm space-y-1 ml-4">
+                        <li>Actas electorales y votos</li>
+                        <li>Datos de usuarios y perfiles</li>
+                        <li>Logs de auditoría completos</li>
+                        <li>Configuraciones del sistema</li>
+                      </ul>
+                      <p className="text-red-600 font-medium mt-3">
+                        Esta operación se registrará en los logs de seguridad.
+                      </p>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={exportData}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Confirmar Exportación
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardContent>
+          </Card>
+
+          {/* GitHub Backup Card */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex items-center space-x-2">
+                <Github className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Backup de Código</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="mb-4">
+                Conecta con GitHub para backup automático del código fuente y restauración completa
+              </CardDescription>
+              <div className="space-y-3">
+                <Button asChild className="w-full" variant="outline">
+                  <a 
+                    href="https://docs.lovable.dev/features/github-integration" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    <Github className="mr-2 h-4 w-4" />
+                    Configurar GitHub
+                  </a>
+                </Button>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>• Sincronización automática bidireccional</p>
+                  <p>• Historial completo de versiones</p>
+                  <p>• Restauración con un clic</p>
+                  <p>• Backup en tiempo real</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* System Statistics */}
