@@ -5,10 +5,10 @@ import { useToast } from '@/hooks/use-toast';
 export interface ElectoralActAdmin {
   id: string;
   election_id: string;
-  municipality_idm: number;
-  mesa_identifier: string;
-  census_total: number;
-  total_voters: number;
+  municipality_idm: number | null;
+  mesa_identifier: string | null;
+  census_total: number | null;
+  total_voters: number | null;
   blank_votes: number;
   null_votes: number;
   source_type: string;
@@ -17,6 +17,7 @@ export interface ElectoralActAdmin {
   updated_at?: string;
   updated_by?: string;
   version: number;
+  completion_status?: string;
   municipio?: string;
   provincia?: string;
   comunidad_autonoma?: string;
@@ -73,7 +74,6 @@ export const useElectoralActsAdmin = () => {
           ),
           mail_votes:mail_votes(dni)
         `)
-        .eq('source_type', 'user')
         .order('created_at', { ascending: false });
 
       if (searchTerm) {

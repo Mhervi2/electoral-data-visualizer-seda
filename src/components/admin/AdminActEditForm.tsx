@@ -30,10 +30,10 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
   const { politicalParties, mpcaData } = useAppData();
 
   const [formData, setFormData] = useState({
-    mesa_identifier: act.mesa_identifier,
-    municipality_idm: act.municipality_idm,
-    census_total: act.census_total,
-    total_voters: act.total_voters,
+    mesa_identifier: act.mesa_identifier || '',
+    municipality_idm: act.municipality_idm || null,
+    census_total: act.census_total || 0,
+    total_voters: act.total_voters || 0,
     blank_votes: act.blank_votes,
     null_votes: act.null_votes,
   });
@@ -96,28 +96,32 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
       return acc;
     }, {} as { [key: string]: string });
 
-    // Validate data
-    const actaData = {
-      electionId: act.election_id,
-      municipio: formData.municipality_idm.toString(),
-      mesaIdentifier: formData.mesa_identifier,
-      censo: formData.census_total.toString(),
-      votantes: formData.total_voters.toString(),
-      blancos: formData.blank_votes.toString(),
-      nulos: formData.null_votes.toString(),
-      votos: votos,
-      mailVoters: mailVotes,
-      imageUrl: act.image_url
-    };
+    // Validate data only if it's a complete act
+    const isImageOnlyAct = act.completion_status === 'image_only';
+    
+    if (!isImageOnlyAct) {
+      const actaData = {
+        electionId: act.election_id,
+        municipio: formData.municipality_idm?.toString() || '',
+        mesaIdentifier: formData.mesa_identifier || '',
+        censo: formData.census_total?.toString() || '0',
+        votantes: formData.total_voters?.toString() || '0',
+        blancos: formData.blank_votes.toString(),
+        nulos: formData.null_votes.toString(),
+        votos: votos,
+        mailVoters: mailVotes,
+        imageUrl: act.image_url
+      };
 
-    const validation = validateActaData(actaData);
-    if (!validation.isValid) {
-      toast({
-        variant: "destructive",
-        title: "Error de validación",
-        description: validation.message,
-      });
-      return;
+      const validation = validateActaData(actaData);
+      if (!validation.isValid) {
+        toast({
+          variant: "destructive",
+          title: "Error de validación",
+          description: validation.message,
+        });
+        return;
+      }
     }
 
     const success = await onSave(formData, partyVotes, mailVotes);
@@ -133,6 +137,25 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
 
   return (
     <div className="space-y-6">
+      {act.completion_status === 'image_only' && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <p className="text-sm text-yellow-800">
+            <strong>Acta de Solo Imagen:</strong> Esta acta fue creada con solo imagen y requiere completar los datos faltantes.
+          </p>
+        </div>
+      )}
+      
+      {act.image_url && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Imagen del Acta</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <img src={act.image_url} alt="Imagen del acta" className="max-w-full h-auto rounded-lg border" />
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="basic" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="basic">Datos Básicos</TabsTrigger>
@@ -151,7 +174,7 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
                   <Label htmlFor="mesa_identifier">Identificador de Mesa</Label>
                   <Input
                     id="mesa_identifier"
-                    value={formData.mesa_identifier}
+                    value={formData.mesa_identifier || ''}
                     onChange={(e) => handleInputChange('mesa_identifier', e.target.value)}
                     placeholder="01-001-A"
                   />
@@ -159,7 +182,7 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
                 <div>
                   <Label>Municipio</Label>
                   <MunicipalitySelector
-                    selectedMunicipalityId={formData.municipality_idm.toString()}
+                    selectedMunicipalityId={formData.municipality_idm?.toString() || ''}
                     onMunicipalitySelect={(municipalityId) => handleMunicipalityChange(municipalityId)}
                   />
                   {selectedMunicipality && (
@@ -176,7 +199,7 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
                   <Input
                     id="census_total"
                     type="number"
-                    value={formData.census_total}
+                    value={formData.census_total || 0}
                     onChange={(e) => handleInputChange('census_total', e.target.value)}
                   />
                 </div>
@@ -185,7 +208,7 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
                   <Input
                     id="total_voters"
                     type="number"
-                    value={formData.total_voters}
+                    value={formData.total_voters || 0}
                     onChange={(e) => handleInputChange('total_voters', e.target.value)}
                   />
                 </div>
