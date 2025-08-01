@@ -2,18 +2,19 @@ import { useState } from 'react';
 import { useSecureFileUpload } from './useSecureFileUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { MpcaData } from '@/types/acta';
 
 export const useBulkImageUpload = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { uploadFile } = useSecureFileUpload();
   const { toast } = useToast();
 
-  const submitImageOnlyActs = async (electionId: string, images: File[]) => {
-    if (!electionId || images.length === 0) {
+  const submitImageOnlyActs = async (electionId: string, images: File[], municipalityData: MpcaData | null) => {
+    if (!electionId || images.length === 0 || !municipalityData) {
       toast({
         variant: "destructive",
         title: "Error de validación",
-        description: "Debe seleccionar una elección y al menos una imagen.",
+        description: "Debe seleccionar una elección, un municipio y al menos una imagen.",
       });
       return false;
     }
@@ -47,13 +48,13 @@ export const useBulkImageUpload = () => {
               completion_status: 'image_only',
               source_type: 'user',
               image_url: imageUrl,
+              municipality_idm: municipalityData.idm,
               // Minimal required fields with defaults
               census_total: 0,
               total_voters: 0,
               blank_votes: 0,
               null_votes: 0,
               mesa_identifier: null,
-              municipality_idm: null,
               submitted_by: null // Will be set if user is authenticated
             })
             .select('id')

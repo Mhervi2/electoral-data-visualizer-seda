@@ -7,6 +7,7 @@ import { useActaData } from '@/hooks/useActaData';
 import { useSubmitActa } from '@/hooks/useSubmitActa';
 import { useBulkImageUpload } from '@/hooks/useBulkImageUpload';
 import { validateImageOnlyActa } from '@/utils/imageOnlyValidation';
+import { useActaFormState } from '@/hooks/useActaFormState';
 import { ElectionSelection } from './ElectionSelection';
 import { MesaIdentification } from './MesaIdentification';
 import { ImageUploadSection } from './ImageUploadSection';
@@ -15,11 +16,18 @@ import { ResultsData } from './ResultsData';
 import { PartyVotes } from './PartyVotes';
 import { MailVotersSection } from './MailVotersSection';
 import { ExistingActDialog } from './ExistingActDialog';
+import { MunicipalitySelector } from './MunicipalitySelector';
 
 export const SubmitActaForm = () => {
   const [activeTab, setActiveTab] = useState('complete');
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imageOnlyElectionId, setImageOnlyElectionId] = useState('');
+  
+  // State for image-only municipality selection
+  const { 
+    selectedMpcaRecord: imageOnlyMpcaRecord, 
+    handleMunicipalityChange: handleImageOnlyMunicipalityChange 
+  } = useActaFormState();
   
   const { uploadFile, uploading } = useSecureFileUpload();
   const { politicalParties, elections } = useActaData();
@@ -68,17 +76,18 @@ export const SubmitActaForm = () => {
   const handleImageOnlySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const validation = validateImageOnlyActa(imageOnlyElectionId, selectedImages);
+    const validation = validateImageOnlyActa(imageOnlyElectionId, selectedImages, imageOnlyMpcaRecord);
     if (!validation.isValid) {
       // Validation error will be shown by the useBulkImageUpload hook
       return;
     }
 
-    const success = await submitImageOnlyActs(imageOnlyElectionId, selectedImages);
+    const success = await submitImageOnlyActs(imageOnlyElectionId, selectedImages, imageOnlyMpcaRecord);
     if (success) {
       // Reset form
       setSelectedImages([]);
       setImageOnlyElectionId('');
+      handleImageOnlyMunicipalityChange('', null);
     }
   };
 
@@ -152,6 +161,11 @@ export const SubmitActaForm = () => {
               elections={elections}
               selectedElectionId={imageOnlyElectionId}
               onElectionChange={setImageOnlyElectionId}
+            />
+
+            <MunicipalitySelector 
+              selectedMunicipalityId={imageOnlyMpcaRecord?.idm.toString() || ''}
+              onMunicipalitySelect={handleImageOnlyMunicipalityChange}
             />
 
             <MultiImageUpload 

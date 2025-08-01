@@ -1,9 +1,19 @@
-export const validateImageOnlyActa = (electionId: string, images: File[]): { isValid: boolean; message?: string } => {
+import { MpcaData } from '@/types/acta';
+
+export const validateImageOnlyActa = (electionId: string, images: File[], municipalityData: MpcaData | null): { isValid: boolean; message?: string } => {
   // Validate election selection
   if (!electionId) {
     return {
       isValid: false,
       message: "Debe seleccionar una elección."
+    };
+  }
+
+  // Validate municipality selection
+  if (!municipalityData) {
+    return {
+      isValid: false,
+      message: "Debe seleccionar un municipio."
     };
   }
 
