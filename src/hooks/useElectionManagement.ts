@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,7 +15,7 @@ export const useElectionManagement = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const createElection = async (formData: ElectionFormData) => {
+  const createElection = useCallback(async (formData: ElectionFormData) => {
     try {
       setLoading(true);
       console.log('🗳️ Creating election with data:', formData);
@@ -78,9 +78,9 @@ export const useElectionManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  const updateElection = async (electionId: string, formData: ElectionFormData) => {
+  const updateElection = useCallback(async (electionId: string, formData: ElectionFormData) => {
     try {
       setLoading(true);
       console.log('🗳️ Updating election with data:', formData);
@@ -154,9 +154,9 @@ export const useElectionManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  const getElectionWithParties = async (electionId: string) => {
+  const getElectionWithParties = useCallback(async (electionId: string) => {
     try {
       console.log('🗳️ Fetching election with parties:', electionId);
 
@@ -195,7 +195,7 @@ export const useElectionManagement = () => {
       });
       throw error;
     }
-  };
+  }, [toast]);
 
   return {
     createElection,

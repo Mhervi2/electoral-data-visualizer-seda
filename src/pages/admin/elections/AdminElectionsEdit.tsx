@@ -60,7 +60,7 @@ const AdminElectionsEdit = () => {
     };
 
     loadElection();
-  }, [id, getElectionWithParties, navigate]);
+  }, [id, navigate]);
 
   const handlePartyToggle = (partyId: string) => {
     setSelectedParties(prev => 
