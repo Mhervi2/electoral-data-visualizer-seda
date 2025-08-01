@@ -1,20 +1,29 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSecureFileUpload } from '@/hooks/useSecureFileUpload';
 import { useActaData } from '@/hooks/useActaData';
 import { useSubmitActa } from '@/hooks/useSubmitActa';
+import { useBulkImageUpload } from '@/hooks/useBulkImageUpload';
+import { validateImageOnlyActa } from '@/utils/imageOnlyValidation';
 import { ElectionSelection } from './ElectionSelection';
 import { MesaIdentification } from './MesaIdentification';
 import { ImageUploadSection } from './ImageUploadSection';
+import { MultiImageUpload } from './MultiImageUpload';
 import { ResultsData } from './ResultsData';
 import { PartyVotes } from './PartyVotes';
 import { MailVotersSection } from './MailVotersSection';
 import { ExistingActDialog } from './ExistingActDialog';
 
 export const SubmitActaForm = () => {
+  const [activeTab, setActiveTab] = useState('complete');
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imageOnlyElectionId, setImageOnlyElectionId] = useState('');
+  
   const { uploadFile, uploading } = useSecureFileUpload();
   const { politicalParties, elections } = useActaData();
+  const { isSubmitting: bulkSubmitting, submitImageOnlyActs } = useBulkImageUpload();
   const {
     actaData,
     existingAct,
@@ -56,6 +65,23 @@ export const SubmitActaForm = () => {
     await submitActa();
   };
 
+  const handleImageOnlySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const validation = validateImageOnlyActa(imageOnlyElectionId, selectedImages);
+    if (!validation.isValid) {
+      // Validation error will be shown by the useBulkImageUpload hook
+      return;
+    }
+
+    const success = await submitImageOnlyActs(imageOnlyElectionId, selectedImages);
+    if (success) {
+      // Reset form
+      setSelectedImages([]);
+      setImageOnlyElectionId('');
+    }
+  };
+
   return (
     <>
       <ExistingActDialog 
@@ -65,52 +91,87 @@ export const SubmitActaForm = () => {
         onNavigateToResults={navigateToResults}
       />
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <ElectionSelection 
-          elections={elections}
-          selectedElectionId={actaData.electionId}
-          onElectionChange={(value) => handleInputChange('electionId', value)}
-        />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="complete">Acta Completa</TabsTrigger>
+          <TabsTrigger value="image-only">Solo Imágenes</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="complete" className="mt-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <ElectionSelection 
+              elections={elections}
+              selectedElectionId={actaData.electionId}
+              onElectionChange={(value) => handleInputChange('electionId', value)}
+            />
 
-        <MesaIdentification 
-          selectedMpcaRecord={selectedMpcaRecord}
-          municipio={actaData.municipio}
-          mesaIdentifier={actaData.mesaIdentifier}
-          onMunicipalityChange={handleMunicipalityChange}
-          onInputChange={handleInputChange}
-          onBlur={checkExistingAct}
-        />
+            <MesaIdentification 
+              selectedMpcaRecord={selectedMpcaRecord}
+              municipio={actaData.municipio}
+              mesaIdentifier={actaData.mesaIdentifier}
+              onMunicipalityChange={handleMunicipalityChange}
+              onInputChange={handleInputChange}
+              onBlur={checkExistingAct}
+            />
 
-        <ImageUploadSection 
-          imagen={actaData.imagen}
-          imageUrl={actaData.imageUrl}
-          uploading={uploading}
-          onImageUpload={handleImageUpload}
-        />
+            <ImageUploadSection 
+              imagen={actaData.imagen}
+              imageUrl={actaData.imageUrl}
+              uploading={uploading}
+              onImageUpload={handleImageUpload}
+            />
 
-        <ResultsData 
-          censo={actaData.censo}
-          votantes={actaData.votantes}
-          blancos={actaData.blancos}
-          nulos={actaData.nulos}
-          onInputChange={handleInputChange}
-        />
+            <ResultsData 
+              censo={actaData.censo}
+              votantes={actaData.votantes}
+              blancos={actaData.blancos}
+              nulos={actaData.nulos}
+              onInputChange={handleInputChange}
+            />
 
-        <PartyVotes 
-          politicalParties={politicalParties}
-          votos={actaData.votos}
-          onVoteChange={handleVoteChange}
-        />
+            <PartyVotes 
+              politicalParties={politicalParties}
+              votos={actaData.votos}
+              onVoteChange={handleVoteChange}
+            />
 
-        <MailVotersSection 
-          mailVoters={actaData.mailVoters}
-          onMailVotersChange={handleMailVotersChange}
-        />
+            <MailVotersSection 
+              mailVoters={actaData.mailVoters}
+              onMailVotersChange={handleMailVotersChange}
+            />
 
-        <Button type="submit" className="w-full" disabled={isSubmitting || uploading}>
-          {isSubmitting ? 'Enviando...' : 'Enviar Acta Electoral'}
-        </Button>
-      </form>
+            <Button type="submit" className="w-full" disabled={isSubmitting || uploading}>
+              {isSubmitting ? 'Enviando...' : 'Enviar Acta Electoral'}
+            </Button>
+          </form>
+        </TabsContent>
+
+        <TabsContent value="image-only" className="mt-6">
+          <form onSubmit={handleImageOnlySubmit} className="space-y-6">
+            <ElectionSelection 
+              elections={elections}
+              selectedElectionId={imageOnlyElectionId}
+              onElectionChange={setImageOnlyElectionId}
+            />
+
+            <MultiImageUpload 
+              onImagesChange={setSelectedImages}
+              uploading={bulkSubmitting}
+              maxImages={5}
+            />
+
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                <strong>Nota:</strong> Al subir solo imágenes, se crearán actas con datos básicos que deberán ser completados posteriormente en la sección de <strong>Gestión de Actas</strong>.
+              </p>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={bulkSubmitting}>
+              {bulkSubmitting ? 'Subiendo imágenes...' : `Subir ${selectedImages.length} imagen${selectedImages.length !== 1 ? 'es' : ''}`}
+            </Button>
+          </form>
+        </TabsContent>
+      </Tabs>
     </>
   );
 };
