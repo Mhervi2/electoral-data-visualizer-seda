@@ -18,10 +18,9 @@ export const MunicipalitySelector = ({
 }: MunicipalitySelectorProps) => {
   const { loading, error } = useAppData();
 
-  const handleSelect = (municipalityId: string) => {
-    // Since we're using server search, we don't have the municipality data here
-    // We'll pass null and let the parent component handle it if needed
-    onMunicipalitySelect(municipalityId, null);
+  const handleSelect = (municipalityId: string, municipalityData?: MpcaData) => {
+    console.log('Municipality selected in selector:', municipalityId, municipalityData);
+    onMunicipalitySelect(municipalityId, municipalityData || null);
   };
 
   if (loading) {
@@ -59,9 +58,11 @@ export const MunicipalitySelector = ({
         onSelect={handleSelect}
         placeholder="Buscar municipio..."
       />
-      <p className="text-xs text-green-600 mt-1">
-        ✅ Búsqueda del servidor activada - escribe para buscar municipios
-      </p>
+      {selectedMunicipalityId && (
+        <p className="text-xs text-muted-foreground mt-1">
+          Municipio seleccionado correctamente
+        </p>
+      )}
     </div>
   );
 };

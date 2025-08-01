@@ -24,6 +24,11 @@ export const useMunicipalitySearch = (searchTerm: string, delay: number = 300) =
 
       try {
         console.log('🔍 Searching municipalities for:', debouncedSearchTerm);
+        
+        // Debug specific case for Zaragoza
+        if (debouncedSearchTerm.toLowerCase().includes('zaragoza')) {
+          console.log('🔍 Searching for Zaragoza specifically...');
+        }
 
         const searchPattern = `%${debouncedSearchTerm.toLowerCase()}%`;
         
@@ -32,7 +37,7 @@ export const useMunicipalitySearch = (searchTerm: string, delay: number = 300) =
           .select('idm, municipio, provincia, ca, idp, idca')
           .or(`municipio.ilike.${searchPattern},provincia.ilike.${searchPattern},ca.ilike.${searchPattern}`)
           .order('municipio', { ascending: true })
-          .limit(100); // Limit to 100 results for performance
+          .limit(300); // Increased limit for better search results
 
         if (queryError) {
           console.error('❌ Search error:', queryError);

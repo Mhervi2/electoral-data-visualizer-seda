@@ -9,7 +9,7 @@ import { useMunicipalitySearch } from '@/hooks/useMunicipalitySearch';
 
 interface ServerMunicipalityComboboxProps {
   selectedValue: string;
-  onSelect: (value: string) => void;
+  onSelect: (value: string, municipalityData?: MpcaData) => void;
   placeholder?: string;
 }
 
@@ -57,7 +57,7 @@ export const ServerMunicipalityCombobox = ({
   const handleSelect = (municipality: MpcaData) => {
     console.log('Selected municipality:', municipality);
     setSelectedMunicipality(municipality);
-    onSelect(municipality.idm.toString());
+    onSelect(municipality.idm.toString(), municipality);
     setOpen(false);
     setSearchValue('');
   };
@@ -120,7 +120,7 @@ export const ServerMunicipalityCombobox = ({
                   <div className="flex flex-col">
                     <span className="font-medium">{mpca.municipio}</span>
                     <span className="text-xs text-muted-foreground">
-                      {mpca.provincia}, {mpca.ca}
+                      {mpca.provincia} • {mpca.ca}
                     </span>
                   </div>
                 </CommandItem>
