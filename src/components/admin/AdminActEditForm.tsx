@@ -12,6 +12,7 @@ import { validateActaData } from '@/utils/actaValidation';
 import { useToast } from '@/hooks/use-toast';
 import { DraggablePartyList } from './DraggablePartyList';
 import { usePartyOrder } from '@/hooks/usePartyOrder';
+import { ZoomableImage } from '@/components/ui/zoomable-image';
 
 interface AdminActEditFormProps {
   act: ElectoralActAdmin;
@@ -175,12 +176,13 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
             <Card>
               <CardHeader>
                 <CardTitle>Imagen del Acta</CardTitle>
+                <p className="text-sm text-muted-foreground">Haz clic en la imagen para ampliarla</p>
               </CardHeader>
               <CardContent>
-                <img 
+                <ZoomableImage 
                   src={act.image_url} 
-                  alt="Imagen del acta" 
-                  className="w-full h-auto rounded-lg border shadow-sm" 
+                  alt="Imagen del acta"
+                  className="w-full"
                 />
               </CardContent>
             </Card>
