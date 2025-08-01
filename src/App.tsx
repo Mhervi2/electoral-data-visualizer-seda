@@ -20,6 +20,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminElections from "./pages/admin/elections/AdminElections";
 import AdminElectionsNew from "./pages/admin/elections/AdminElectionsNew";
+import AdminElectionsEdit from "./pages/admin/elections/AdminElectionsEdit";
 import AdminFiles from "./pages/admin/files/AdminFiles";
 import AdminFilesUpload from "./pages/admin/files/AdminFilesUpload";
 import AdminElectoralActs from "./pages/admin/AdminElectoralActs";
@@ -45,6 +46,7 @@ const App = () => (
               <Route index element={<AdminDashboard />} />
               <Route path="elections" element={<AdminElections />} />
               <Route path="elections/new" element={<AdminElectionsNew />} />
+              <Route path="elections/:id/edit" element={<AdminElectionsEdit />} />
               <Route path="files" element={<AdminFiles />} />
               <Route path="files/upload" element={<AdminFilesUpload />} />
               <Route path="electoral-acts" element={<AdminElectoralActs />} />

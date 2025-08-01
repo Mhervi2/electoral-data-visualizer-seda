@@ -94,6 +94,10 @@ const AdminElectionsEdit = () => {
     try {
       const updatedElection = await updateElection(id, electionFormData);
       if (updatedElection) {
+        toast({
+          title: "Elección actualizada",
+          description: `Los cambios en "${name}" se han guardado correctamente.`,
+        });
         navigate('/admin/elections');
       }
     } catch (error) {
