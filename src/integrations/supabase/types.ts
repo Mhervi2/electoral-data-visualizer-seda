@@ -47,75 +47,174 @@ export type Database = {
         }
         Relationships: []
       }
+      data_export_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          export_date: string
+          file_checksum: string | null
+          file_size: number | null
+          id: string
+          ip_address: unknown | null
+          success: boolean
+          tables_included: string[]
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          export_date?: string
+          file_checksum?: string | null
+          file_size?: number | null
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean
+          tables_included: string[]
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          export_date?: string
+          file_checksum?: string | null
+          file_size?: number | null
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean
+          tables_included?: string[]
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      election_parties: {
+        Row: {
+          created_at: string
+          election_id: string
+          id: string
+          party_id: string
+        }
+        Insert: {
+          created_at?: string
+          election_id: string
+          id?: string
+          party_id: string
+        }
+        Update: {
+          created_at?: string
+          election_id?: string
+          id?: string
+          party_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "election_parties_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "elections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "election_parties_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "political_parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       elections: {
         Row: {
           created_at: string | null
+          election_date: string | null
+          election_type: string | null
           id: string
           name: string
+          scope: string | null
           status: string
+          total_seats: number | null
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
+          election_date?: string | null
+          election_type?: string | null
           id?: string
           name: string
+          scope?: string | null
           status?: string
+          total_seats?: number | null
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          election_date?: string | null
+          election_type?: string | null
           id?: string
           name?: string
+          scope?: string | null
           status?: string
+          total_seats?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
       electoral_acts: {
         Row: {
           blank_votes: number
-          census_total: number
+          census_total: number | null
+          completion_status: string
           created_at: string | null
           election_id: string | null
           id: string
           image_url: string | null
-          mesa_identifier: string
+          mesa_identifier: string | null
+          mesa_identifier_full: string | null
           municipality_idm: number | null
           null_votes: number
           source_type: string
           submitted_by: string | null
-          total_voters: number
+          total_voters: number | null
           updated_at: string | null
           updated_by: string | null
           version: number
         }
         Insert: {
           blank_votes?: number
-          census_total: number
+          census_total?: number | null
+          completion_status?: string
           created_at?: string | null
           election_id?: string | null
           id?: string
           image_url?: string | null
-          mesa_identifier: string
+          mesa_identifier?: string | null
+          mesa_identifier_full?: string | null
           municipality_idm?: number | null
           null_votes?: number
           source_type?: string
           submitted_by?: string | null
-          total_voters: number
+          total_voters?: number | null
           updated_at?: string | null
           updated_by?: string | null
           version?: number
         }
         Update: {
           blank_votes?: number
-          census_total?: number
+          census_total?: number | null
+          completion_status?: string
           created_at?: string | null
           election_id?: string | null
           id?: string
           image_url?: string | null
-          mesa_identifier?: string
+          mesa_identifier?: string | null
+          mesa_identifier_full?: string | null
           municipality_idm?: number | null
           null_votes?: number
           source_type?: string
           submitted_by?: string | null
-          total_voters?: number
+          total_voters?: number | null
           updated_at?: string | null
           updated_by?: string | null
           version?: number
@@ -321,6 +420,33 @@ export type Database = {
           id?: string
           name?: string
           siglas?: string
+        }
+        Relationships: []
+      }
+      political_party_provincial_order: {
+        Row: {
+          created_at: string
+          id: string
+          order_position: number
+          party_id: string
+          provincia: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_position: number
+          party_id: string
+          provincia: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_position?: number
+          party_id?: string
+          provincia?: string
+          updated_at?: string
         }
         Relationships: []
       }

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Image, Eye } from 'lucide-react';
 import { ActDetailsDialog } from './ActDetailsDialog';
 import { ElectoralAct } from '@/types/acta';
+import { MesaIdentifierDisplay, FullMesaIdentifier } from '@/components/ui/mesa-identifier-display';
 
 interface ResultsTableProps {
   electoralActs: ElectoralAct[];
@@ -98,15 +99,25 @@ export const ResultsTable = ({ electoralActs }: ResultsTableProps) => {
                 const { district, section, table } = parseMesaIdentifier(act.mesa_identifier);
                 return (
                   <TableRow key={act.id}>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div className="font-medium">{getLocationDisplay(act)}</div>
-                        <div className="text-muted-foreground">
-                          D:{district} S:{section}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">{table}</TableCell>
+                     <TableCell>
+                       <div className="text-sm">
+                         <div className="font-medium">{getLocationDisplay(act)}</div>
+                         <div className="text-muted-foreground">
+                           D:{district} S:{section}
+                         </div>
+                       </div>
+                     </TableCell>
+                     <TableCell>
+                       <div className="space-y-1">
+                         <div className="font-medium">{table}</div>
+                         <MesaIdentifierDisplay
+                           mesaIdentifier={act.mesa_identifier}
+                           mesaIdentifierFull={act.mesa_identifier_full}
+                           size="sm"
+                         />
+                         <FullMesaIdentifier mesaIdentifierFull={act.mesa_identifier_full} />
+                       </div>
+                     </TableCell>
                     <TableCell>{act.census_total}</TableCell>
                     <TableCell>{act.total_voters}</TableCell>
                     <TableCell>

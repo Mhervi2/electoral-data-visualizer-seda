@@ -25,6 +25,7 @@ import AdminFiles from "./pages/admin/files/AdminFiles";
 import AdminFilesUpload from "./pages/admin/files/AdminFilesUpload";
 import AdminElectoralActs from "./pages/admin/AdminElectoralActs";
 import ProvincialSeats from "./pages/admin/ProvincialSeats";
+import TerritorialCodes from "./pages/admin/TerritorialCodes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="files/upload" element={<AdminFilesUpload />} />
               <Route path="electoral-acts" element={<AdminElectoralActs />} />
               <Route path="provincial-seats" element={<ProvincialSeats />} />
+              <Route path="territorial-codes" element={<TerritorialCodes />} />
             </Route>
             
             {/* Public routes with layout */}

@@ -2,17 +2,21 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ActaData } from '@/types/acta';
+import { ActaData, MpcaData } from '@/types/acta';
+import { generateFullMesaIdentifier } from '@/utils/mesaIdentifierUtils';
 
 export const useActaSubmission = () => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const submitActa = async (actaData: ActaData): Promise<boolean> => {
+  const submitActa = async (actaData: ActaData, selectedMpcaRecord?: MpcaData | null): Promise<boolean> => {
     setIsSubmitting(true);
     console.log('📤 Submitting acta with mesa identifier...');
     
     try {
+      // Generate full mesa identifier
+      const mesaIdentifierFull = generateFullMesaIdentifier(selectedMpcaRecord, actaData.mesaIdentifier);
+
       // Submit electoral act (public access, no authentication required)
       const { data: actData, error: actError } = await supabase
         .from('electoral_acts')
@@ -20,6 +24,7 @@ export const useActaSubmission = () => {
           election_id: actaData.electionId,
           municipality_idm: parseInt(actaData.municipio),
           mesa_identifier: actaData.mesaIdentifier,
+          mesa_identifier_full: mesaIdentifierFull,
           census_total: parseInt(actaData.censo),
           total_voters: parseInt(actaData.votantes),
           blank_votes: parseInt(actaData.blancos),

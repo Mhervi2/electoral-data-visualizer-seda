@@ -53,7 +53,7 @@ export const useSubmitActa = () => {
       return;
     }
 
-    const success = await submitActaToDatabase(actaData);
+    const success = await submitActaToDatabase(actaData, selectedMpcaRecord);
     if (success) {
       resetForm();
       navigateToResults(selectedMpcaRecord, actaData);
