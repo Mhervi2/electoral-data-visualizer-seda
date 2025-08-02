@@ -104,14 +104,14 @@ const TerritorialCodes = () => {
         return;
       }
 
-      let updateQuery = supabase.from('mpca').update({ idca, idp });
+      let updateQuery;
 
       if (editingType === 'ca') {
-        updateQuery = updateQuery.eq('ca', editingTarget);
+        updateQuery = supabase.from('mpca').update({ idca }).eq('ca', editingTarget);
       } else if (editingType === 'provincia') {
-        updateQuery = updateQuery.eq('provincia', editingTarget);
+        updateQuery = supabase.from('mpca').update({ idp }).eq('provincia', editingTarget);
       } else {
-        updateQuery = updateQuery.eq('idm', editingRecord.idm);
+        updateQuery = supabase.from('mpca').update({ idca, idp }).eq('idm', editingRecord.idm);
       }
 
       const { error } = await updateQuery;
@@ -291,9 +291,9 @@ const TerritorialCodes = () => {
                   <div key={ca.name} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="space-y-1">
                       <div className="font-medium">{ca.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {ca.count} provincias
-                      </div>
+                       <div className="text-sm text-muted-foreground">
+                        {ca.count} municipios
+                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Badge variant="outline">IDCA: {ca.id}</Badge>
@@ -440,7 +440,7 @@ const TerritorialCodes = () => {
             <AlertDialogTitle>Editar Códigos Territoriales</AlertDialogTitle>
             <AlertDialogDescription>
               {editingType === 'ca' && `Modifica el código IDCA para toda la comunidad autónoma: ${editingTarget}`}
-              {editingType === 'provincia' && `Modifica los códigos para toda la provincia: ${editingTarget}`}
+              {editingType === 'provincia' && `Modifica el código IDP para toda la provincia: ${editingTarget}`}
               {editingType === 'municipio' && `Modifica los códigos para el municipio: ${editingRecord?.municipio}`}
               {editingType !== 'municipio' && (
                 <div className="mt-2 text-sm font-medium text-orange-600">
@@ -455,31 +455,35 @@ const TerritorialCodes = () => {
           
           {editingRecord && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="idca">Código Comunidad Autónoma (IDCA)</Label>
-                <Input
-                  id="idca"
-                  value={tempIdca}
-                  onChange={(e) => setTempIdca(e.target.value)}
-                  placeholder="Ej: 12"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Comunidad: {editingRecord.ca}
-                </p>
-              </div>
+              {(editingType === 'ca' || editingType === 'municipio') && (
+                <div className="space-y-2">
+                  <Label htmlFor="idca">Código Comunidad Autónoma (IDCA)</Label>
+                  <Input
+                    id="idca"
+                    value={tempIdca}
+                    onChange={(e) => setTempIdca(e.target.value)}
+                    placeholder="Ej: 12"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Comunidad: {editingRecord.ca}
+                  </p>
+                </div>
+              )}
               
-              <div className="space-y-2">
-                <Label htmlFor="idp">Código Provincia (IDP)</Label>
-                <Input
-                  id="idp"
-                  value={tempIdp}
-                  onChange={(e) => setTempIdp(e.target.value)}
-                  placeholder="Ej: 28"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Provincia: {editingRecord.provincia}
-                </p>
-              </div>
+              {(editingType === 'provincia' || editingType === 'municipio') && (
+                <div className="space-y-2">
+                  <Label htmlFor="idp">Código Provincia (IDP)</Label>
+                  <Input
+                    id="idp"
+                    value={tempIdp}
+                    onChange={(e) => setTempIdp(e.target.value)}
+                    placeholder="Ej: 28"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Provincia: {editingRecord.provincia}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
