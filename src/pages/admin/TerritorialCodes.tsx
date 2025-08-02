@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Search, MapPin, Save, RefreshCw } from 'lucide-react';
+import { Search, MapPin, Save, RefreshCw, Edit3, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { MpcaData } from '@/types/acta';
@@ -22,6 +23,8 @@ const TerritorialCodes = () => {
   const [filteredRecords, setFilteredRecords] = useState<TerritorialRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingRecord, setEditingRecord] = useState<TerritorialRecord | null>(null);
+  const [editingType, setEditingType] = useState<'ca' | 'provincia' | 'municipio'>('municipio');
+  const [editingTarget, setEditingTarget] = useState<string>('');
   const [tempIdca, setTempIdca] = useState('');
   const [tempIdp, setTempIdp] = useState('');
 
@@ -63,10 +66,26 @@ const TerritorialCodes = () => {
     }
   };
 
-  const handleEdit = (record: TerritorialRecord) => {
+  const handleEdit = (record: TerritorialRecord, type: 'ca' | 'provincia' | 'municipio' = 'municipio') => {
     setEditingRecord(record);
+    setEditingType(type);
+    setEditingTarget(type === 'ca' ? record.ca : type === 'provincia' ? record.provincia : record.municipio);
     setTempIdca(record.idca.toString());
     setTempIdp(record.idp.toString());
+  };
+
+  const handleEditCA = (ca: string, idca: number) => {
+    const sampleRecord = records.find(r => r.ca === ca);
+    if (sampleRecord) {
+      handleEdit({ ...sampleRecord, idca }, 'ca');
+    }
+  };
+
+  const handleEditProvincia = (provincia: string, idp: number) => {
+    const sampleRecord = records.find(r => r.provincia === provincia);
+    if (sampleRecord) {
+      handleEdit({ ...sampleRecord, idp }, 'provincia');
+    }
   };
 
   const handleSave = async () => {
@@ -85,19 +104,29 @@ const TerritorialCodes = () => {
         return;
       }
 
-      const { error } = await supabase
-        .from('mpca')
-        .update({ 
-          idca: idca,
-          idp: idp 
-        })
-        .eq('idm', editingRecord.idm);
+      let updateQuery = supabase.from('mpca').update({ idca, idp });
+
+      if (editingType === 'ca') {
+        updateQuery = updateQuery.eq('ca', editingTarget);
+      } else if (editingType === 'provincia') {
+        updateQuery = updateQuery.eq('provincia', editingTarget);
+      } else {
+        updateQuery = updateQuery.eq('idm', editingRecord.idm);
+      }
+
+      const { error } = await updateQuery;
 
       if (error) throw error;
 
+      const recordsAffected = editingType === 'ca' 
+        ? records.filter(r => r.ca === editingTarget).length
+        : editingType === 'provincia'
+        ? records.filter(r => r.provincia === editingTarget).length
+        : 1;
+
       toast({
         title: "Éxito",
-        description: "Códigos territoriales actualizados correctamente.",
+        description: `${recordsAffected} registro(s) actualizado(s) correctamente.`,
       });
 
       setEditingRecord(null);
@@ -110,6 +139,40 @@ const TerritorialCodes = () => {
         description: "No se pudieron actualizar los códigos territoriales.",
       });
     }
+  };
+
+  const getConflicts = () => {
+    const idcaConflicts = new Map();
+    const idpConflicts = new Map();
+
+    records.forEach(record => {
+      // Check IDCA conflicts
+      if (!idcaConflicts.has(record.idca)) {
+        idcaConflicts.set(record.idca, new Set());
+      }
+      idcaConflicts.get(record.idca).add(record.ca);
+
+      // Check IDP conflicts  
+      if (!idpConflicts.has(record.idp)) {
+        idpConflicts.set(record.idp, new Set());
+      }
+      idpConflicts.get(record.idp).add(record.provincia);
+    });
+
+    const conflicts = [];
+    idcaConflicts.forEach((communities, idca) => {
+      if (communities.size > 1) {
+        conflicts.push(`IDCA ${idca}: ${Array.from(communities).join(', ')}`);
+      }
+    });
+
+    idpConflicts.forEach((provinces, idp) => {
+      if (provinces.size > 1) {
+        conflicts.push(`IDP ${idp}: ${Array.from(provinces).join(', ')}`);
+      }
+    });
+
+    return conflicts;
   };
 
   const getUniqueItems = (items: TerritorialRecord[], key: keyof TerritorialRecord, idKey: 'idca' | 'idp') => {
@@ -127,6 +190,7 @@ const TerritorialCodes = () => {
 
   const autonomousCommunities = getUniqueItems(records, 'ca', 'idca');
   const provinces = getUniqueItems(records, 'provincia', 'idp');
+  const conflicts = getConflicts();
 
   if (loading) {
     return (
@@ -182,117 +246,192 @@ const TerritorialCodes = () => {
         </Card>
       </div>
 
-      {/* Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Buscar Territorios</CardTitle>
-          <CardDescription>
-            Busca por municipio, provincia o comunidad autónoma para editar sus códigos.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar territorio..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Results */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Autonomous Communities Summary */}
-        <Card>
+      {/* Conflicts Alert */}
+      {conflicts.length > 0 && (
+        <Card className="border-destructive">
           <CardHeader>
-            <CardTitle>Comunidades Autónomas</CardTitle>
-            <CardDescription>Códigos IDCA asignados</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {autonomousCommunities.slice(0, 10).map((ca) => (
-              <div key={ca.name} className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium">{ca.name}</span>
-                  <Badge variant="outline">{ca.count} provincias</Badge>
-                </div>
-                <Badge>{ca.id}</Badge>
-              </div>
-            ))}
-            {autonomousCommunities.length > 10 && (
-              <p className="text-sm text-muted-foreground">
-                Y {autonomousCommunities.length - 10} más...
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Provinces Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Provincias</CardTitle>
-            <CardDescription>Códigos IDP asignados</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {provinces.slice(0, 10).map((prov) => (
-              <div key={prov.name} className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium">{prov.name}</span>
-                  <Badge variant="outline">{prov.count} municipios</Badge>
-                </div>
-                <Badge>{prov.id}</Badge>
-              </div>
-            ))}
-            {provinces.length > 10 && (
-              <p className="text-sm text-muted-foreground">
-                Y {provinces.length - 10} más...
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search Results */}
-      {searchTerm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Resultados de Búsqueda</CardTitle>
+            <CardTitle className="flex items-center space-x-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Conflictos Detectados</span>
+            </CardTitle>
             <CardDescription>
-              {filteredRecords.length} resultados encontrados
+              Se encontraron códigos duplicados que necesitan revisión.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {filteredRecords.slice(0, 20).map((record) => (
-                <div key={record.idm} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="space-y-1">
-                    <div className="font-medium">{record.municipio}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {record.provincia} - {record.ca}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="text-right text-sm">
-                      <div>IDCA: <Badge variant="outline">{record.idca}</Badge></div>
-                      <div>IDP: <Badge variant="outline">{record.idp}</Badge></div>
-                    </div>
-                    <Button size="sm" onClick={() => handleEdit(record)}>
-                      Editar
-                    </Button>
-                  </div>
-                </div>
+            <ul className="space-y-1">
+              {conflicts.map((conflict, index) => (
+                <li key={index} className="text-sm text-destructive">• {conflict}</li>
               ))}
-              {filteredRecords.length > 20 && (
-                <p className="text-sm text-muted-foreground text-center">
-                  Y {filteredRecords.length - 20} resultados más. Refina tu búsqueda para ver más.
-                </p>
-              )}
-            </div>
+            </ul>
           </CardContent>
         </Card>
       )}
+
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="comunidades" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="comunidades">Comunidades Autónomas</TabsTrigger>
+          <TabsTrigger value="provincias">Provincias</TabsTrigger>
+          <TabsTrigger value="municipios">Municipios</TabsTrigger>
+          <TabsTrigger value="buscar">Buscar</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="comunidades" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestión de Comunidades Autónomas</CardTitle>
+              <CardDescription>
+                Edita los códigos IDCA. Los cambios se aplicarán a todos los municipios de la comunidad.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                {autonomousCommunities.map((ca) => (
+                  <div key={ca.name} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-1">
+                      <div className="font-medium">{ca.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {ca.count} provincias
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline">IDCA: {ca.id}</Badge>
+                      <Button size="sm" onClick={() => handleEditCA(ca.name, ca.id)}>
+                        <Edit3 className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="provincias" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestión de Provincias</CardTitle>
+              <CardDescription>
+                Edita los códigos IDP. Los cambios se aplicarán a todos los municipios de la provincia.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                {provinces.map((prov) => (
+                  <div key={prov.name} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-1">
+                      <div className="font-medium">{prov.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {prov.count} municipios
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline">IDP: {prov.id}</Badge>
+                      <Button size="sm" onClick={() => handleEditProvincia(prov.name, prov.id)}>
+                        <Edit3 className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="municipios" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Todos los Municipios</CardTitle>
+              <CardDescription>
+                Listado completo de municipios con sus códigos territoriales.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {records.map((record) => (
+                  <div key={record.idm} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="space-y-1">
+                      <div className="font-medium">{record.municipio}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {record.provincia} - {record.ca}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="text-right text-sm space-y-1">
+                        <div>IDCA: <Badge variant="outline">{record.idca}</Badge></div>
+                        <div>IDP: <Badge variant="outline">{record.idp}</Badge></div>
+                      </div>
+                      <Button size="sm" onClick={() => handleEdit(record)}>
+                        <Edit3 className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="buscar" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Buscar Territorios</CardTitle>
+              <CardDescription>
+                Busca por municipio, provincia o comunidad autónoma para editar sus códigos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar territorio..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {searchTerm && (
+                <div className="space-y-3">
+                  <div className="text-sm text-muted-foreground">
+                    {filteredRecords.length} resultados encontrados
+                  </div>
+                  {filteredRecords.slice(0, 50).map((record) => (
+                    <div key={record.idm} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="space-y-1">
+                        <div className="font-medium">{record.municipio}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {record.provincia} - {record.ca}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="text-right text-sm">
+                          <div>IDCA: <Badge variant="outline">{record.idca}</Badge></div>
+                          <div>IDP: <Badge variant="outline">{record.idp}</Badge></div>
+                        </div>
+                        <Button size="sm" onClick={() => handleEdit(record)}>
+                          <Edit3 className="mr-2 h-4 w-4" />
+                          Editar
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {filteredRecords.length > 50 && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      Mostrando los primeros 50 de {filteredRecords.length} resultados. Refina tu búsqueda para ver más.
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
 
       {/* Edit Dialog */}
       <AlertDialog open={!!editingRecord} onOpenChange={() => setEditingRecord(null)}>
@@ -300,7 +439,17 @@ const TerritorialCodes = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Editar Códigos Territoriales</AlertDialogTitle>
             <AlertDialogDescription>
-              Modifica los códigos IDCA e IDP para: <strong>{editingRecord?.municipio}</strong>
+              {editingType === 'ca' && `Modifica el código IDCA para toda la comunidad autónoma: ${editingTarget}`}
+              {editingType === 'provincia' && `Modifica los códigos para toda la provincia: ${editingTarget}`}
+              {editingType === 'municipio' && `Modifica los códigos para el municipio: ${editingRecord?.municipio}`}
+              {editingType !== 'municipio' && (
+                <div className="mt-2 text-sm font-medium text-orange-600">
+                  ⚠️ Este cambio afectará a {editingType === 'ca' 
+                    ? records.filter(r => r.ca === editingTarget).length
+                    : records.filter(r => r.provincia === editingTarget).length
+                  } municipios
+                </div>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           
