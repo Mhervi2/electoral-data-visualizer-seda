@@ -17,6 +17,8 @@ export interface TerritorialData {
 }
 
 export const useTerritorialManagement = () => {
+  console.log('🔍 useTerritorialManagement hook started');
+  
   const { toast } = useToast();
   const [data, setData] = useState<TerritorialData>({
     autonomousCommunities: [],
@@ -25,6 +27,8 @@ export const useTerritorialManagement = () => {
     conflicts: [],
     loading: true
   });
+  
+  console.log('🔍 Hook state initialized:', data);
 
   const fetchTerritorialSummary = async () => {
     try {
@@ -187,8 +191,11 @@ export const useTerritorialManagement = () => {
   };
 
   useEffect(() => {
+    console.log('🔍 useEffect triggered in useTerritorialManagement');
     fetchTerritorialSummary();
   }, []);
+
+  console.log('🔍 Returning data from hook:', data);
 
   return {
     ...data,

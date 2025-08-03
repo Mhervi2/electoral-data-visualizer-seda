@@ -11,7 +11,12 @@ import { MunicipalitySearch } from '@/components/admin/MunicipalitySearch';
 import { MunicipalityEditDialog } from '@/components/admin/MunicipalityEditDialog';
 
 const TerritorialCodes = () => {
+  console.log('🔍 TerritorialCodes component loading...');
+  
   // Use the optimized hook for territorial management
+  const territorialData = useTerritorialManagement();
+  console.log('🔍 Territorial data:', territorialData);
+  
   const {
     autonomousCommunities,
     provinces,
@@ -20,7 +25,7 @@ const TerritorialCodes = () => {
     loading,
     updateTerritorialCodes,
     refetch
-  } = useTerritorialManagement();
+  } = territorialData;
 
   // Dialog states
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -70,7 +75,7 @@ const TerritorialCodes = () => {
         <div>
           <h1 className="text-3xl font-bold font-space-grotesk">Gestión de Códigos Territoriales</h1>
           <p className="text-muted-foreground">
-            Administra los identificadores de comunidades autónomas y provincias de forma optimizada.
+            Administra los identificadores de comunidades autónomas y provincias de forma optimizada. (v2)
           </p>
         </div>
       </div>
