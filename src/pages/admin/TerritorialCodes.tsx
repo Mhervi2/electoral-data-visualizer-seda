@@ -44,15 +44,18 @@ const TerritorialCodes = () => {
   const fetchRecords = async () => {
     try {
       setLoading(true);
+      // Load ALL records by setting a limit higher than total count (8,112 municipalities)
       const { data, error } = await supabase
         .from('mpca')
         .select('*')
+        .limit(10000) // Ensure we get all records, not just first 1000
         .order('ca', { ascending: true })
         .order('provincia', { ascending: true })
         .order('municipio', { ascending: true });
 
       if (error) throw error;
 
+      console.log(`Loaded ${data?.length || 0} territorial records`);
       setRecords(data || []);
     } catch (error) {
       console.error('Error fetching records:', error);
@@ -178,8 +181,12 @@ const TerritorialCodes = () => {
   const getUniqueItems = (items: TerritorialRecord[], key: keyof TerritorialRecord, idKey: 'idca' | 'idp') => {
     const unique = new Map();
     items.forEach(item => {
-      const value = item[key] as string;
+      const value = (item[key] as string)?.trim(); // Normalize by trimming
       const id = item[idKey];
+      
+      // Skip invalid entries
+      if (!value || value === '') return;
+      
       if (!unique.has(value)) {
         unique.set(value, { name: value, id, count: 0 });
       }
@@ -346,12 +353,25 @@ const TerritorialCodes = () => {
             <CardHeader>
               <CardTitle>Todos los Municipios</CardTitle>
               <CardDescription>
-                Listado completo de municipios con sus códigos territoriales.
+                Listado completo de {records.length} municipios con sus códigos territoriales.
+                Utiliza la búsqueda para encontrar municipios específicos.
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar municipio por nombre..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {records.map((record) => (
+                {(searchTerm ? filteredRecords.slice(0, 100) : records.slice(0, 100)).map((record) => (
                   <div key={record.idm} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="space-y-1">
                       <div className="font-medium">{record.municipio}</div>
@@ -371,6 +391,18 @@ const TerritorialCodes = () => {
                     </div>
                   </div>
                 ))}
+                
+                {searchTerm && filteredRecords.length > 100 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Mostrando los primeros 100 de {filteredRecords.length} resultados. Refina tu búsqueda para ver más.
+                  </p>
+                )}
+                
+                {!searchTerm && records.length > 100 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Mostrando los primeros 100 de {records.length} municipios. Usa la búsqueda para encontrar municipios específicos.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
