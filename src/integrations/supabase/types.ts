@@ -548,6 +548,10 @@ export type Database = {
       }
     }
     Functions: {
+      update_municipality_name: {
+        Args: { p_idm: number; p_new_name: string }
+        Returns: number
+      }
       update_territorial_name: {
         Args: { p_type: string; p_old_name: string; p_new_name: string }
         Returns: number

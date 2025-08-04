@@ -241,6 +241,40 @@ export const useTerritorialManagement = () => {
     }
   };
 
+  const updateMunicipalityName = async (
+    idm: number,
+    newName: string
+  ): Promise<number> => {
+    try {
+      const { data, error } = await supabase.rpc('update_municipality_name', {
+        p_idm: idm,
+        p_new_name: newName
+      });
+
+      if (error) throw error;
+
+      const affectedCount = data || 0;
+
+      toast({
+        title: "Éxito",
+        description: "Nombre del municipio actualizado correctamente.",
+      });
+
+      // Refresh data
+      await fetchTerritorialSummary();
+
+      return affectedCount;
+    } catch (error) {
+      console.error('Error updating municipality name:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo actualizar el nombre del municipio.",
+      });
+      throw error;
+    }
+  };
+
   useEffect(() => {
     console.log('🔍 useEffect triggered in useTerritorialManagement');
     fetchTerritorialSummary();
@@ -252,6 +286,7 @@ export const useTerritorialManagement = () => {
     ...data,
     updateTerritorialCodes,
     updateTerritorialName,
+    updateMunicipalityName,
     refetch: fetchTerritorialSummary
   };
 };
