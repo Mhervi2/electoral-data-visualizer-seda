@@ -24,6 +24,7 @@ const TerritorialCodes = () => {
     conflicts,
     loading,
     updateTerritorialCodes,
+    updateTerritorialName,
     refetch
   } = territorialData;
 
@@ -46,8 +47,28 @@ const TerritorialCodes = () => {
     setEditDialogOpen(true);
   };
 
-  const handleSaveTerritory = async (newId: number) => {
-    await updateTerritorialCodes(editingType, editingName, newId);
+  const handleSaveTerritory = async (newId: number, newName?: string) => {
+    try {
+      // If name changed, update name first
+      if (newName && newName !== editingName) {
+        await updateTerritorialName(
+          editingType,
+          editingName,
+          newName
+        );
+      }
+      
+      // If ID changed, update ID
+      if (newId !== editingId) {
+        await updateTerritorialCodes(
+          editingType,
+          newName || editingName, // Use new name if changed
+          newId
+        );
+      }
+    } catch (error) {
+      // Error is handled in the hook
+    }
   };
 
   const handleEditMunicipality = (municipality: MpcaData) => {

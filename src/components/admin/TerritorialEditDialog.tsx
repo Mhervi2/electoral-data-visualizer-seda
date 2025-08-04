@@ -11,7 +11,7 @@ interface TerritorialEditDialogProps {
   name: string;
   currentId: number;
   affectedCount: number;
-  onSave: (newId: number) => Promise<void>;
+  onSave: (newId: number, newName?: string) => Promise<void>;
 }
 
 export const TerritorialEditDialog: React.FC<TerritorialEditDialogProps> = ({
@@ -24,6 +24,7 @@ export const TerritorialEditDialog: React.FC<TerritorialEditDialogProps> = ({
   onSave
 }) => {
   const [newId, setNewId] = useState(currentId.toString());
+  const [newName, setNewName] = useState(name);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -34,7 +35,8 @@ export const TerritorialEditDialog: React.FC<TerritorialEditDialogProps> = ({
 
     try {
       setSaving(true);
-      await onSave(parsedId);
+      const nameChanged = newName.trim() !== name;
+      await onSave(parsedId, nameChanged ? newName.trim() : undefined);
       onOpenChange(false);
     } catch (error) {
       // Error handling is done in the parent hook
@@ -64,6 +66,20 @@ export const TerritorialEditDialog: React.FC<TerritorialEditDialogProps> = ({
         
         <div className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="newName">Nombre de {typeLabel}</Label>
+            <Input
+              id="newName"
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={`Nombre de ${typeLabel}`}
+            />
+            <p className="text-sm text-muted-foreground">
+              Nombre actual: {name}
+            </p>
+          </div>
+          
+          <div className="space-y-2">
             <Label htmlFor="newId">Nuevo código {codeLabel}</Label>
             <Input
               id="newId"
@@ -82,7 +98,7 @@ export const TerritorialEditDialog: React.FC<TerritorialEditDialogProps> = ({
           <AlertDialogCancel disabled={saving}>Cancelar</AlertDialogCancel>
           <AlertDialogAction 
             onClick={handleSave} 
-            disabled={saving || newId === currentId.toString() || isNaN(parseInt(newId))}
+            disabled={saving || (newId === currentId.toString() && newName.trim() === name) || isNaN(parseInt(newId))}
           >
             <Save className="mr-2 h-4 w-4" />
             {saving ? 'Guardando...' : 'Guardar Cambios'}

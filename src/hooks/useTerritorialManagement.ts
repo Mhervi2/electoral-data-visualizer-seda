@@ -39,7 +39,8 @@ export const useTerritorialManagement = () => {
         .from('mpca')
         .select('ca, idca')
         .not('ca', 'is', null)
-        .not('ca', 'eq', '');
+        .not('ca', 'eq', '')
+        .limit(10000);
 
       if (caError) throw caError;
 
@@ -48,7 +49,8 @@ export const useTerritorialManagement = () => {
         .from('mpca')
         .select('provincia, idp')
         .not('provincia', 'is', null)
-        .not('provincia', 'eq', '');
+        .not('provincia', 'eq', '')
+        .limit(10000);
 
       if (provError) throw provError;
 
@@ -58,6 +60,9 @@ export const useTerritorialManagement = () => {
         .select('*', { count: 'exact', head: true });
 
       if (countError) throw countError;
+
+      console.log('🔍 Raw CA data:', caData?.length, 'records');
+      console.log('🔍 Raw Province data:', provData?.length, 'records');
 
       // Process autonomous communities
       const caMap = new Map<string, { id: number; count: number }>();
@@ -75,6 +80,8 @@ export const useTerritorialManagement = () => {
         .map(([name, data]) => ({ name, id: data.id, count: data.count }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
+      console.log('🔍 Processed CA:', autonomousCommunities.length, 'unique communities');
+
       // Process provinces
       const provMap = new Map<string, { id: number; count: number }>();
       provData.forEach(item => {
@@ -90,6 +97,8 @@ export const useTerritorialManagement = () => {
       const provinces = Array.from(provMap.entries())
         .map(([name, data]) => ({ name, id: data.id, count: data.count }))
         .sort((a, b) => a.name.localeCompare(b.name));
+
+      console.log('🔍 Processed Provinces:', provinces.length, 'unique provinces');
 
       // Detect conflicts
       const conflicts = [];
@@ -124,6 +133,12 @@ export const useTerritorialManagement = () => {
         if (validNames.length > 1) {
           conflicts.push(`IDP ${idp}: ${validNames.join(', ')}`);
         }
+      });
+
+      console.log('🔍 Final data:', {
+        autonomousCommunities: autonomousCommunities.length,
+        provinces: provinces.length,
+        conflicts: conflicts.length
       });
 
       setData({
@@ -190,6 +205,42 @@ export const useTerritorialManagement = () => {
     }
   };
 
+  const updateTerritorialName = async (
+    type: 'ca' | 'provincia',
+    oldName: string,
+    newName: string
+  ): Promise<number> => {
+    try {
+      const { data, error } = await supabase.rpc('update_territorial_name', {
+        p_type: type,
+        p_old_name: oldName,
+        p_new_name: newName
+      });
+
+      if (error) throw error;
+
+      const affectedCount = data || 0;
+
+      toast({
+        title: "Éxito",
+        description: `Nombre actualizado correctamente. ${affectedCount} municipios afectados.`,
+      });
+
+      // Refresh data
+      await fetchTerritorialSummary();
+
+      return affectedCount;
+    } catch (error) {
+      console.error('Error updating territorial name:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo actualizar el nombre territorial.",
+      });
+      throw error;
+    }
+  };
+
   useEffect(() => {
     console.log('🔍 useEffect triggered in useTerritorialManagement');
     fetchTerritorialSummary();
@@ -200,6 +251,7 @@ export const useTerritorialManagement = () => {
   return {
     ...data,
     updateTerritorialCodes,
+    updateTerritorialName,
     refetch: fetchTerritorialSummary
   };
 };
