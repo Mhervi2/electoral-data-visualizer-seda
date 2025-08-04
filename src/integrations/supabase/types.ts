@@ -548,7 +548,10 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      update_territorial_name: {
+        Args: { p_type: string; p_old_name: string; p_new_name: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
