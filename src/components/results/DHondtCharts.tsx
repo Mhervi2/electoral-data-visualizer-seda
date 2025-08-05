@@ -2,6 +2,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { ProvincialResult, AutonomousResult } from '@/utils/dhondtCalculations';
+import { Badge } from '@/components/ui/badge';
+import { X } from 'lucide-react';
 
 interface DHondtChartsProps {
   provincialResults?: ProvincialResult[];
@@ -143,6 +145,32 @@ export const DHondtCharts = ({ provincialResults, autonomousResults, title }: DH
                       </div>
                     ))}
                   </div>
+
+                  {result.excludedParties && result.excludedParties.length > 0 && (
+                    <div className="mt-6 p-4 bg-destructive/10 rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <X className="h-4 w-4 text-destructive" />
+                        <span className="text-sm font-medium text-destructive">
+                          Sin representación (no alcanzan umbral mínimo)
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {result.excludedParties.map((party, index) => (
+                          <div key={index} className="flex justify-between items-center text-sm">
+                            <span className="font-medium">{party.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">
+                                {party.votes.toLocaleString()} votos
+                              </span>
+                              <Badge variant="outline" className="text-destructive border-destructive">
+                                {party.percentage.toFixed(1)}%
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -203,6 +231,7 @@ export const DHondtCharts = ({ provincialResults, autonomousResults, title }: DH
                       </div>
                     ))}
                   </div>
+
                 </div>
               );
             })}

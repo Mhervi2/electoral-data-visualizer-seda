@@ -256,7 +256,7 @@ export const useElectoralAggregation = () => {
         .select('provincia, ca');
 
       // Aggregate the data
-      const aggregated = aggregateElectoralData(individualActas, partyVotes || [], provincialSeats || [], mpcaData || []);
+      const aggregated = await aggregateElectoralData(individualActas, partyVotes || [], provincialSeats || [], mpcaData || []);
       setAggregatedResults(aggregated);
 
     } catch (error) {
@@ -272,7 +272,7 @@ export const useElectoralAggregation = () => {
     }
   };
 
-  const aggregateElectoralData = (acts: any[], partyVotes: any[], provincialSeats: any[] = [], mpcaData: any[] = []): AggregatedResults => {
+  const aggregateElectoralData = async (acts: any[], partyVotes: any[], provincialSeats: any[] = [], mpcaData: any[] = []): Promise<AggregatedResults> => {
     // Basic calculations
     const totalCensus = acts.reduce((sum, act) => sum + (act.census_total || 0), 0);
     const totalVotes = acts.reduce((sum, act) => sum + (act.total_voters || 0), 0);
@@ -412,8 +412,17 @@ export const useElectoralAggregation = () => {
         const provinceSeats = provincialSeats.filter(ps => ps.provincia === filters.province);
         const provinceVotes = partyVotesForDHondt.filter(pv => pv.provincia === filters.province);
         
+        // Get minimum threshold from election
+        const { data: electionData } = await supabase
+          .from('elections')
+          .select('minimum_threshold')
+          .eq('id', filters.electionId)
+          .single();
+
+        const minimumThreshold = electionData?.minimum_threshold || 3.0;
+
         if (provinceSeats.length > 0 && provinceVotes.length > 0) {
-          dhondtProvincialResults = calculateProvincialSeats(provinceVotes, politicalParties, provinceSeats);
+          dhondtProvincialResults = calculateProvincialSeats(provinceVotes, politicalParties, provinceSeats, minimumThreshold);
         }
       } else if (isAutonomousLevel && filters.autonomousCommunity) {
         // Calculate for all provinces in the autonomous community
@@ -424,8 +433,17 @@ export const useElectoralAggregation = () => {
         const communitySeats = provincialSeats.filter(ps => communityProvinces.includes(ps.provincia));
         const communityVotes = partyVotesForDHondt.filter(pv => communityProvinces.includes(pv.provincia));
         
+        // Get minimum threshold from election
+        const { data: electionData } = await supabase
+          .from('elections')
+          .select('minimum_threshold')
+          .eq('id', filters.electionId)
+          .single();
+
+        const minimumThreshold = electionData?.minimum_threshold || 3.0;
+
         if (communitySeats.length > 0 && communityVotes.length > 0) {
-          dhondtProvincialResults = calculateProvincialSeats(communityVotes, politicalParties, communitySeats);
+          dhondtProvincialResults = calculateProvincialSeats(communityVotes, politicalParties, communitySeats, minimumThreshold);
           dhondtAutonomousResults = aggregateAutonomousSeats(dhondtProvincialResults, mpcaData);
         }
       }

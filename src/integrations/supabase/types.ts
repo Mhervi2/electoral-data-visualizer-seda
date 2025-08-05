@@ -131,6 +131,7 @@ export type Database = {
           election_date: string | null
           election_type: string | null
           id: string
+          minimum_threshold: number
           name: string
           scope: string | null
           status: string
@@ -142,6 +143,7 @@ export type Database = {
           election_date?: string | null
           election_type?: string | null
           id?: string
+          minimum_threshold?: number
           name: string
           scope?: string | null
           status?: string
@@ -153,6 +155,7 @@ export type Database = {
           election_date?: string | null
           election_type?: string | null
           id?: string
+          minimum_threshold?: number
           name?: string
           scope?: string | null
           status?: string

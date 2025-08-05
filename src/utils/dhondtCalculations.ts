@@ -4,6 +4,7 @@ export interface ProvincialResult {
   provincia: string;
   totalSeats: number;
   parties: DHondtResult[];
+  excludedParties: Array<{ name: string; votes: number; percentage: number }>;
   totalVotes: number;
 }
 
@@ -22,7 +23,8 @@ export interface AutonomousResult {
 export const calculateProvincialSeats = (
   partyVotes: Array<{ party_id: string; votes: number; provincia: string }>,
   politicalParties: Array<{ id: string; name: string; siglas: string }>,
-  provincialSeats: Array<{ provincia: string; seats: number }>
+  provincialSeats: Array<{ provincia: string; seats: number }>,
+  minimumThreshold: number = 3.0
 ): ProvincialResult[] => {
   const provinceMap = new Map<string, Map<string, number>>();
 
@@ -42,13 +44,13 @@ export const calculateProvincialSeats = (
     const seatData = provincialSeats.find(ps => ps.provincia === provincia);
     if (!seatData || seatData.seats === 0) return;
 
-    const parties: PartyVotes[] = [];
+    const allParties: PartyVotes[] = [];
     let totalVotes = 0;
 
     partyMap.forEach((votes, partyId) => {
       const party = politicalParties.find(p => p.id === partyId);
       if (party && votes > 0) {
-        parties.push({
+        allParties.push({
           name: party.siglas || party.name,
           votes
         });
@@ -56,12 +58,30 @@ export const calculateProvincialSeats = (
       }
     });
 
-    if (parties.length > 0) {
-      const dhondtResults = calculateDHondt(parties, seatData.seats);
+    if (allParties.length > 0) {
+      // Filter parties by minimum threshold
+      const eligibleParties: PartyVotes[] = [];
+      const excludedParties: Array<{ name: string; votes: number; percentage: number }> = [];
+
+      allParties.forEach(party => {
+        const percentage = (party.votes / totalVotes) * 100;
+        if (percentage >= minimumThreshold) {
+          eligibleParties.push(party);
+        } else {
+          excludedParties.push({
+            name: party.name,
+            votes: party.votes,
+            percentage
+          });
+        }
+      });
+
+      const dhondtResults = calculateDHondt(eligibleParties, seatData.seats);
       results.push({
         provincia,
         totalSeats: seatData.seats,
         parties: dhondtResults,
+        excludedParties,
         totalVotes
       });
     }

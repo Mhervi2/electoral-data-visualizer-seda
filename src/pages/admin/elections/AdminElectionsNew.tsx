@@ -35,6 +35,7 @@ const AdminElectionsNew = () => {
   const [date, setDate] = useState<Date>();
   const [selectedParties, setSelectedParties] = useState<string[]>([]);
   const [newPartyDialog, setNewPartyDialog] = useState(false);
+  const [minimumThreshold, setMinimumThreshold] = useState(3.0);
   const [newParty, setNewParty] = useState({
     name: '',
     acronym: '',
@@ -88,6 +89,7 @@ const AdminElectionsNew = () => {
       election_type: formData.get('type') as string,
       scope: formData.get('scope') as string,
       total_seats: parseInt(formData.get('totalSeats') as string) || 0,
+      minimum_threshold: minimumThreshold,
       selectedParties: selectedParties
     };
 
@@ -208,6 +210,23 @@ const AdminElectionsNew = () => {
                   min="1"
                   placeholder="Ej: 350"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="minimumThreshold">Porcentaje Mínimo para Representación (%)</Label>
+                <Input
+                  id="minimumThreshold"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={minimumThreshold}
+                  onChange={(e) => setMinimumThreshold(parseFloat(e.target.value) || 0)}
+                  placeholder="Ej: 3.0"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Porcentaje mínimo de votos por circunscripción para obtener representación
+                </p>
               </div>
             </CardContent>
           </Card>

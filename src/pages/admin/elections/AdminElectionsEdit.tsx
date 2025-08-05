@@ -30,6 +30,7 @@ const AdminElectionsEdit = () => {
   const [electionType, setElectionType] = useState('');
   const [scope, setScope] = useState('');
   const [totalSeats, setTotalSeats] = useState('');
+  const [minimumThreshold, setMinimumThreshold] = useState(3.0);
   const [selectedParties, setSelectedParties] = useState<string[]>([]);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ const AdminElectionsEdit = () => {
         setElectionType((electionData as any).election_type || '');
         setScope((electionData as any).scope || '');
         setTotalSeats((electionData as any).total_seats?.toString() || '');
+        setMinimumThreshold((electionData as any).minimum_threshold || 3.0);
         setSelectedParties(electionData.selectedParties || []);
         
       } catch (error) {
@@ -88,6 +90,7 @@ const AdminElectionsEdit = () => {
       election_type: electionType,
       scope,
       total_seats: parseInt(totalSeats) || 0,
+      minimum_threshold: minimumThreshold,
       selectedParties
     };
 
@@ -225,17 +228,34 @@ const AdminElectionsEdit = () => {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="totalSeats">Número Total de Escaños (opcional)</Label>
-                <Input
-                  id="totalSeats"
-                  value={totalSeats}
-                  onChange={(e) => setTotalSeats(e.target.value)}
-                  type="number"
-                  min="1"
-                  placeholder="Ej: 350"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="totalSeats">Número Total de Escaños (opcional)</Label>
+                    <Input
+                      id="totalSeats"
+                      value={totalSeats}
+                      onChange={(e) => setTotalSeats(e.target.value)}
+                      type="number"
+                      min="1"
+                      placeholder="Ej: 350"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="minimumThreshold">Porcentaje Mínimo para Representación (%)</Label>
+                    <Input
+                      id="minimumThreshold"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={minimumThreshold}
+                      onChange={(e) => setMinimumThreshold(parseFloat(e.target.value) || 0)}
+                      placeholder="Ej: 3.0"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Porcentaje mínimo de votos por circunscripción para obtener representación
+                    </p>
+                  </div>
             </CardContent>
           </Card>
 

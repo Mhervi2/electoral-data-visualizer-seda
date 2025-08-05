@@ -8,6 +8,7 @@ interface ElectionFormData {
   election_type: string;
   scope: string;
   total_seats: number;
+  minimum_threshold: number;
   selectedParties: string[];
 }
 
@@ -29,6 +30,7 @@ export const useElectionManagement = () => {
           election_type: formData.election_type,
           scope: formData.scope,
           total_seats: formData.total_seats,
+          minimum_threshold: formData.minimum_threshold,
           status: 'active'
         })
         .select()
@@ -93,7 +95,8 @@ export const useElectionManagement = () => {
           election_date: formData.election_date,
           election_type: formData.election_type,
           scope: formData.scope,
-          total_seats: formData.total_seats
+          total_seats: formData.total_seats,
+          minimum_threshold: formData.minimum_threshold
         })
         .eq('id', electionId)
         .select()
