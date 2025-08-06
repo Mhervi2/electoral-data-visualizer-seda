@@ -154,7 +154,7 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
   
   // Use party order hook for draggable functionality
   const { orderedParties, loading: orderLoading, updatePartyOrder } = usePartyOrder(
-    selectedMunicipality?.provincia,
+    act.provincia,
     politicalParties || []
   );
 
