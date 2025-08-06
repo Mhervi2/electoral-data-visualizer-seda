@@ -4,6 +4,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { MpcaData } from '@/types/acta';
 import { MunicipalitySelector } from './MunicipalitySelector';
+import { generateFullMesaIdentifier } from '@/utils/mesaIdentifierUtils';
+import { FullMesaIdentifier } from '@/components/ui/mesa-identifier-display';
 
 interface MesaIdentificationProps {
   selectedMpcaRecord: MpcaData | null;
@@ -96,6 +98,18 @@ export const MesaIdentification = ({
             <p className="text-sm text-destructive">
               Formato incorrecto. Use: Distrito-Sección-Mesa (ej: 01-001-A)
             </p>
+          )}
+          
+          {/* Show full identifier when all data is available */}
+          {selectedMpcaRecord && validateMesaFormat(mesaIdentifier) && (
+            <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
+              <Label className="text-sm font-medium">Identificador Completo</Label>
+              <FullMesaIdentifier 
+                fullIdentifier={generateFullMesaIdentifier(selectedMpcaRecord, mesaIdentifier)}
+                variant="secondary"
+                size="sm"
+              />
+            </div>
           )}
         </div>
       </CardContent>

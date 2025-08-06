@@ -2,14 +2,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PoliticalParty } from '@/types/acta';
+import { usePartyOrder } from '@/hooks/usePartyOrder';
 
 interface PartyVotesProps {
   politicalParties: PoliticalParty[];
   votos: { [key: string]: string };
   onVoteChange: (partidoId: string, votes: string) => void;
+  provincia?: string;
 }
 
-export const PartyVotes = ({ politicalParties, votos, onVoteChange }: PartyVotesProps) => {
+export const PartyVotes = ({ politicalParties, votos, onVoteChange, provincia }: PartyVotesProps) => {
+  const { orderedParties, loading } = usePartyOrder(provincia, politicalParties);
+
   if (!politicalParties || politicalParties.length === 0) {
     return (
       <Card>
@@ -25,6 +29,21 @@ export const PartyVotes = ({ politicalParties, votos, onVoteChange }: PartyVotes
     );
   }
 
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Votos a Candidaturas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            Cargando orden de partidos...
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -32,7 +51,7 @@ export const PartyVotes = ({ politicalParties, votos, onVoteChange }: PartyVotes
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {politicalParties.map(partido => (
+          {orderedParties.map(partido => (
             <div key={partido.id} className="flex items-center space-x-4">
               <div 
                 className="w-4 h-4 rounded-full flex-shrink-0" 

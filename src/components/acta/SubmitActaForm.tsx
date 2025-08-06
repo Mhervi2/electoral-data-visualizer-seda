@@ -142,6 +142,7 @@ export const SubmitActaForm = () => {
               politicalParties={politicalParties}
               votos={actaData.votos}
               onVoteChange={handleVoteChange}
+              provincia={selectedMpcaRecord?.provincia}
             />
 
             <MailVotersSection 
