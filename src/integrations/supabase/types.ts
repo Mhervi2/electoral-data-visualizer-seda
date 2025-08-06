@@ -171,6 +171,7 @@ export type Database = {
           completion_status: string
           created_at: string | null
           election_id: string | null
+          full_identifier: string | null
           id: string
           image_url: string | null
           mesa_identifier: string | null
@@ -190,6 +191,7 @@ export type Database = {
           completion_status?: string
           created_at?: string | null
           election_id?: string | null
+          full_identifier?: string | null
           id?: string
           image_url?: string | null
           mesa_identifier?: string | null
@@ -209,6 +211,7 @@ export type Database = {
           completion_status?: string
           created_at?: string | null
           election_id?: string | null
+          full_identifier?: string | null
           id?: string
           image_url?: string | null
           mesa_identifier?: string | null
@@ -554,6 +557,15 @@ export type Database = {
       }
     }
     Functions: {
+      generate_full_identifier: {
+        Args: {
+          p_idca: number
+          p_idp: number
+          p_idc: string
+          p_mesa_identifier: string
+        }
+        Returns: string
+      }
       update_municipality_name: {
         Args: { p_idm: number; p_new_name: string }
         Returns: number
