@@ -6,6 +6,7 @@ export interface MpcaData {
   provincia: string;
   idca: number;
   ca: string;
+  idc: string;
 }
 
 export interface PoliticalParty {

@@ -330,6 +330,7 @@ export type Database = {
         Row: {
           ca: string | null
           id: string | null
+          idc: string | null
           idca: number | null
           idm: number
           idp: number | null
@@ -339,6 +340,7 @@ export type Database = {
         Insert: {
           ca?: string | null
           id?: string | null
+          idc?: string | null
           idca?: number | null
           idm?: number
           idp?: number | null
@@ -348,6 +350,7 @@ export type Database = {
         Update: {
           ca?: string | null
           id?: string | null
+          idc?: string | null
           idca?: number | null
           idm?: number
           idp?: number | null

@@ -27,6 +27,7 @@ export const MunicipalityEditDialog: React.FC<MunicipalityEditDialogProps> = ({
   
   const [idca, setIdca] = useState('');
   const [idp, setIdp] = useState('');
+  const [idc, setIdc] = useState('');
   const [municipalityName, setMunicipalityName] = useState('');
   const [caName, setCaName] = useState('');
   const [provinceName, setProvinceName] = useState('');
@@ -36,6 +37,7 @@ export const MunicipalityEditDialog: React.FC<MunicipalityEditDialogProps> = ({
     if (municipality) {
       setIdca(municipality.idca.toString());
       setIdp(municipality.idp.toString());
+      setIdc(municipality.idc || '');
       setMunicipalityName(municipality.municipio);
       setCaName(municipality.ca);
       setProvinceName(municipality.provincia);
@@ -57,16 +59,49 @@ export const MunicipalityEditDialog: React.FC<MunicipalityEditDialogProps> = ({
       return;
     }
 
+    // Validate IDC format (3 digits)
+    if (idc && (!/^\d{3}$/.test(idc))) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "El IDC debe ser un número de 3 dígitos (001-999).",
+      });
+      return;
+    }
+
     try {
       setSaving(true);
       
       let hasChanges = false;
 
       // Update codes if they changed
-      if (parsedIdca !== municipality.idca || parsedIdp !== municipality.idp) {
+      if (parsedIdca !== municipality.idca || parsedIdp !== municipality.idp || idc !== municipality.idc) {
+        // Check if IDC is unique within the province when changing it
+        if (idc !== municipality.idc && idc) {
+          const { data: existingIdc } = await supabase
+            .from('mpca')
+            .select('idm')
+            .eq('provincia', municipality.provincia)
+            .eq('idc', idc)
+            .neq('idm', municipality.idm)
+            .single();
+
+          if (existingIdc) {
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: `El IDC ${idc} ya existe en la provincia ${municipality.provincia}.`,
+            });
+            return;
+          }
+        }
+
+        const updateData: any = { idca: parsedIdca, idp: parsedIdp };
+        if (idc) updateData.idc = idc;
+
         const { error } = await supabase
           .from('mpca')
-          .update({ idca: parsedIdca, idp: parsedIdp })
+          .update(updateData)
           .eq('idm', municipality.idm);
 
         if (error) throw error;
@@ -209,6 +244,20 @@ export const MunicipalityEditDialog: React.FC<MunicipalityEditDialogProps> = ({
                 Provincia: {provinceName}
               </p>
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="idc">Identificación de Circunscripción (IDC)</Label>
+              <Input
+                id="idc"
+                value={idc}
+                onChange={(e) => setIdc(e.target.value)}
+                placeholder="001"
+                maxLength={3}
+              />
+              <p className="text-sm text-muted-foreground">
+                Identificador único del municipio dentro de la provincia (001-999)
+              </p>
+            </div>
           </div>
         </div>
 
@@ -219,10 +268,11 @@ export const MunicipalityEditDialog: React.FC<MunicipalityEditDialogProps> = ({
             disabled={saving || (
               idca === municipality?.idca.toString() && 
               idp === municipality?.idp.toString() && 
+              idc === (municipality?.idc || '') &&
               municipalityName === municipality?.municipio &&
               caName === municipality?.ca &&
               provinceName === municipality?.provincia
-            ) || isNaN(parseInt(idca)) || isNaN(parseInt(idp))}
+            ) || isNaN(parseInt(idca)) || isNaN(parseInt(idp)) || (idc && !/^\d{3}$/.test(idc))}
           >
             <Save className="mr-2 h-4 w-4" />
             {saving ? 'Guardando...' : 'Guardar Cambios'}

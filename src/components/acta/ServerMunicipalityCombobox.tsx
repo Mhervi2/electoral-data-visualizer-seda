@@ -35,7 +35,7 @@ export const ServerMunicipalityCombobox = ({
         const { supabase } = await import('@/integrations/supabase/client');
         const { data } = await supabase
           .from('mpca')
-          .select('idm, municipio, provincia, ca, idp, idca')
+          .select('idm, municipio, provincia, ca, idp, idca, idc')
           .eq('idm', Number(selectedValue))
           .single();
         
@@ -47,6 +47,7 @@ export const ServerMunicipalityCombobox = ({
             provincia: data.provincia || '',
             idca: Number(data.idca) || 0,
             ca: data.ca || '',
+            idc: data.idc || '',
           });
         }
       };

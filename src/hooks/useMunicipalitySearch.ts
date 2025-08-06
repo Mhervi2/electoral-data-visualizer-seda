@@ -34,7 +34,7 @@ export const useMunicipalitySearch = (searchTerm: string, delay: number = 300) =
         
         const { data, error: queryError } = await supabase
           .from('mpca')
-          .select('idm, municipio, provincia, ca, idp, idca')
+          .select('idm, municipio, provincia, ca, idp, idca, idc')
           .or(`municipio.ilike.${searchPattern},provincia.ilike.${searchPattern},ca.ilike.${searchPattern}`)
           .order('municipio', { ascending: true })
           .limit(300); // Increased limit for better search results
@@ -53,6 +53,7 @@ export const useMunicipalitySearch = (searchTerm: string, delay: number = 300) =
           provincia: item.provincia || '',
           idca: Number(item.idca) || 0,
           ca: item.ca || '',
+          idc: item.idc || '',
         }));
 
         // Sort results to prioritize exact matches and starts-with matches
