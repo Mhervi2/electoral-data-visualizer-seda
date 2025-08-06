@@ -138,6 +138,20 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
 
   const selectedMunicipality = mpcaData?.find(m => m.idm === formData.municipality_idm);
   
+  // Debug logging for municipality and province
+  useEffect(() => {
+    console.log('🏛️ AdminActEditForm - Municipality info:', {
+      municipalityIdm: formData.municipality_idm,
+      selectedMunicipality: selectedMunicipality ? {
+        idm: selectedMunicipality.idm,
+        municipio: selectedMunicipality.municipio,
+        provincia: selectedMunicipality.provincia
+      } : null,
+      mpcaDataLoaded: !!mpcaData,
+      mpcaDataLength: mpcaData?.length || 0
+    });
+  }, [formData.municipality_idm, selectedMunicipality, mpcaData]);
+  
   // Use party order hook for draggable functionality
   const { orderedParties, loading: orderLoading, updatePartyOrder } = usePartyOrder(
     selectedMunicipality?.provincia,
