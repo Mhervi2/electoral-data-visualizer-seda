@@ -7,6 +7,7 @@ import { Info } from 'lucide-react';
 interface MesaIdentifierDisplayProps {
   mesaIdentifier?: string;
   mesaIdentifierFull?: string;
+  fullIdentifier?: string;
   showTooltip?: boolean;
   variant?: 'default' | 'outline' | 'secondary';
   size?: 'sm' | 'default';
@@ -15,15 +16,19 @@ interface MesaIdentifierDisplayProps {
 export const MesaIdentifierDisplay: React.FC<MesaIdentifierDisplayProps> = ({
   mesaIdentifier,
   mesaIdentifierFull,
+  fullIdentifier,
   showTooltip = true,
   variant = 'outline',
   size = 'default'
 }) => {
-  const shortIdentifier = mesaIdentifierFull 
-    ? fullToShortMesaIdentifier(mesaIdentifierFull)
+  // Use new fullIdentifier first, then fall back to old mesaIdentifierFull
+  const identifier = fullIdentifier || mesaIdentifierFull;
+  
+  const shortIdentifier = identifier 
+    ? fullToShortMesaIdentifier(identifier)
     : mesaIdentifier;
 
-  const parsed = parseFullMesaIdentifier(mesaIdentifierFull);
+  const parsed = parseFullMesaIdentifier(identifier);
   
   const tooltipContent = parsed.isValid ? (
     <div className="space-y-2">
@@ -31,13 +36,13 @@ export const MesaIdentifierDisplay: React.FC<MesaIdentifierDisplayProps> = ({
       <div className="space-y-1 text-sm">
         <div><strong>IDCA:</strong> {parsed.idca} (Comunidad Autónoma)</div>
         <div><strong>IDP:</strong> {parsed.idp} (Provincia)</div>
-        <div><strong>IDM:</strong> {parsed.idm} (Municipio)</div>
+        <div><strong>IDC:</strong> {parsed.idc} (Código Municipio)</div>
         <div><strong>DD:</strong> {parsed.district} (Distrito)</div>
         <div><strong>SSS:</strong> {parsed.section} (Sección)</div>
         <div><strong>M:</strong> {parsed.table} (Mesa)</div>
       </div>
       <div className="pt-2 border-t text-xs text-muted-foreground">
-        Formato: XX-YY-ZZZ-DD-SSS-M
+        Formato: XX-YY-IDC-DD-SSS-M
       </div>
     </div>
   ) : null;
@@ -47,13 +52,13 @@ export const MesaIdentifierDisplay: React.FC<MesaIdentifierDisplayProps> = ({
       <Badge variant={variant} className={size === 'sm' ? 'text-xs' : ''}>
         {shortIdentifier || 'N/A'}
       </Badge>
-      {mesaIdentifierFull && showTooltip && (
+      {identifier && showTooltip && (
         <Info className="h-3 w-3 text-muted-foreground" />
       )}
     </div>
   );
 
-  if (mesaIdentifierFull && showTooltip && parsed.isValid) {
+  if (identifier && showTooltip && parsed.isValid) {
     return (
       <TooltipProvider>
         <Tooltip>
@@ -73,22 +78,27 @@ export const MesaIdentifierDisplay: React.FC<MesaIdentifierDisplayProps> = ({
 
 interface FullMesaIdentifierProps {
   mesaIdentifierFull?: string;
+  fullIdentifier?: string;
   variant?: 'default' | 'outline' | 'secondary';
   size?: 'sm' | 'default';
 }
 
 export const FullMesaIdentifier: React.FC<FullMesaIdentifierProps> = ({
   mesaIdentifierFull,
+  fullIdentifier,
   variant = 'secondary',
   size = 'sm'
 }) => {
-  if (!mesaIdentifierFull) {
+  // Use new fullIdentifier first, then fall back to old mesaIdentifierFull
+  const identifier = fullIdentifier || mesaIdentifierFull;
+  
+  if (!identifier) {
     return null;
   }
 
   return (
     <Badge variant={variant} className={size === 'sm' ? 'text-xs font-mono' : 'font-mono'}>
-      {mesaIdentifierFull}
+      {identifier}
     </Badge>
   );
 };

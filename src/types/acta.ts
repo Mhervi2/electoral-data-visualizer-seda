@@ -65,6 +65,7 @@ export interface ElectoralAct {
   municipality_idm: number;
   mesa_identifier: string;
   mesa_identifier_full?: string;
+  full_identifier?: string;
   census_total: number;
   total_voters: number;
   blank_votes: number;

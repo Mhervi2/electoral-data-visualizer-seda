@@ -110,12 +110,16 @@ export const ResultsTable = ({ electoralActs }: ResultsTableProps) => {
                      <TableCell>
                        <div className="space-y-1">
                          <div className="font-medium">{table}</div>
-                         <MesaIdentifierDisplay
-                           mesaIdentifier={act.mesa_identifier}
-                           mesaIdentifierFull={act.mesa_identifier_full}
-                           size="sm"
-                         />
-                         <FullMesaIdentifier mesaIdentifierFull={act.mesa_identifier_full} />
+                          <MesaIdentifierDisplay
+                            mesaIdentifier={act.mesa_identifier}
+                            mesaIdentifierFull={act.mesa_identifier_full}
+                            fullIdentifier={act.full_identifier}
+                            size="sm"
+                          />
+                          <FullMesaIdentifier 
+                            mesaIdentifierFull={act.mesa_identifier_full}
+                            fullIdentifier={act.full_identifier}
+                          />
                        </div>
                      </TableCell>
                     <TableCell>{act.census_total}</TableCell>
