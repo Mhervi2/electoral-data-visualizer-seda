@@ -6,7 +6,8 @@ import { Image } from 'lucide-react';
 
 const getProxiedImageUrl = (originalUrl: string) => {
   if (originalUrl.includes('drive.google.com')) {
-    return `https://bzufsrhmxaiqnmkvketb.supabase.co/functions/v1/proxy-drive-image?url=${encodeURIComponent(originalUrl)}`;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    return `${supabaseUrl}/functions/v1/proxy-drive-image?url=${encodeURIComponent(originalUrl)}`;
   }
   return originalUrl;
 };
