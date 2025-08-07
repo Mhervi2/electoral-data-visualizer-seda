@@ -1,1 +1,4 @@
 project_id = "bzufsrhmxaiqnmkvketb"
+
+[functions.proxy-drive-image]
+verify_jwt = false
