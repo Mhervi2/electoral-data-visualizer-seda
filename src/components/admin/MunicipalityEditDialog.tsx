@@ -23,7 +23,7 @@ export const MunicipalityEditDialog: React.FC<MunicipalityEditDialogProps> = ({
   onSaved
 }) => {
   const { toast } = useToast();
-  const { updateTerritorialName, updateMunicipalityName } = useTerritorialManagement();
+  const { updateTerritorialName, updateMunicipalityName, updateTerritorialCodes } = useTerritorialManagement();
   
   const [idca, setIdca] = useState('');
   const [idp, setIdp] = useState('');
@@ -74,10 +74,26 @@ export const MunicipalityEditDialog: React.FC<MunicipalityEditDialogProps> = ({
       
       let hasChanges = false;
 
-      // Update codes if they changed
-      if (parsedIdca !== municipality.idca || parsedIdp !== municipality.idp || idc !== municipality.idc) {
+      let affectedMessages: string[] = [];
+
+      // Update IDCA if changed - propagate to all municipalities in CA
+      if (parsedIdca !== municipality.idca) {
+        const idcaCount = await updateTerritorialCodes('ca', municipality.ca, parsedIdca);
+        affectedMessages.push(`Código IDCA actualizado (${idcaCount} municipios)`);
+        hasChanges = true;
+      }
+
+      // Update IDP if changed - propagate to all municipalities in province  
+      if (parsedIdp !== municipality.idp) {
+        const idpCount = await updateTerritorialCodes('provincia', municipality.provincia, parsedIdp);
+        affectedMessages.push(`Código IDP actualizado (${idpCount} municipios)`);
+        hasChanges = true;
+      }
+
+      // Update IDC if changed - only this municipality
+      if (idc !== municipality.idc) {
         // Check if IDC is unique within the province when changing it
-        if (idc !== municipality.idc && idc) {
+        if (idc) {
           const { data: existingIdc } = await supabase
             .from('mpca')
             .select('idm')
@@ -96,15 +112,14 @@ export const MunicipalityEditDialog: React.FC<MunicipalityEditDialogProps> = ({
           }
         }
 
-        const updateData: any = { idca: parsedIdca, idp: parsedIdp };
-        if (idc) updateData.idc = idc;
-
+        const updateData: any = { idc: idc || null };
         const { error } = await supabase
           .from('mpca')
           .update(updateData)
           .eq('idm', municipality.idm);
 
         if (error) throw error;
+        affectedMessages.push("Código IDC actualizado");
         hasChanges = true;
       }
 
@@ -127,9 +142,13 @@ export const MunicipalityEditDialog: React.FC<MunicipalityEditDialogProps> = ({
       }
 
       if (hasChanges) {
+        const description = affectedMessages.length > 0 
+          ? affectedMessages.join(', ')
+          : "Cambios aplicados correctamente.";
+          
         toast({
           title: "Éxito",
-          description: "Cambios aplicados correctamente.",
+          description,
         });
       }
 
