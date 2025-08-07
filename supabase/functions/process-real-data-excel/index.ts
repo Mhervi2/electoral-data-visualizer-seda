@@ -144,7 +144,8 @@ serve(async (req) => {
 
     console.log('🎉 Party columns found:', partyColumns);
 
-    // Get all MPCA data for municipality matching
+    // OPTIMIZATION 1: Load and cache all MPCA data with normalized search index
+    console.log('🔄 Loading MPCA data...');
     const { data: mpcaData, error: mpcaError } = await supabase
       .from('mpca')
       .select('*');
@@ -157,6 +158,24 @@ serve(async (req) => {
       });
     }
 
+    // OPTIMIZATION 2: Load and cache all political parties
+    console.log('🔄 Loading political parties...');
+    const { data: politicalParties, error: partiesError } = await supabase
+      .from('political_parties')
+      .select('*');
+
+    if (partiesError) {
+      console.error('❌ Error fetching political parties:', partiesError);
+      return new Response(JSON.stringify({ error: 'Error fetching political parties' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Create normalized lookup maps for efficient searching
+    const municipalityMap = new Map<string, MpcaData>();
+    const partyMap = new Map<string, { id: string; name: string; siglas: string; color: string }>();
+    
     // Helper function to normalize municipality names for robust comparison
     const normalizeMunicipio = (name: string): string => {
       if (!name || typeof name !== 'string') return '';
@@ -169,6 +188,19 @@ serve(async (req) => {
         .replace(/\s+/g, ' ') // Normalize whitespace
         .trim();
     };
+
+    // Build municipality search index
+    (mpcaData as MpcaData[]).forEach(municipality => {
+      const normalizedName = normalizeMunicipio(municipality.municipio);
+      municipalityMap.set(normalizedName, municipality);
+    });
+
+    // Build party search index (by siglas, case-insensitive)
+    politicalParties?.forEach(party => {
+      partyMap.set(party.siglas.toLowerCase(), party);
+    });
+
+    console.log(`✅ Cached ${municipalityMap.size} municipalities and ${partyMap.size} parties`);
 
     // Helper function to convert Google Drive links
     const convertDriveLink = (url: string): string => {
@@ -203,20 +235,12 @@ serve(async (req) => {
           continue;
         }
 
-        // Find matching municipality by name with enhanced matching
+        // OPTIMIZATION 3: Use cached municipality lookup
         const normalizedMunicipio = normalizeMunicipio(municipioRaw);
-        console.log(`🔍 Looking for municipality: "${municipioRaw}" (normalized: "${normalizedMunicipio}")`);
-        
-        // First try exact normalized match
-        let matchingMpca = (mpcaData as MpcaData[]).find(m => {
-          const normalizedDbName = normalizeMunicipio(m.municipio);
-          console.log(`   📝 Comparing "${normalizedMunicipio}" with "${normalizedDbName}" from "${m.municipio}"`);
-          return normalizedDbName === normalizedMunicipio;
-        });
+        let matchingMpca = municipalityMap.get(normalizedMunicipio);
 
-        // If no exact match found, try database ILIKE search as fallback
+        // If no exact match found, try fallback search
         if (!matchingMpca) {
-          console.log(`   🔄 No exact match found, trying ILIKE search...`);
           const { data: ilikeMunicipalities } = await supabase
             .from('mpca')
             .select('*')
@@ -225,28 +249,18 @@ serve(async (req) => {
           
           if (ilikeMunicipalities && ilikeMunicipalities.length > 0) {
             matchingMpca = ilikeMunicipalities[0] as MpcaData;
-            console.log(`   ✅ Found via ILIKE: ${matchingMpca.municipio}`);
           }
         }
 
         if (!matchingMpca) {
-          const availableMunicipalities = (mpcaData as MpcaData[])
-            .filter(m => m.municipio.toLowerCase().includes(municipioRaw.toLowerCase().substring(0, 3)))
-            .slice(0, 3)
-            .map(m => m.municipio)
-            .join(', ');
-          errors.push(`Row ${i + 1}: Municipality not found: "${municipioRaw}". Similar: ${availableMunicipalities || 'none'}`);
+          errors.push(`Row ${i + 1}: Municipality not found: "${municipioRaw}"`);
           continue;
         }
-
-        console.log(`✅ Found municipality: ${matchingMpca.municipio} (IDM: ${matchingMpca.idm})`);
 
         // Construct mesa identifier with proper zero padding
         const distrito = distritoRaw.toString().padStart(2, '0');
         const seccion = seccionRaw.toString().padStart(3, '0');
         const mesaIdentifier = `${distrito}-${seccion}-${mesaRaw}`;
-
-        console.log(`📍 Mesa identifier: ${mesaIdentifier}`);
 
         // Get vote counts
         const censo = parseInt(row[censoIndex]?.toString() || '0') || 0;
@@ -292,7 +306,6 @@ serve(async (req) => {
           }
           actId = updatedAct.id;
           updatedMesas++;
-          console.log(`🔄 Updated existing mesa: ${mesaIdentifier}`);
 
           // Delete existing party votes for this act
           await supabase
@@ -326,69 +339,69 @@ serve(async (req) => {
           console.log(`✅ Created new mesa: ${mesaIdentifier}`);
         }
 
-        // Process party votes
+        // OPTIMIZATION 4: Collect party votes for batch processing
+        const partyVotesToInsert: { electoral_act_id: string; party_id: string; votes: number }[] = [];
+        
         for (const partyCol of partyColumns) {
           const votes = parseInt(row[partyCol.index]?.toString() || '0') || 0;
           
           if (votes > 0) {
-            // First check if party exists with exact siglas match
-            let { data: existingParty } = await supabase
-              .from('political_parties')
-              .select('id')
-              .eq('siglas', partyCol.siglas)
-              .maybeSingle();
-
-            // If not found, try case-insensitive match
-            if (!existingParty) {
-              const { data: parties } = await supabase
-                .from('political_parties')
-                .select('id, siglas')
-                .ilike('siglas', partyCol.siglas);
-              
-              existingParty = parties?.[0] || null;
-            }
+            // OPTIMIZATION 5: Use cached party lookup
+            let existingParty = partyMap.get(partyCol.siglas.toLowerCase());
 
             let partyId = existingParty?.id;
 
             if (!existingParty) {
               // Create new party with lowercase ID for consistency
               partyId = partyCol.siglas.toLowerCase();
+              const newParty = {
+                id: partyId,
+                name: partyCol.fullName,
+                siglas: partyCol.siglas,
+                color: '#6B7280' // Default color
+              };
+
               const { error: partyError } = await supabase
                 .from('political_parties')
-                .insert({
-                  id: partyId,
-                  name: partyCol.fullName,
-                  siglas: partyCol.siglas,
-                  color: '#6B7280' // Default color
-                });
+                .insert(newParty);
 
               if (partyError) {
                 console.error('Error creating party:', partyError);
                 errors.push(`Row ${i + 1}: Error creating party ${partyCol.siglas}: ${partyError.message}`);
                 continue;
               } else {
+                // Add to cache for future lookups
+                partyMap.set(partyCol.siglas.toLowerCase(), newParty);
                 createdParties++;
-                console.log(`✅ Created party: ${partyCol.fullName} (${partyCol.siglas})`);
               }
             }
 
-            // Insert party vote
-            const { error: voteError } = await supabase
-              .from('party_votes')
-              .insert({
-                electoral_act_id: actId,
-                party_id: partyId,
-                votes: votes
-              });
+            // Add to batch insert
+            partyVotesToInsert.push({
+              electoral_act_id: actId,
+              party_id: partyId,
+              votes: votes
+            });
+          }
+        }
 
-            if (voteError) {
-              errors.push(`Row ${i + 1}: Error inserting vote for ${partyCol.siglas}: ${voteError.message}`);
-            }
+        // OPTIMIZATION 6: Batch insert party votes
+        if (partyVotesToInsert.length > 0) {
+          const { error: voteError } = await supabase
+            .from('party_votes')
+            .insert(partyVotesToInsert);
+
+          if (voteError) {
+            errors.push(`Row ${i + 1}: Error inserting votes: ${voteError.message}`);
           }
         }
 
         processedMesas++;
-        console.log(`✅ Processed mesa ${i}/${jsonData.length - 1}: ${mesaIdentifier}`);
+        
+        // OPTIMIZATION 7: Reduce logging frequency to avoid CPU timeout
+        if (processedMesas % 10 === 0 || processedMesas === jsonData.length - 1) {
+          console.log(`✅ Processed ${processedMesas}/${jsonData.length - 1} mesas (${Math.round((processedMesas / (jsonData.length - 1)) * 100)}%)`);
+        }
 
       } catch (error) {
         const errorMsg = `Row ${i + 1}: Unexpected error: ${error.message}`;
