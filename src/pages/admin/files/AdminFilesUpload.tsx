@@ -53,7 +53,7 @@ const AdminFilesUpload = () => {
     }
   };
 
-  const processExcelFile = async (file: File, electionId: string, sourceType: string) => {
+  const processExcelFile = async (file: File, electionId: string, sourceType: string, isRealData: boolean = false) => {
     try {
       setProcessing(true);
 
@@ -63,8 +63,9 @@ const AdminFilesUpload = () => {
       formData.append('electionId', electionId);
       formData.append('sourceType', sourceType);
 
-      // Call the edge function
-      const { data, error } = await supabase.functions.invoke('process-electoral-excel', {
+      // Call the appropriate edge function based on data type
+      const functionName = isRealData ? 'process-real-data-excel' : 'process-electoral-excel';
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: formData,
       });
 
@@ -110,7 +111,8 @@ const AdminFilesUpload = () => {
     try {
       console.log('Processing Excel file:', selectedFile.name);
       
-      const processingResult = await processExcelFile(selectedFile, electionId, sourceType);
+      const isRealData = sourceType === 'real-data';
+      const processingResult = await processExcelFile(selectedFile, electionId, sourceType, isRealData);
       
       setResult(processingResult);
 
@@ -203,6 +205,7 @@ const AdminFilesUpload = () => {
                   <SelectItem value="indra">INDRA</SelectItem>
                   <SelectItem value="escrutinio">Escrutinio General</SelectItem>
                   <SelectItem value="oficial">Resultado Oficial</SelectItem>
+                  <SelectItem value="real-data">Datos Reales Excel</SelectItem>
                 </SelectContent>
               </Select>
             </div>
