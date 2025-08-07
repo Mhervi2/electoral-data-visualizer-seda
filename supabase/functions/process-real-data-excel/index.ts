@@ -95,27 +95,32 @@ serve(async (req) => {
       );
     };
 
-    const idMesaIndex = findColumnIndex(['Id Mesa', 'IdMesa', 'ID Mesa']);
+    const fotoIndex = findColumnIndex(['Fotografía', 'Fotografia', 'foto']);
     const municipioIndex = findColumnIndex(['Municipio']);
+    const distritoIndex = findColumnIndex(['Distrito']);
+    const seccionIndex = findColumnIndex(['Sección', 'Seccion']);
+    const mesaIndex = findColumnIndex(['Mesa']);
     const censoIndex = findColumnIndex(['electores censados', 'censo']);
     const votantesIndex = findColumnIndex(['total de votantes', 'votantes']);
     const nulosIndex = findColumnIndex(['nulos']);
     const blancosIndex = findColumnIndex(['blanco']);
-    const fotoIndex = findColumnIndex(['Fotografía', 'Fotografia', 'foto']);
 
     console.log('🔍 Column indices found:', {
-      idMesa: idMesaIndex,
+      foto: fotoIndex,
       municipio: municipioIndex,
+      distrito: distritoIndex,
+      seccion: seccionIndex,
+      mesa: mesaIndex,
       censo: censoIndex,
       votantes: votantesIndex,
       nulos: nulosIndex,
-      blancos: blancosIndex,
-      foto: fotoIndex
+      blancos: blancosIndex
     });
 
-    if (idMesaIndex === -1 || municipioIndex === -1) {
+    // Validate required columns
+    if (municipioIndex === -1 || distritoIndex === -1 || seccionIndex === -1 || mesaIndex === -1) {
       return new Response(JSON.stringify({ 
-        error: 'Required columns not found: Id Mesa or Municipio' 
+        error: 'Required columns not found: Municipio, Distrito, Sección, or Mesa' 
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -153,25 +158,10 @@ serve(async (req) => {
     // Helper function to normalize municipality names
     const normalizeMunicipio = (name: string): string => {
       return name
-        .replace(/^\(([^)]+)\)\s*/, '$1 ') // "(EL) MUNICIPIO" -> "EL MUNICIPIO"
-        .replace(/^\(([^)]+)\)\s*/, '$1 ') // "(LA) CIUDAD" -> "LA CIUDAD"
         .toUpperCase()
-        .trim();
-    };
-
-    // Helper function to parse Id Mesa
-    const parseIdMesa = (idMesa: string): { idca: number; idp: number; idc: string; distrito: string; seccion: string; mesa: string } | null => {
-      const parts = idMesa?.toString().split('-');
-      if (parts.length !== 6) return null;
-      
-      return {
-        idca: parseInt(parts[0]),
-        idp: parseInt(parts[1]),
-        idc: parts[2],
-        distrito: parts[3],
-        seccion: parts[4],
-        mesa: parts[5]
-      };
+        .trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, ''); // Remove accents
     };
 
     // Helper function to convert Google Drive links
@@ -195,73 +185,37 @@ serve(async (req) => {
       const row = jsonData[i] as any[];
       
       try {
-        const idMesaRaw = row[idMesaIndex]?.toString();
         const municipioRaw = row[municipioIndex]?.toString();
+        const distritoRaw = row[distritoIndex]?.toString();
+        const seccionRaw = row[seccionIndex]?.toString();
+        const mesaRaw = row[mesaIndex]?.toString();
         
-        if (!idMesaRaw || !municipioRaw) {
-          errors.push(`Row ${i + 1}: Missing Id Mesa or Municipio`);
+        if (!municipioRaw || !distritoRaw || !seccionRaw || !mesaRaw) {
+          errors.push(`Row ${i + 1}: Missing required mesa data: Municipio, Distrito, Sección, or Mesa`);
           continue;
         }
 
-        // Parse Id Mesa
-        const parsedMesa = parseIdMesa(idMesaRaw);
-        if (!parsedMesa) {
-          errors.push(`Row ${i + 1}: Invalid Id Mesa format: ${idMesaRaw}`);
-          continue;
-        }
-
-        // Find matching municipality
+        // Find matching municipality by name
         const normalizedMunicipio = normalizeMunicipio(municipioRaw);
-        console.log(`🔍 Looking for municipality: "${municipioRaw}" (normalized: "${normalizedMunicipio}") with codes ${parsedMesa.idca}-${parsedMesa.idp}-${parsedMesa.idc}`);
+        console.log(`🔍 Looking for municipality: "${municipioRaw}" (normalized: "${normalizedMunicipio}")`);
         
-        // First try exact match with name
-        let matchingMpca = (mpcaData as MpcaData[]).find(m => 
-          m.idca === parsedMesa.idca && 
-          m.idp === parsedMesa.idp && 
-          m.idc === parsedMesa.idc &&
+        const matchingMpca = (mpcaData as MpcaData[]).find(m => 
           normalizeMunicipio(m.municipio) === normalizedMunicipio
         );
 
-        // If not found, try by codes only (fallback)
         if (!matchingMpca) {
-          const candidatesByCode = (mpcaData as MpcaData[]).filter(m => 
-            m.idca === parsedMesa.idca && 
-            m.idp === parsedMesa.idp && 
-            m.idc === parsedMesa.idc
-          );
-          
-          console.log(`⚠️ Exact name match failed. Found ${candidatesByCode.length} municipalities with codes ${parsedMesa.idca}-${parsedMesa.idp}-${parsedMesa.idc}:`);
-          candidatesByCode.forEach(candidate => {
-            console.log(`  - "${candidate.municipio}" (normalized: "${normalizeMunicipio(candidate.municipio)}")`);
-          });
-          
-          // Use the first candidate if exactly one exists
-          if (candidatesByCode.length === 1) {
-            matchingMpca = candidatesByCode[0];
-            console.log(`✅ Using fallback match: "${matchingMpca.municipio}"`);
-          } else if (candidatesByCode.length > 1) {
-            // Try fuzzy matching
-            const fuzzyMatch = candidatesByCode.find(candidate => {
-              const normalizedCandidate = normalizeMunicipio(candidate.municipio);
-              return normalizedCandidate.includes(normalizedMunicipio) || normalizedMunicipio.includes(normalizedCandidate);
-            });
-            
-            if (fuzzyMatch) {
-              matchingMpca = fuzzyMatch;
-              console.log(`🔄 Using fuzzy match: "${fuzzyMatch.municipio}"`);
-            }
-          }
-        }
-
-        if (!matchingMpca) {
-          errors.push(`Row ${i + 1}: Municipality not found: "${municipioRaw}" (normalized: "${normalizedMunicipio}") with codes ${parsedMesa.idca}-${parsedMesa.idp}-${parsedMesa.idc}`);
+          errors.push(`Row ${i + 1}: Municipality not found: "${municipioRaw}"`);
           continue;
         }
 
+        console.log(`✅ Found municipality: ${matchingMpca.municipio} (IDM: ${matchingMpca.idm})`);
+
         // Construct mesa identifier with proper zero padding
-        const distrito = parsedMesa.distrito.toString().padStart(2, '0');
-        const seccion = parsedMesa.seccion.toString().padStart(3, '0');
-        const mesaIdentifier = `${distrito}-${seccion}-${parsedMesa.mesa}`;
+        const distrito = distritoRaw.toString().padStart(2, '0');
+        const seccion = seccionRaw.toString().padStart(3, '0');
+        const mesaIdentifier = `${distrito}-${seccion}-${mesaRaw}`;
+
+        console.log(`📍 Mesa identifier: ${mesaIdentifier}`);
 
         // Get vote counts
         const censo = parseInt(row[censoIndex]?.toString() || '0') || 0;
