@@ -140,12 +140,17 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
             ref={imageRef}
             src={proxiedSrc}
             alt={alt}
-            className={`max-w-none transition-transform duration-200 ${
+            className={`transition-transform duration-200 ${
               scale > 1 ? 'cursor-grab' : 'cursor-default'
             } ${isDragging ? 'cursor-grabbing' : ''}`}
             style={{
+              maxWidth: scale === 1 ? '100%' : 'none',
+              maxHeight: scale === 1 ? '100%' : 'none',
+              width: scale === 1 ? 'auto' : undefined,
+              height: scale === 1 ? 'auto' : undefined,
               transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
               transformOrigin: 'center center',
+              objectFit: 'contain'
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
