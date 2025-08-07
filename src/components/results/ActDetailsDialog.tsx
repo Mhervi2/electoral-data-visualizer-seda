@@ -35,6 +35,11 @@ interface ActDetailsDialogProps {
 }
 
 export const ActDetailsDialog = ({ act }: ActDetailsDialogProps) => {
+  const isGoogleDriveUrl = (url: string): boolean => {
+    if (!url) return false;
+    return url.includes('drive.google.com') || url.includes('drive.usercontent.google.com');
+  };
+
   const convertToUserContentUrl = (driveUrl: string): string => {
     try {
       // Extract file ID from different Google Drive URL formats
@@ -63,7 +68,7 @@ export const ActDetailsDialog = ({ act }: ActDetailsDialogProps) => {
   };
 
   const handleImageClick = () => {
-    if (act.source_type === 'real-data' && act.image_url) {
+    if (isGoogleDriveUrl(act.image_url!) && act.image_url) {
       const userContentUrl = convertToUserContentUrl(act.image_url);
       window.open(userContentUrl, '_blank', 'noopener,noreferrer');
     }
@@ -103,8 +108,8 @@ export const ActDetailsDialog = ({ act }: ActDetailsDialogProps) => {
 
   const { district, section, table } = parseMesaIdentifier(act.mesa_identifier);
 
-  // For real-data images, open in new window instead of modal
-  if (act.source_type === 'real-data' && act.image_url) {
+  // For Google Drive images, open in new window instead of modal
+  if (isGoogleDriveUrl(act.image_url!) && act.image_url) {
     return (
       <Button 
         size="sm" 
