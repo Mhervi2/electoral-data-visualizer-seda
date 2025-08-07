@@ -77,17 +77,23 @@ export const MunicipalityEditDialog: React.FC<MunicipalityEditDialogProps> = ({
       let affectedMessages: string[] = [];
 
       // Update IDCA if changed - propagate to all municipalities in CA
-      if (parsedIdca !== municipality.idca) {
+      if (parsedIdca !== Number(municipality.idca)) {
+        console.log('🏛️ Updating IDCA:', { from: municipality.idca, to: parsedIdca, ca: municipality.ca });
         const idcaCount = await updateTerritorialCodes('ca', municipality.ca, parsedIdca);
-        affectedMessages.push(`Código IDCA actualizado (${idcaCount} municipios)`);
-        hasChanges = true;
+        if (idcaCount > 0) {
+          affectedMessages.push(`Código IDCA actualizado (${idcaCount} municipios)`);
+          hasChanges = true;
+        }
       }
 
       // Update IDP if changed - propagate to all municipalities in province  
-      if (parsedIdp !== municipality.idp) {
+      if (parsedIdp !== Number(municipality.idp)) {
+        console.log('🏛️ Updating IDP:', { from: municipality.idp, to: parsedIdp, provincia: municipality.provincia });
         const idpCount = await updateTerritorialCodes('provincia', municipality.provincia, parsedIdp);
-        affectedMessages.push(`Código IDP actualizado (${idpCount} municipios)`);
-        hasChanges = true;
+        if (idpCount > 0) {
+          affectedMessages.push(`Código IDP actualizado (${idpCount} municipios)`);
+          hasChanges = true;
+        }
       }
 
       // Update IDC if changed - only this municipality

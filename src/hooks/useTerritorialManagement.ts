@@ -165,41 +165,90 @@ export const useTerritorialManagement = () => {
     name: string,
     newId: number
   ): Promise<number> => {
+    console.log('🔧 updateTerritorialCodes called:', { type, name, newId });
+    
     try {
       const field = type === 'ca' ? 'idca' : 'idp';
       const nameField = type === 'ca' ? 'ca' : 'provincia';
+      
+      console.log('🔧 Field mapping:', { field, nameField });
 
+      // First, check what records match the criteria
       const { data: affectedRecords, error: queryError } = await supabase
         .from('mpca')
-        .select('idm')
+        .select('idm, ' + field + ', ' + nameField)
         .eq(nameField, name);
 
-      if (queryError) throw queryError;
+      if (queryError) {
+        console.error('🔧 Query error:', queryError);
+        throw queryError;
+      }
 
-      const { error: updateError } = await supabase
-        .from('mpca')
-        .update({ [field]: newId })
-        .eq(nameField, name);
+      console.log('🔧 Found affected records:', affectedRecords?.length, affectedRecords);
 
-      if (updateError) throw updateError;
+      if (!affectedRecords || affectedRecords.length === 0) {
+        console.warn('🔧 No records found for:', { nameField, name });
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: `No se encontraron municipios para ${nameField}: ${name}`,
+        });
+        return 0;
+      }
 
-      const affectedCount = affectedRecords?.length || 0;
-
-      toast({
-        title: "Éxito",
-        description: `${affectedCount} municipios actualizados correctamente.`,
+      // Check if any record already has the target ID
+      const alreadyHasTargetId = affectedRecords.some(record => {
+        const currentId = Number(record[field]);
+        const targetId = Number(newId);
+        console.log('🔧 Comparing:', { currentId, targetId, same: currentId === targetId });
+        return currentId === targetId;
       });
 
-      // Refresh data
-      await fetchTerritorialSummary();
+      if (alreadyHasTargetId && affectedRecords.length === 1) {
+        console.log('🔧 Record already has target ID');
+        toast({
+          title: "Sin cambios",
+          description: "El código ya es el mismo.",
+        });
+        return 0;
+      }
+
+      // Perform the update
+      console.log('🔧 Performing update:', { [field]: newId, nameField, name });
+      
+      const { data: updateResult, error: updateError } = await supabase
+        .from('mpca')
+        .update({ [field]: newId })
+        .eq(nameField, name)
+        .select('idm, ' + field);
+
+      if (updateError) {
+        console.error('🔧 Update error:', updateError);
+        throw updateError;
+      }
+
+      console.log('🔧 Update successful:', updateResult?.length, 'records updated');
+
+      const affectedCount = updateResult?.length || 0;
+
+      if (affectedCount > 0) {
+        toast({
+          title: "Éxito",
+          description: `${affectedCount} municipios actualizados con código ${field.toUpperCase()}: ${newId}`,
+        });
+
+        // Refresh data
+        console.log('🔧 Refreshing territorial data...');
+        await fetchTerritorialSummary();
+      }
 
       return affectedCount;
     } catch (error) {
-      console.error('Error updating territorial codes:', error);
+      console.error('🔧 Error updating territorial codes:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudieron actualizar los códigos territoriales.",
+        description: `Error al actualizar códigos territoriales: ${error.message || 'Error desconocido'}`,
       });
       throw error;
     }
