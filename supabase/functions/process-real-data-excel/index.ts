@@ -212,15 +212,49 @@ serve(async (req) => {
 
         // Find matching municipality
         const normalizedMunicipio = normalizeMunicipio(municipioRaw);
-        const matchingMpca = (mpcaData as MpcaData[]).find(m => 
+        console.log(`🔍 Looking for municipality: "${municipioRaw}" (normalized: "${normalizedMunicipio}") with codes ${parsedMesa.idca}-${parsedMesa.idp}-${parsedMesa.idc}`);
+        
+        // First try exact match with name
+        let matchingMpca = (mpcaData as MpcaData[]).find(m => 
           m.idca === parsedMesa.idca && 
           m.idp === parsedMesa.idp && 
           m.idc === parsedMesa.idc &&
           normalizeMunicipio(m.municipio) === normalizedMunicipio
         );
 
+        // If not found, try by codes only (fallback)
         if (!matchingMpca) {
-          errors.push(`Row ${i + 1}: Municipality not found: ${municipioRaw} with codes ${parsedMesa.idca}-${parsedMesa.idp}-${parsedMesa.idc}`);
+          const candidatesByCode = (mpcaData as MpcaData[]).filter(m => 
+            m.idca === parsedMesa.idca && 
+            m.idp === parsedMesa.idp && 
+            m.idc === parsedMesa.idc
+          );
+          
+          console.log(`⚠️ Exact name match failed. Found ${candidatesByCode.length} municipalities with codes ${parsedMesa.idca}-${parsedMesa.idp}-${parsedMesa.idc}:`);
+          candidatesByCode.forEach(candidate => {
+            console.log(`  - "${candidate.municipio}" (normalized: "${normalizeMunicipio(candidate.municipio)}")`);
+          });
+          
+          // Use the first candidate if exactly one exists
+          if (candidatesByCode.length === 1) {
+            matchingMpca = candidatesByCode[0];
+            console.log(`✅ Using fallback match: "${matchingMpca.municipio}"`);
+          } else if (candidatesByCode.length > 1) {
+            // Try fuzzy matching
+            const fuzzyMatch = candidatesByCode.find(candidate => {
+              const normalizedCandidate = normalizeMunicipio(candidate.municipio);
+              return normalizedCandidate.includes(normalizedMunicipio) || normalizedMunicipio.includes(normalizedCandidate);
+            });
+            
+            if (fuzzyMatch) {
+              matchingMpca = fuzzyMatch;
+              console.log(`🔄 Using fuzzy match: "${fuzzyMatch.municipio}"`);
+            }
+          }
+        }
+
+        if (!matchingMpca) {
+          errors.push(`Row ${i + 1}: Municipality not found: "${municipioRaw}" (normalized: "${normalizedMunicipio}") with codes ${parsedMesa.idca}-${parsedMesa.idp}-${parsedMesa.idc}`);
           continue;
         }
 
