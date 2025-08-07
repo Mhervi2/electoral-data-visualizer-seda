@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useSecureFileUpload } from '@/hooks/useSecureFileUpload';
 import { useAppData } from '@/hooks/useAppData';
+import MunicipalityResolutionDialog from '@/components/admin/MunicipalityResolutionDialog';
+import { UnresolvedMunicipality, MunicipalityResolution } from '@/hooks/useMunicipalityResolution';
 
 interface ProcessingResult {
   success: boolean;
@@ -21,6 +23,8 @@ interface ProcessingResult {
   totalRows: number;
   errors: string[];
   hasMoreErrors: boolean;
+  unresolvedMunicipalities?: UnresolvedMunicipality[];
+  pausedForResolution?: boolean;
 }
 
 const AdminFilesUpload = () => {
@@ -30,6 +34,14 @@ const AdminFilesUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<ProcessingResult | null>(null);
+  const [showResolutionDialog, setShowResolutionDialog] = useState(false);
+  const [unresolvedMunicipalities, setUnresolvedMunicipalities] = useState<UnresolvedMunicipality[]>([]);
+  const [pendingProcessing, setPendingProcessing] = useState<{
+    file: File;
+    electionId: string;
+    sourceType: string;
+    isRealData: boolean;
+  } | null>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -55,7 +67,7 @@ const AdminFilesUpload = () => {
     }
   };
 
-  const processExcelFile = async (file: File, electionId: string, sourceType: string, isRealData: boolean = false) => {
+  const processExcelFile = async (file: File, electionId: string, sourceType: string, isRealData: boolean = false, resolutions?: MunicipalityResolution[]) => {
     try {
       setProcessing(true);
 
@@ -67,6 +79,15 @@ const AdminFilesUpload = () => {
       // If is real-data, send 'user' so it appears in electoral results
       const effectiveSourceType = sourceType === 'real-data' ? 'user' : sourceType;
       formData.append('sourceType', effectiveSourceType);
+
+      // Add municipality resolutions if provided
+      if (resolutions && resolutions.length > 0) {
+        const resolutionData = resolutions.map(resolution => ({
+          originalName: resolution.originalName,
+          resolvedIdm: typeof resolution.resolution === 'object' ? resolution.resolution.idm : 0
+        }));
+        formData.append('resolutions', JSON.stringify(resolutionData));
+      }
 
       // Call the appropriate edge function based on data type
       const functionName = isRealData ? 'process-real-data-excel' : 'process-electoral-excel';
@@ -119,6 +140,14 @@ const AdminFilesUpload = () => {
       const isRealData = sourceType === 'real-data';
       const processingResult = await processExcelFile(selectedFile, electionId, sourceType, isRealData);
       
+      // Check if we need to resolve municipalities
+      if (processingResult.pausedForResolution && processingResult.unresolvedMunicipalities) {
+        setUnresolvedMunicipalities(processingResult.unresolvedMunicipalities);
+        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData });
+        setShowResolutionDialog(true);
+        return;
+      }
+      
       setResult(processingResult);
 
       if (processingResult.success) {
@@ -160,6 +189,77 @@ const AdminFilesUpload = () => {
       });
     }
   };
+
+  const handleMunicipalityResolutions = async (resolutions: MunicipalityResolution[]) => {
+    if (!pendingProcessing) return;
+
+    setShowResolutionDialog(false);
+    
+    try {
+      console.log('Resuming processing with resolutions:', resolutions);
+      const processingResult = await processExcelFile(
+        pendingProcessing.file,
+        pendingProcessing.electionId,
+        pendingProcessing.sourceType,
+        pendingProcessing.isRealData,
+        resolutions
+      );
+      
+      setResult(processingResult);
+
+      if (processingResult.success) {
+        const createdCount = processingResult.createdMesas || 0;
+        const updatedCount = processingResult.updatedMesas || 0;
+        const totalCount = createdCount + updatedCount;
+        
+        let description = `Se procesaron ${totalCount} mesas electorales`;
+        if (createdCount > 0 && updatedCount > 0) {
+          description += ` (${createdCount} nuevas, ${updatedCount} actualizadas)`;
+        } else if (updatedCount > 0) {
+          description += ` (${updatedCount} actualizadas)`;
+        } else if (createdCount > 0) {
+          description += ` (${createdCount} nuevas)`;
+        }
+        
+        toast({
+          title: "Archivo procesado correctamente",
+          description: description + ".",
+        });
+
+        // Reset form after successful processing
+        setSelectedFile(null);
+        setPendingProcessing(null);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error en el procesamiento",
+          description: "Revisa los errores mostrados abajo.",
+        });
+      }
+
+    } catch (error) {
+      console.error('Processing error after resolution:', error);
+      toast({
+        variant: "destructive",
+        title: "Error al procesar archivo",
+        description: error instanceof Error ? error.message : "Error desconocido",
+      });
+    } finally {
+      setPendingProcessing(null);
+    }
+  };
+
+  const handleCancelResolution = () => {
+    setShowResolutionDialog(false);
+    setPendingProcessing(null);
+    setUnresolvedMunicipalities([]);
+    
+    toast({
+      title: "Importación cancelada",
+      description: "La importación del archivo ha sido cancelada.",
+    });
+  };
+
 
   return (
     <div className="space-y-6">
@@ -349,6 +449,14 @@ const AdminFilesUpload = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Municipality Resolution Dialog */}
+      <MunicipalityResolutionDialog
+        isOpen={showResolutionDialog}
+        unresolvedMunicipalities={unresolvedMunicipalities}
+        onResolutionsComplete={handleMunicipalityResolutions}
+        onCancel={handleCancelResolution}
+      />
     </div>
   );
 };

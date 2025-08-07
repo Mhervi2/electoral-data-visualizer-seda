@@ -395,6 +395,30 @@ export type Database = {
         }
         Relationships: []
       }
+      municipality_resolutions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          original_name: string
+          resolved_idm: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          original_name: string
+          resolved_idm: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          original_name?: string
+          resolved_idm?: number
+        }
+        Relationships: []
+      }
       party_votes: {
         Row: {
           created_at: string | null
