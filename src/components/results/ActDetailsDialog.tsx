@@ -3,14 +3,8 @@ import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Image } from 'lucide-react';
+import { ZoomableImage } from '@/components/ui/zoomable-image';
 
-const getProxiedImageUrl = (originalUrl: string) => {
-  if (originalUrl.includes('drive.google.com')) {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    return `${supabaseUrl}/functions/v1/proxy-drive-image?url=${encodeURIComponent(originalUrl)}`;
-  }
-  return originalUrl;
-};
 
 interface ElectoralAct {
   id: string;
@@ -82,7 +76,7 @@ export const ActDetailsDialog = ({ act }: ActDetailsDialogProps) => {
           <Image className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-4xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Imagen del Acta</DialogTitle>
           <DialogDescription>
@@ -90,11 +84,13 @@ export const ActDetailsDialog = ({ act }: ActDetailsDialogProps) => {
           </DialogDescription>
         </DialogHeader>
         {act.image_url && (
-          <img 
-            src={getProxiedImageUrl(act.image_url)} 
-            alt="Acta electoral" 
-            className="w-full h-auto rounded-lg"
-          />
+          <div className="flex justify-center">
+            <ZoomableImage 
+              src={act.image_url} 
+              alt="Acta electoral"
+              className="max-h-[70vh] w-auto"
+            />
+          </div>
         )}
       </DialogContent>
     </Dialog>
