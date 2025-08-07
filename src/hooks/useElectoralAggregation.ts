@@ -166,14 +166,8 @@ export const useElectoralAggregation = () => {
       }
     }
     if (filters.sourceTypes.length > 0) {
-      // Expand 'user' filter to include 'real-data' automatically
-      const expandedSourceTypes = [...filters.sourceTypes];
-      if (filters.sourceTypes.includes('user') && !filters.sourceTypes.includes('real-data')) {
-        expandedSourceTypes.push('real-data');
-      }
-      
-      console.log('🎯 Applying Source Types filter:', filters.sourceTypes, '→ Expanded:', expandedSourceTypes);
-      query = query.in('source_type', expandedSourceTypes);
+      console.log('🎯 Applying Source Types filter:', filters.sourceTypes);
+      query = query.in('source_type', filters.sourceTypes);
     }
 
     return query;

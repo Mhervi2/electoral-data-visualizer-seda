@@ -82,14 +82,8 @@ export const useAvailableFilters = (currentFilters: Filters) => {
         query = query.ilike('municipio', `%${trimmedValue}%`);
       }
       if (currentFilters.sourceTypes.length > 0) {
-        // Expand 'user' filter to include 'real-data' automatically
-        const expandedSourceTypes = [...currentFilters.sourceTypes];
-        if (currentFilters.sourceTypes.includes('user') && !currentFilters.sourceTypes.includes('real-data')) {
-          expandedSourceTypes.push('real-data');
-        }
-        
-        console.log('📍 Filtering by Source Types:', currentFilters.sourceTypes, '→ Expanded:', expandedSourceTypes);
-        query = query.in('source_type', expandedSourceTypes);
+        console.log('📍 Filtering by Source Types:', currentFilters.sourceTypes);
+        query = query.in('source_type', currentFilters.sourceTypes);
       }
 
       const { data, error } = await query;
