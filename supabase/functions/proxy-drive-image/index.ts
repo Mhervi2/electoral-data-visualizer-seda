@@ -7,26 +7,50 @@ const corsHeaders = {
 
 function convertDriveLink(driveUrl: string): string {
   try {
-    // Handle different Google Drive URL formats
+    console.log('Original URL:', driveUrl);
+    
+    // Handle different Google Drive URL formats and convert directly to usercontent domain
     if (driveUrl.includes('drive.google.com/file/d/')) {
       // Extract file ID from share URL
       const fileIdMatch = driveUrl.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
       if (fileIdMatch) {
         const fileId = fileIdMatch[1];
-        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+        const directUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=view`;
+        console.log('Converted to usercontent URL:', directUrl);
+        return directUrl;
       }
     }
     
     if (driveUrl.includes('drive.google.com/open?id=')) {
       // Extract file ID from open URL
-      const fileIdMatch = driveUrl.match(/id=([a-zA-Z0-9-_]+)/);
+      const fileIdMatch = driveUrl.match(/[?&]id=([a-zA-Z0-9-_]+)/);
       if (fileIdMatch) {
         const fileId = fileIdMatch[1];
-        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+        const directUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=view`;
+        console.log('Converted to usercontent URL:', directUrl);
+        return directUrl;
       }
     }
     
-    // If already in direct format or not a Drive URL, return as is
+    if (driveUrl.includes('drive.google.com/uc?export=view&id=')) {
+      // Extract file ID from uc URL and convert to usercontent
+      const fileIdMatch = driveUrl.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+      if (fileIdMatch) {
+        const fileId = fileIdMatch[1];
+        const directUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=view`;
+        console.log('Converted uc URL to usercontent URL:', directUrl);
+        return directUrl;
+      }
+    }
+    
+    // If already usercontent URL, return as is
+    if (driveUrl.includes('drive.usercontent.google.com')) {
+      console.log('Already usercontent URL:', driveUrl);
+      return driveUrl;
+    }
+    
+    // If not a Drive URL or not recognized format, return as is
+    console.log('URL not converted, returning original:', driveUrl);
     return driveUrl;
   } catch (error) {
     console.error('Error converting Drive URL:', error);
