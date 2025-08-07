@@ -61,7 +61,10 @@ const AdminFilesUpload = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('electionId', electionId);
-      formData.append('sourceType', sourceType);
+      
+      // If is real-data, send 'user' so it appears in electoral results
+      const effectiveSourceType = sourceType === 'real-data' ? 'user' : sourceType;
+      formData.append('sourceType', effectiveSourceType);
 
       // Call the appropriate edge function based on data type
       const functionName = isRealData ? 'process-real-data-excel' : 'process-electoral-excel';

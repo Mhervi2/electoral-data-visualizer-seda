@@ -4,6 +4,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from '@/components/ui/button';
 import { Image } from 'lucide-react';
 
+const getProxiedImageUrl = (originalUrl: string) => {
+  if (originalUrl.includes('drive.google.com')) {
+    return `https://bzufsrhmxaiqnmkvketb.supabase.co/functions/v1/proxy-drive-image?url=${encodeURIComponent(originalUrl)}`;
+  }
+  return originalUrl;
+};
+
 interface ElectoralAct {
   id: string;
   municipality_idm: number;
@@ -83,7 +90,7 @@ export const ActDetailsDialog = ({ act }: ActDetailsDialogProps) => {
         </DialogHeader>
         {act.image_url && (
           <img 
-            src={act.image_url} 
+            src={getProxiedImageUrl(act.image_url)} 
             alt="Acta electoral" 
             className="w-full h-auto rounded-lg"
           />

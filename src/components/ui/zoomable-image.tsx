@@ -3,6 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
 
+const getProxiedImageUrl = (originalUrl: string) => {
+  if (originalUrl.includes('drive.google.com')) {
+    return `https://bzufsrhmxaiqnmkvketb.supabase.co/functions/v1/proxy-drive-image?url=${encodeURIComponent(originalUrl)}`;
+  }
+  return originalUrl;
+};
+
 interface ZoomableImageProps {
   src: string;
   alt: string;
@@ -65,10 +72,12 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
     setScale(prev => Math.max(0.5, Math.min(5, prev + delta)));
   }, []);
 
+  const proxiedSrc = getProxiedImageUrl(src);
+
   const defaultTrigger = (
     <div className={`relative group cursor-pointer ${className}`}>
       <img 
-        src={src} 
+        src={proxiedSrc} 
         alt={alt} 
         className="w-full h-auto rounded-lg border shadow-sm transition-all group-hover:shadow-md" 
       />
@@ -128,7 +137,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
         >
           <img
             ref={imageRef}
-            src={src}
+            src={proxiedSrc}
             alt={alt}
             className={`max-w-none transition-transform duration-200 ${
               scale > 1 ? 'cursor-grab' : 'cursor-default'
