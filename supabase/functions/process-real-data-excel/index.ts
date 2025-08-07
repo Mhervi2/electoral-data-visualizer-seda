@@ -238,7 +238,7 @@ serve(async (req) => {
         let actId: string;
 
         if (existingAct) {
-          // Update existing act
+          // Update existing act  
           const { data: updatedAct, error: updateError } = await supabase
             .from('electoral_acts')
             .update({
@@ -248,7 +248,8 @@ serve(async (req) => {
               null_votes: nulos,
               source_type: sourceType,
               image_url: fotoUrl,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              updated_by: null // Set to null since this is an automated import
             })
             .eq('id', existingAct.id)
             .select('id')
@@ -295,18 +296,32 @@ serve(async (req) => {
           const votes = parseInt(row[partyCol.index]?.toString() || '0') || 0;
           
           if (votes > 0) {
-            // Create or get political party
-            const { data: existingParty } = await supabase
+            // First check if party exists with exact siglas match
+            let { data: existingParty } = await supabase
               .from('political_parties')
               .select('id')
               .eq('siglas', partyCol.siglas)
-              .single();
+              .maybeSingle();
+
+            // If not found, try case-insensitive match
+            if (!existingParty) {
+              const { data: parties } = await supabase
+                .from('political_parties')
+                .select('id, siglas')
+                .ilike('siglas', partyCol.siglas);
+              
+              existingParty = parties?.[0] || null;
+            }
+
+            let partyId = existingParty?.id;
 
             if (!existingParty) {
+              // Create new party with lowercase ID for consistency
+              partyId = partyCol.siglas.toLowerCase();
               const { error: partyError } = await supabase
                 .from('political_parties')
                 .insert({
-                  id: partyCol.siglas,
+                  id: partyId,
                   name: partyCol.fullName,
                   siglas: partyCol.siglas,
                   color: '#6B7280' // Default color
@@ -314,6 +329,8 @@ serve(async (req) => {
 
               if (partyError) {
                 console.error('Error creating party:', partyError);
+                errors.push(`Row ${i + 1}: Error creating party ${partyCol.siglas}: ${partyError.message}`);
+                continue;
               } else {
                 createdParties++;
                 console.log(`✅ Created party: ${partyCol.fullName} (${partyCol.siglas})`);
@@ -325,7 +342,7 @@ serve(async (req) => {
               .from('party_votes')
               .insert({
                 electoral_act_id: actId,
-                party_id: partyCol.siglas,
+                party_id: partyId,
                 votes: votes
               });
 
