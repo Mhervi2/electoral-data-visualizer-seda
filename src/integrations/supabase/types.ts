@@ -332,7 +332,7 @@ export type Database = {
       mpca: {
         Row: {
           ca: string | null
-          id: string | null
+          id: string
           idc: string | null
           idca: number | null
           idm: number
@@ -342,7 +342,7 @@ export type Database = {
         }
         Insert: {
           ca?: string | null
-          id?: string | null
+          id?: string
           idc?: string | null
           idca?: number | null
           idm?: number
@@ -352,7 +352,7 @@ export type Database = {
         }
         Update: {
           ca?: string | null
-          id?: string | null
+          id?: string
           idc?: string | null
           idca?: number | null
           idm?: number
