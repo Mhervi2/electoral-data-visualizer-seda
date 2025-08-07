@@ -15,6 +15,8 @@ import { useAppData } from '@/hooks/useAppData';
 interface ProcessingResult {
   success: boolean;
   processedMesas: number;
+  createdMesas?: number;
+  updatedMesas?: number;
   createdParties: number;
   totalRows: number;
   errors: string[];
@@ -120,9 +122,22 @@ const AdminFilesUpload = () => {
       setResult(processingResult);
 
       if (processingResult.success) {
+        const createdCount = processingResult.createdMesas || 0;
+        const updatedCount = processingResult.updatedMesas || 0;
+        const totalCount = createdCount + updatedCount;
+        
+        let description = `Se procesaron ${totalCount} mesas electorales`;
+        if (createdCount > 0 && updatedCount > 0) {
+          description += ` (${createdCount} nuevas, ${updatedCount} actualizadas)`;
+        } else if (updatedCount > 0) {
+          description += ` (${updatedCount} actualizadas)`;
+        } else if (createdCount > 0) {
+          description += ` (${createdCount} nuevas)`;
+        }
+        
         toast({
           title: "Archivo procesado correctamente",
-          description: `Se procesaron ${processingResult.processedMesas} mesas electorales.`,
+          description: description + ".",
         });
 
         // Reset form after successful processing
@@ -280,11 +295,23 @@ const AdminFilesUpload = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-green-50 p-3 rounded-lg">
-                <p className="text-sm text-muted-foreground">Mesas Procesadas</p>
+                <p className="text-sm text-muted-foreground">Total Procesadas</p>
                 <p className="text-2xl font-bold text-green-600">{result.processedMesas}</p>
               </div>
+              {result.createdMesas !== undefined && (
+                <div className="bg-emerald-50 p-3 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Mesas Nuevas</p>
+                  <p className="text-2xl font-bold text-emerald-600">{result.createdMesas}</p>
+                </div>
+              )}
+              {result.updatedMesas !== undefined && (
+                <div className="bg-amber-50 p-3 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Mesas Actualizadas</p>
+                  <p className="text-2xl font-bold text-amber-600">{result.updatedMesas}</p>
+                </div>
+              )}
               <div className="bg-blue-50 p-3 rounded-lg">
                 <p className="text-sm text-muted-foreground">Partidos Creados</p>
                 <p className="text-2xl font-bold text-blue-600">{result.createdParties}</p>

@@ -10,6 +10,8 @@ const corsHeaders = {
 interface ProcessingResult {
   success: boolean;
   processedMesas: number;
+  createdMesas: number;
+  updatedMesas: number;
   createdParties: number;
   totalRows: number;
   errors: string[];
@@ -180,6 +182,8 @@ serve(async (req) => {
     };
 
     let processedMesas = 0;
+    let createdMesas = 0;
+    let updatedMesas = 0;
     let createdParties = 0;
     const errors: string[] = [];
     const maxErrors = 50;
@@ -287,6 +291,8 @@ serve(async (req) => {
             continue;
           }
           actId = updatedAct.id;
+          updatedMesas++;
+          console.log(`🔄 Updated existing mesa: ${mesaIdentifier}`);
 
           // Delete existing party votes for this act
           await supabase
@@ -316,6 +322,8 @@ serve(async (req) => {
             continue;
           }
           actId = newAct.id;
+          createdMesas++;
+          console.log(`✅ Created new mesa: ${mesaIdentifier}`);
         }
 
         // Process party votes
@@ -394,6 +402,8 @@ serve(async (req) => {
     const result: ProcessingResult = {
       success: true,
       processedMesas,
+      createdMesas,
+      updatedMesas,
       createdParties,
       totalRows: jsonData.length - 1,
       errors: errors.slice(0, maxErrors),

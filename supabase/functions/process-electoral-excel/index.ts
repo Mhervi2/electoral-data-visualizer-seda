@@ -94,6 +94,8 @@ serve(async (req) => {
     console.log('Party columns found:', partyIndices.map(p => p.name))
 
     let processedMesas = 0
+    let createdMesas = 0
+    let updatedMesas = 0
     let createdParties = 0
     const errors: string[] = []
 
@@ -165,6 +167,8 @@ serve(async (req) => {
 
           if (updateError) throw updateError
           actId = updatedAct.id
+          updatedMesas++
+          console.log(`🔄 Updated existing mesa: ${mesaIdentifier}`)
 
           // Delete existing party votes
           await supabaseClient
@@ -191,6 +195,8 @@ serve(async (req) => {
 
           if (insertError) throw insertError
           actId = newAct.id
+          createdMesas++
+          console.log(`✅ Created new mesa: ${mesaIdentifier}`)
         }
 
         // Process party votes
@@ -247,6 +253,8 @@ serve(async (req) => {
     const result = {
       success: true,
       processedMesas,
+      createdMesas,
+      updatedMesas,
       createdParties,
       totalRows: rows.length,
       errors: errors.slice(0, 10), // Limit errors shown
