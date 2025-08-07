@@ -362,6 +362,39 @@ export type Database = {
         }
         Relationships: []
       }
+      mpca_audit_log: {
+        Row: {
+          changed_at: string | null
+          changed_by: string | null
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          operation: string
+          row_id: number
+          table_name: string
+        }
+        Insert: {
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          operation: string
+          row_id: number
+          table_name?: string
+        }
+        Update: {
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          operation?: string
+          row_id?: number
+          table_name?: string
+        }
+        Relationships: []
+      }
       party_votes: {
         Row: {
           created_at: string | null
