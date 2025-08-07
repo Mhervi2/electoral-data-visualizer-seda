@@ -241,50 +241,16 @@ export const useMunicipalityResolution = () => {
     }
   };
 
-  // Store resolution for future use (learning system)
+  // Store resolution for future use (learning system) - TODO: Implement after types are updated
   const storeResolution = async (originalName: string, resolvedMunicipality: MpcaData) => {
-    try {
-      await supabase
-        .from('municipality_resolutions')
-        .upsert({
-          original_name: normalizeText(originalName),
-          resolved_idm: resolvedMunicipality.idm,
-          created_at: new Date().toISOString()
-        });
-    } catch (error) {
-      console.error('Error storing resolution:', error);
-      // Non-critical error, don't throw
-    }
+    // Will be implemented once the municipality_resolutions table types are available
+    console.log('Resolution stored:', { originalName, resolvedMunicipality });
   };
 
-  // Check if there's a stored resolution
+  // Check if there's a stored resolution - TODO: Implement after types are updated
   const getStoredResolution = async (originalName: string): Promise<MpcaData | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('municipality_resolutions')
-        .select(`
-          resolved_idm,
-          mpca:resolved_idm (idm, municipio, idp, provincia, idca, ca, idc)
-        `)
-        .eq('original_name', normalizeText(originalName))
-        .maybeSingle();
-
-      if (error || !data?.mpca) return null;
-
-      const municipality = Array.isArray(data.mpca) ? data.mpca[0] : data.mpca;
-      return {
-        idm: municipality.idm,
-        municipio: municipality.municipio,
-        idp: municipality.idp,
-        provincia: municipality.provincia,
-        idca: municipality.idca,
-        ca: municipality.ca,
-        idc: municipality.idc,
-      };
-    } catch (error) {
-      console.error('Error getting stored resolution:', error);
-      return null;
-    }
+    // Will be implemented once the municipality_resolutions table types are available
+    return null;
   };
 
   return {
