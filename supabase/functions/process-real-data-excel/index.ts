@@ -224,8 +224,10 @@ serve(async (req) => {
           continue;
         }
 
-        // Construct mesa identifier
-        const mesaIdentifier = `${parsedMesa.distrito}-${parsedMesa.seccion}-${parsedMesa.mesa}`;
+        // Construct mesa identifier with proper zero padding
+        const distrito = parsedMesa.distrito.toString().padStart(2, '0');
+        const seccion = parsedMesa.seccion.toString().padStart(3, '0');
+        const mesaIdentifier = `${distrito}-${seccion}-${parsedMesa.mesa}`;
 
         // Get vote counts
         const censo = parseInt(row[censoIndex]?.toString() || '0') || 0;
