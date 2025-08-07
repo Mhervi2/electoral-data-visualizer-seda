@@ -155,13 +155,17 @@ serve(async (req) => {
       });
     }
 
-    // Helper function to normalize municipality names
+    // Helper function to normalize municipality names for robust comparison
     const normalizeMunicipio = (name: string): string => {
+      if (!name || typeof name !== 'string') return '';
       return name
-        .toUpperCase()
         .trim()
+        .toUpperCase()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, ''); // Remove accents
+        .replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .replace(/[^\w\s]/g, '') // Remove special characters
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim();
     };
 
     // Helper function to convert Google Drive links
@@ -195,16 +199,39 @@ serve(async (req) => {
           continue;
         }
 
-        // Find matching municipality by name
+        // Find matching municipality by name with enhanced matching
         const normalizedMunicipio = normalizeMunicipio(municipioRaw);
         console.log(`🔍 Looking for municipality: "${municipioRaw}" (normalized: "${normalizedMunicipio}")`);
         
-        const matchingMpca = (mpcaData as MpcaData[]).find(m => 
-          normalizeMunicipio(m.municipio) === normalizedMunicipio
-        );
+        // First try exact normalized match
+        let matchingMpca = (mpcaData as MpcaData[]).find(m => {
+          const normalizedDbName = normalizeMunicipio(m.municipio);
+          console.log(`   📝 Comparing "${normalizedMunicipio}" with "${normalizedDbName}" from "${m.municipio}"`);
+          return normalizedDbName === normalizedMunicipio;
+        });
+
+        // If no exact match found, try database ILIKE search as fallback
+        if (!matchingMpca) {
+          console.log(`   🔄 No exact match found, trying ILIKE search...`);
+          const { data: ilikeMunicipalities } = await supabase
+            .from('mpca')
+            .select('*')
+            .ilike('municipio', `%${municipioRaw.trim()}%`)
+            .limit(1);
+          
+          if (ilikeMunicipalities && ilikeMunicipalities.length > 0) {
+            matchingMpca = ilikeMunicipalities[0] as MpcaData;
+            console.log(`   ✅ Found via ILIKE: ${matchingMpca.municipio}`);
+          }
+        }
 
         if (!matchingMpca) {
-          errors.push(`Row ${i + 1}: Municipality not found: "${municipioRaw}"`);
+          const availableMunicipalities = (mpcaData as MpcaData[])
+            .filter(m => m.municipio.toLowerCase().includes(municipioRaw.toLowerCase().substring(0, 3)))
+            .slice(0, 3)
+            .map(m => m.municipio)
+            .join(', ');
+          errors.push(`Row ${i + 1}: Municipality not found: "${municipioRaw}". Similar: ${availableMunicipalities || 'none'}`);
           continue;
         }
 
