@@ -2,7 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Image } from 'lucide-react';
+import { Image, ExternalLink } from 'lucide-react';
 import { ZoomableImage } from '@/components/ui/zoomable-image';
 
 
@@ -35,6 +35,40 @@ interface ActDetailsDialogProps {
 }
 
 export const ActDetailsDialog = ({ act }: ActDetailsDialogProps) => {
+  const convertToUserContentUrl = (driveUrl: string): string => {
+    try {
+      // Extract file ID from different Google Drive URL formats
+      let fileId = '';
+      
+      if (driveUrl.includes('drive.google.com/file/d/')) {
+        const match = driveUrl.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+        if (match) fileId = match[1];
+      } else if (driveUrl.includes('drive.google.com/open?id=')) {
+        const match = driveUrl.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+        if (match) fileId = match[1];
+      } else if (driveUrl.includes('drive.google.com/uc?export=view&id=')) {
+        const match = driveUrl.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+        if (match) fileId = match[1];
+      }
+      
+      if (fileId) {
+        return `https://drive.usercontent.google.com/download?id=${fileId}&export=view&authuser=0`;
+      }
+      
+      return driveUrl;
+    } catch (error) {
+      console.error('Error converting Drive URL:', error);
+      return driveUrl;
+    }
+  };
+
+  const handleImageClick = () => {
+    if (act.source_type === 'real-data' && act.image_url) {
+      const userContentUrl = convertToUserContentUrl(act.image_url);
+      window.open(userContentUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   const getLocationDisplay = (act: ElectoralAct) => {
     const municipality = act.municipio || 'N/A';
     const province = act.provincia;
@@ -68,6 +102,20 @@ export const ActDetailsDialog = ({ act }: ActDetailsDialogProps) => {
   };
 
   const { district, section, table } = parseMesaIdentifier(act.mesa_identifier);
+
+  // For real-data images, open in new window instead of modal
+  if (act.source_type === 'real-data' && act.image_url) {
+    return (
+      <Button 
+        size="sm" 
+        variant="outline" 
+        onClick={handleImageClick}
+        title="Abrir imagen en nueva ventana"
+      >
+        <ExternalLink className="h-4 w-4" />
+      </Button>
+    );
+  }
 
   return (
     <Dialog>
