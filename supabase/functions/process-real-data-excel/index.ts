@@ -154,8 +154,11 @@ serve(async (req) => {
     const hasExpectedHeaders = (headers: string[]) => {
       const norm = headers.map(h => normalize(h));
       const hasMunicipio = norm.some(h => h.includes('municipio') || h.includes('municipality'));
-      const hasMesa = norm.some(h => h.includes('mesa') || h.includes('table') || h.includes('polling'));
-      return hasMunicipio && hasMesa;
+      // Accept either a combined mesa identifier column OR separate district+section columns
+      const hasMesaCombined = norm.some(h => h.includes('mesa') || h.includes('table') || h.includes('polling'));
+      const hasDistrictSection = norm.some(h => h.includes('distrito') || h.includes('district')) &&
+                                 norm.some(h => h.includes('seccion') || h.includes('sección') || h.includes('section'));
+      return hasMunicipio && (hasMesaCombined || hasDistrictSection);
     };
 
     for (const sheetName of workbook.SheetNames) {
@@ -292,6 +295,8 @@ serve(async (req) => {
     const fotoIndex = findColumnIndex(headers, ['fotografía', 'foto', 'imagen', 'image']);
     const municipioIndex = findColumnIndex(headers, ['municipio', 'municipality']);
     const mesaIndex = findColumnIndex(headers, ['mesa', 'table', 'polling']);
+    const districtIndex = findColumnIndex(headers, ['distrito', 'district']);
+    const sectionIndex = findColumnIndex(headers, ['sección', 'seccion', 'section']);
     const censoIndex = findColumnIndex(headers, ['censo', 'census', 'electores', 'número de electores censados', 'numero de electores censados']);
     const votantesIndex = findColumnIndex(headers, ['votantes', 'total voters', 'número total de votantes', 'numero total de votantes']);
     const blancosIndex = findColumnIndex(headers, ['blancos', 'blank', 'votos en blanco', 'blank votes']);
@@ -301,6 +306,8 @@ serve(async (req) => {
       foto: fotoIndex,
       municipio: municipioIndex,
       mesa: mesaIndex,
+      distrito: districtIndex,
+      seccion: sectionIndex,
       censo: censoIndex,
       votantes: votantesIndex,
       blancos: blancosIndex,
@@ -309,7 +316,7 @@ serve(async (req) => {
 
     // Filter out system columns to find party columns (improved logic)
     const systemColumnIndices = new Set([
-      fotoIndex, municipioIndex, mesaIndex, censoIndex, 
+      fotoIndex, municipioIndex, mesaIndex, districtIndex, sectionIndex, censoIndex, 
       votantesIndex, blancosIndex, nulosIndex
     ].filter(index => index !== -1));
 
@@ -475,6 +482,39 @@ serve(async (req) => {
       return null;
     }
 
+    // Helpers to normalize and build mesa identifier from combined or split columns
+    const combinedMesaRegex = /^(\d{1,2})[\s\-_.]?(\d{1,3})[\s\-_.]?([A-Za-z])$/;
+    function normalizeMesaCombined(value: string): string | null {
+      const v = (value || '').toString().trim();
+      const m = v.match(combinedMesaRegex);
+      if (!m) return null;
+      const d = m[1].padStart(2, '0');
+      const s = m[2].padStart(3, '0');
+      const t = m[3].toUpperCase();
+      return `${d}-${s}-${t}`;
+    }
+    function buildMesaIdentifier(row: any[]): string | null {
+      // Try combined column first
+      const rawMesa = mesaIndex !== -1 ? (row[mesaIndex]?.toString()?.trim() || '') : '';
+      const combined = rawMesa ? normalizeMesaCombined(rawMesa) : null;
+      if (combined) return combined;
+
+      // Try split columns (Distrito + Sección + Mesa letter possibly in mesa column)
+      const rawDistrict = districtIndex !== -1 ? (row[districtIndex]?.toString()?.trim() || '') : '';
+      const rawSection = sectionIndex !== -1 ? (row[sectionIndex]?.toString()?.trim() || '') : '';
+      let letter = '';
+      if (rawMesa && /^[A-Za-z]$/.test(rawMesa)) {
+        letter = rawMesa.toUpperCase();
+      }
+      // Extract digits
+      const districtNum = rawDistrict.replace(/[^0-9]/g, '');
+      const sectionNum = rawSection.replace(/[^0-9]/g, '');
+      if (!districtNum || !sectionNum || !letter) return null;
+      const d = districtNum.padStart(2, '0');
+      const s = sectionNum.padStart(3, '0');
+      return `${d}-${s}-${letter}`;
+    }
+
     // Process data and collect unresolved municipalities and parties
     const unresolvedMunicipalities: UnresolvedMunicipality[] = [];
     const unresolvedParties: UnresolvedParty[] = [];
@@ -627,10 +667,10 @@ serve(async (req) => {
       const { row, municipalityData, rowIndex } = mesaData;
       
       try {
-        const mesaIdentifier = row[mesaIndex]?.toString()?.trim();
+        const mesaIdentifier = buildMesaIdentifier(row);
         if (!mesaIdentifier) {
           if (errors.length < MAX_ERRORS) {
-            errors.push(`Fila ${rowIndex + 1}: Mesa identifier vacío`);
+            errors.push(`Fila ${rowIndex + 1}: Identificador de mesa vacío o inválido`);
           }
           continue;
         }
