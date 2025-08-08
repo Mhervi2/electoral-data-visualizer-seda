@@ -121,23 +121,47 @@ Deno.serve(async (req) => {
           throw new Error(`Error al obtener provincias: ${error.message}`);
         }
 
-        // Get unique provinces
+        // Get unique provinces with data cleaning
         const uniqueProvinces = new Map();
         (provinces || []).forEach(item => {
+          const provinciaKey = item.provincia.toLowerCase()
+            .replace(/^la\s+/, '')  // Remove "La " prefix
+            .replace(/^a\s+/, '');  // Remove "A " prefix
+          
           if (!uniqueProvinces.has(item.idp)) {
+            // Normalize community name
+            let normalizedCA = item.ca;
+            if (item.ca.includes('Castilla') && item.ca.includes('La Mancha')) {
+              normalizedCA = 'Castilla-La Mancha';
+            }
+            if (item.ca === 'Madrid') {
+              normalizedCA = 'Comunidad de Madrid';
+            }
+            if (item.ca === 'Murcia') {
+              normalizedCA = 'Región de Murcia';
+            }
+            if (item.ca === 'Asturias') {
+              normalizedCA = 'Principado de Asturias';
+            }
+
             uniqueProvinces.set(item.idp, {
               idp: item.idp,
               provincia: item.provincia,
               idca: item.idca,
-              ca: item.ca
+              ca: normalizedCA
             });
           }
         });
 
+        const sortedProvinces = Array.from(uniqueProvinces.values())
+          .sort((a, b) => a.provincia.localeCompare(b.provincia));
+
+        console.log(`Returning ${sortedProvinces.length} unique provinces`);
+
         return new Response(
           JSON.stringify({ 
             success: true, 
-            data: Array.from(uniqueProvinces.values()) 
+            data: sortedProvinces 
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
