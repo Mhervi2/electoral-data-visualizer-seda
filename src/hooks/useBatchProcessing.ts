@@ -86,7 +86,28 @@ export const useBatchProcessing = () => {
       throw new Error(error.message);
     }
 
-    return data as BatchProcessingResult;
+    const raw = data as any;
+    // Map backend fields to our interface
+    const mapped: BatchProcessingResult = {
+      success: !!raw?.success,
+      processedMesas: Number(raw?.processed ?? raw?.processedMesas ?? 0),
+      createdMesas: Number(raw?.created ?? raw?.createdMesas ?? 0),
+      updatedMesas: Number(raw?.updated ?? raw?.updatedMesas ?? 0),
+      createdParties: Number(raw?.createdParties ?? 0),
+      totalRows: Number(raw?.totalRows ?? raw?.totalDataRows ?? 0),
+      errors: Array.isArray(raw?.errors) ? raw.errors : [],
+      hasMoreErrors: !!raw?.hasMoreErrors,
+      unresolvedMunicipalities: raw?.unresolvedMunicipalities,
+      unresolvedParties: raw?.unresolvedParties,
+      pausedForResolution: !!raw?.pausedForResolution || (raw?.unresolvedMunicipalities?.length > 0 || raw?.unresolvedParties?.length > 0),
+      batchComplete: !!raw?.batchComplete,
+      currentBatch: raw?.currentBatch ?? 1,
+      totalBatches: raw?.totalBatches ?? 1,
+      nextBatchStart: raw?.nextBatchStart,
+      progressPercentage: raw?.progressPercentage ?? 0,
+    };
+
+    return mapped;
   };
 
   const processFileInBatches = useCallback(async (
@@ -128,7 +149,7 @@ export const useBatchProcessing = () => {
       }
 
       totalBatches = firstBatch.totalBatches || 1;
-      totalRows = firstBatch.totalRows;
+      totalRows = firstBatch.totalRows || (firstBatch.totalBatches ? firstBatch.totalBatches * batchSize : 0);
       
       // Update progress with initial batch results
       totalProcessedMesas += firstBatch.processedMesas;
