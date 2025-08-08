@@ -166,8 +166,9 @@ const AdminFilesUpload = () => {
         processingResult = await processExcelFile(selectedFile, electionId, sourceType, isRealData);
       }
       
-      // Check if we need to resolve parties first (new order)
-      if (processingResult.pausedForResolution && processingResult.unresolvedParties) {
+      // Check if we need to resolve parties first (new priority)
+      if (processingResult.unresolvedParties && processingResult.unresolvedParties.length > 0) {
+        console.log('Found unresolved parties:', processingResult.unresolvedParties);
         setUnresolvedParties(processingResult.unresolvedParties);
         setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData });
         setShowPartyResolutionDialog(true);
@@ -175,7 +176,8 @@ const AdminFilesUpload = () => {
       }
       
       // Then check if we need to resolve municipalities
-      if (processingResult.pausedForResolution && processingResult.unresolvedMunicipalities) {
+      if (processingResult.unresolvedMunicipalities && processingResult.unresolvedMunicipalities.length > 0) {
+        console.log('Found unresolved municipalities:', processingResult.unresolvedMunicipalities);
         setUnresolvedMunicipalities(processingResult.unresolvedMunicipalities);
         setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData });
         setShowResolutionDialog(true);
@@ -253,8 +255,9 @@ const AdminFilesUpload = () => {
         );
       }
       
-      // Check if we now need to resolve municipalities
-      if (processingResult.pausedForResolution && processingResult.unresolvedMunicipalities) {
+      // Check if we still have unresolved municipalities after party resolution
+      if (processingResult.unresolvedMunicipalities && processingResult.unresolvedMunicipalities.length > 0) {
+        console.log('Found unresolved municipalities after party resolution:', processingResult.unresolvedMunicipalities);
         setUnresolvedMunicipalities(processingResult.unresolvedMunicipalities);
         setShowResolutionDialog(true);
         return;
@@ -374,6 +377,7 @@ const AdminFilesUpload = () => {
       setPendingProcessing(null);
     }
   };
+
 
   const handleCancelResolution = () => {
     setShowResolutionDialog(false);

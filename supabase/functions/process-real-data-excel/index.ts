@@ -321,6 +321,7 @@ serve(async (req) => {
     });
 
     const partyMap = new Map<string, any>();
+    const allParties: any[] = [];
     (partiesData || []).forEach(party => {
       const normalizedName = normalizeText(party.name);
       const normalizedSiglas = normalizeText(party.siglas || '');
@@ -328,11 +329,13 @@ serve(async (req) => {
       if (normalizedSiglas) {
         partyMap.set(normalizedSiglas, party);
       }
+      allParties.push(party);
     });
 
-    console.log(`🏛️ Loaded ${municipalityMap.size} municipalities and ${partyMap.size} parties`);
+    console.log(`🏛️ Loaded ${municipalityMap.size} municipalities and ${allParties.length} parties`);
+    console.log(`📊 Available parties in database:`, allParties.map(p => `${p.name} (${p.siglas})`).join(', '));
 
-    // Normalize text function
+    // Enhanced normalize text function for better party matching
     function normalizeText(text: string): string {
       return text
         .toLowerCase()
@@ -341,6 +344,69 @@ serve(async (req) => {
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^\w\s]/g, ' ')
         .replace(/\s+/g, ' ');
+    }
+
+    // Extract siglas from party names (text inside parentheses)
+    function extractSiglas(text: string): string | null {
+      const match = text.match(/\(([^)]+)\)$/);
+      return match ? match[1].trim() : null;
+    }
+
+    // Normalize party name by removing siglas in parentheses
+    function normalizePartyName(text: string): string {
+      const withoutParentheses = text.replace(/\s*\([^)]*\)\s*$/, '').trim();
+      return normalizeText(withoutParentheses);
+    }
+
+    // Enhanced party lookup function
+    function findParty(partyName: string): any | null {
+      console.log(`🎭 Looking for party: "${partyName}"`);
+      
+      // Extract siglas if present
+      const siglas = extractSiglas(partyName);
+      const normalizedName = normalizePartyName(partyName);
+      const normalizedOriginal = normalizeText(partyName);
+      
+      console.log(`   Normalized name: "${normalizedName}"`);
+      console.log(`   Extracted siglas: "${siglas}"`);
+      
+      // Try direct match with normalized original
+      if (partyMap.has(normalizedOriginal)) {
+        const found = partyMap.get(normalizedOriginal);
+        console.log(`   ✅ Direct original match: "${found.name}"`);
+        return found;
+      }
+      
+      // Try match with normalized name (without parentheses)
+      if (partyMap.has(normalizedName)) {
+        const found = partyMap.get(normalizedName);
+        console.log(`   ✅ Name match: "${found.name}"`);
+        return found;
+      }
+      
+      // Try match with siglas if extracted
+      if (siglas) {
+        const normalizedSiglas = normalizeText(siglas);
+        if (partyMap.has(normalizedSiglas)) {
+          const found = partyMap.get(normalizedSiglas);
+          console.log(`   ✅ Siglas match: "${found.name}" (${found.siglas})`);
+          return found;
+        }
+      }
+      
+      // Try fuzzy matching for names
+      for (const [key, party] of partyMap.entries()) {
+        // Check if it's a party entry (not siglas)
+        if (party.name && normalizeText(party.name) === key) {
+          if (key.includes(normalizedName) || normalizedName.includes(key)) {
+            console.log(`   🔍 Fuzzy name match: "${partyName}" -> "${party.name}"`);
+            return party;
+          }
+        }
+      }
+      
+      console.log(`   ❌ No match found for: "${partyName}"`);
+      return null;
     }
 
     // Enhanced municipality lookup function
@@ -420,7 +486,7 @@ serve(async (req) => {
       });
     }
 
-    // Check for unresolved parties in party columns
+    // Check for unresolved parties in party columns using enhanced matching
     for (const partyIndex of partyColumnIndices) {
       const partyName = headers[partyIndex]?.toString()?.trim();
       if (!partyName) continue;
@@ -433,8 +499,9 @@ serve(async (req) => {
       if (partyResolutions.has(normalizedPartyName)) {
         partyExists = true;
       } else {
-        // Check if party exists in database
-        partyExists = partyMap.has(normalizedPartyName);
+        // Use enhanced party matching function
+        const foundParty = findParty(partyName);
+        partyExists = foundParty !== null;
       }
 
       if (!partyExists) {
@@ -456,6 +523,7 @@ serve(async (req) => {
     // Check resolution order: parties first, then municipalities
     if (unresolvedParties.length > 0 && !partyResolutionsJson) {
       console.log(`⏸️ Found ${unresolvedParties.length} partidos sin resolver. Pausing for party resolution.`);
+      console.log(`   Unresolved parties:`, unresolvedParties.map(p => p.originalName));
       
       const result: ProcessingResult = {
         success: false,
@@ -486,28 +554,6 @@ serve(async (req) => {
         updated: 0,
         errors: [],
         unresolvedMunicipalities: unresolvedMunicipalities,
-        batchComplete: false,
-        currentBatch: isBatchMode ? Math.floor(batchStart / batchSize) + 1 : 1,
-        totalBatches: isBatchMode ? Math.ceil((jsonData.length - 1) / batchSize) : 1,
-        nextBatchStart: batchStart,
-        progressPercentage: 0
-      };
-
-      return new Response(JSON.stringify(result), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-      
-      console.log(`⏸️ Found ${pauseReason}. Pausing for resolution.`);
-      
-      const result: ProcessingResult = {
-        success: false,
-        processed: 0,
-        created: 0,
-        updated: 0,
-        errors: [],
-        unresolvedMunicipalities: unresolvedMunicipalities.length > 0 ? unresolvedMunicipalities : undefined,
-        unresolvedParties: unresolvedParties.length > 0 ? unresolvedParties : undefined,
         batchComplete: false,
         currentBatch: isBatchMode ? Math.floor(batchStart / batchSize) + 1 : 1,
         totalBatches: isBatchMode ? Math.ceil((jsonData.length - 1) / batchSize) : 1,
@@ -643,10 +689,11 @@ serve(async (req) => {
           
           if (votes <= 0) continue;
 
-          let party = partyMap.get(normalizedPartyName);
+          // Use enhanced party finding with resolution support
+          let party = null;
           
           // Check if we have a resolution for this party
-          if (!party && partyResolutions.has(normalizedPartyName)) {
+          if (partyResolutions.has(normalizedPartyName)) {
             const resolvedPartyId = partyResolutions.get(normalizedPartyName)!;
             // Find party by resolved ID
             for (const [key, value] of partyMap.entries()) {
@@ -655,6 +702,9 @@ serve(async (req) => {
                 break;
               }
             }
+          } else {
+            // Use enhanced party matching
+            party = findParty(partyName);
           }
           
           if (!party) {
