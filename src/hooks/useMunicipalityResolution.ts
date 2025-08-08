@@ -176,6 +176,25 @@ export const useMunicipalityResolution = () => {
     }
   };
 
+  // Get next available IDM for a municipality
+  const getNextAvailableIdm = async (): Promise<number> => {
+    try {
+      const { data, error } = await supabase
+        .from('mpca')
+        .select('idm')
+        .order('idm', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      const maxIdm = data && data.length > 0 ? data[0].idm : 0;
+      return Number(maxIdm) + 1;
+    } catch (error) {
+      console.error('Error getting next IDM:', error);
+      throw error;
+    }
+  };
+
   // Get next available IDC for a municipality
   const getNextAvailableIdc = async (idp: number): Promise<string> => {
     try {
@@ -207,11 +226,15 @@ export const useMunicipalityResolution = () => {
   const createNewMunicipality = async (municipalityData: MunicipalityCreationData): Promise<MpcaData> => {
     setIsLoading(true);
     try {
-      const idc = await getNextAvailableIdc(municipalityData.idp);
+      const [idm, idc] = await Promise.all([
+        getNextAvailableIdm(),
+        getNextAvailableIdc(municipalityData.idp)
+      ]);
 
       const { data, error } = await supabase
         .from('mpca')
         .insert({
+          idm: idm,
           municipio: municipalityData.municipio,
           idp: municipalityData.idp,
           provincia: municipalityData.provincia,
@@ -222,7 +245,10 @@ export const useMunicipalityResolution = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(`Error al crear municipio: ${error.message}`);
+      }
 
       return {
         idm: data.idm,
@@ -260,6 +286,7 @@ export const useMunicipalityResolution = () => {
     storeResolution,
     getStoredResolution,
     getNextAvailableIdc,
+    getNextAvailableIdm,
     isLoading
   };
 };
