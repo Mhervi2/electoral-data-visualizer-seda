@@ -404,6 +404,19 @@ const AdminFilesUpload = () => {
     }
   };
 
+  const handleCancelResolution = () => {
+    setShowResolutionDialog(false);
+    setShowPartyResolutionDialog(false);
+    setPendingProcessing(null);
+    setUnresolvedMunicipalities([]);
+    setUnresolvedParties([]);
+
+    toast({
+      title: "Importación cancelada",
+      description: "La importación del archivo ha sido cancelada.",
+    });
+  };
+
   // Load provinces when selecting real-data source
   React.useEffect(() => {
     const loadProvinces = async () => {
@@ -423,6 +436,8 @@ const AdminFilesUpload = () => {
       loadProvinces();
     }
   }, [selectedSourceType]);
+  return (
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -453,7 +468,7 @@ const AdminFilesUpload = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="election">Elección Asociada *</nLabel>
+              <Label htmlFor="election">Elección Asociada *</Label>
               <Select name="election" required disabled={electionsLoading}>
                 <SelectTrigger>
                   <SelectValue placeholder={electionsLoading ? "Cargando elecciones..." : "Selecciona la elección"} />
