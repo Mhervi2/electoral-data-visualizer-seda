@@ -52,7 +52,8 @@ export const useBatchProcessing = () => {
     batchStart: number = 0,
     batchSize: number = 100,
     municipalityResolutions?: MunicipalityResolution[],
-    partyResolutions?: any[]
+    partyResolutions?: any[],
+    provinceIdp?: number
   ): Promise<BatchProcessingResult> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -76,6 +77,10 @@ export const useBatchProcessing = () => {
         resolvedPartyId: typeof resolution.resolution === 'object' ? resolution.resolution.id : resolution.resolution
       }));
       formData.append('partyResolutions', JSON.stringify(partyResolutionData));
+    }
+
+    if (provinceIdp !== undefined) {
+      formData.append('provinceIdp', provinceIdp.toString());
     }
 
     const { data, error } = await supabase.functions.invoke('process-real-data-excel', {
@@ -116,7 +121,8 @@ export const useBatchProcessing = () => {
     sourceType: string,
     municipalityResolutions?: MunicipalityResolution[],
     partyResolutions?: any[],
-    batchSize: number = 100
+    batchSize: number = 100,
+    provinceIdp?: number
   ): Promise<BatchProcessingResult> => {
     let currentBatchStart = 0;
     let totalProcessedMesas = 0;
@@ -140,7 +146,7 @@ export const useBatchProcessing = () => {
     try {
       // First batch to get total information
       console.log('Starting batch processing...');
-      const firstBatch = await processBatch(file, electionId, sourceType, 0, batchSize, municipalityResolutions, partyResolutions);
+      const firstBatch = await processBatch(file, electionId, sourceType, 0, batchSize, municipalityResolutions, partyResolutions, provinceIdp);
       
       // Handle unresolved parties or municipalities in first batch
       if (firstBatch.pausedForResolution && (firstBatch.unresolvedParties || firstBatch.unresolvedMunicipalities)) {
@@ -198,7 +204,7 @@ export const useBatchProcessing = () => {
       while (currentBatchStart < totalRows) {
         console.log(`Processing batch starting at row ${currentBatchStart + 1}...`);
         
-        const batchResult = await processBatch(file, electionId, sourceType, currentBatchStart, batchSize, municipalityResolutions, partyResolutions);
+        const batchResult = await processBatch(file, electionId, sourceType, currentBatchStart, batchSize, municipalityResolutions, partyResolutions, provinceIdp);
 
         // If the backend paused for resolution mid-way, stop and return partial
         if (batchResult.pausedForResolution && ((batchResult.unresolvedParties && batchResult.unresolvedParties.length > 0) || (batchResult.unresolvedMunicipalities && batchResult.unresolvedMunicipalities.length > 0))) {

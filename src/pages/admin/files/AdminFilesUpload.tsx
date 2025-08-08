@@ -49,7 +49,12 @@ const AdminFilesUpload = () => {
     electionId: string;
     sourceType: string;
     isRealData: boolean;
+    provinceIdp?: number;
   } | null>(null);
+
+  const [selectedSourceType, setSelectedSourceType] = useState<string>('');
+  const [provinces, setProvinces] = useState<Array<{ idp: number; provincia: string; idca: number; ca: string }>>([]);
+  const [selectedProvinceId, setSelectedProvinceId] = useState<number | null>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -88,6 +93,11 @@ const AdminFilesUpload = () => {
       // If is real-data, send 'user' so it appears in electoral results
       const effectiveSourceType = sourceType === 'real-data' ? 'user' : sourceType;
       formData.append('sourceType', effectiveSourceType);
+
+      // Add province if available (even though this helper is mainly for non-batch)
+      if (selectedProvinceId !== null && sourceType === 'real-data') {
+        formData.append('provinceIdp', String(selectedProvinceId));
+      }
 
       // Add municipality resolutions if provided
       if (municipalityResolutions && municipalityResolutions.length > 0) {
@@ -152,6 +162,15 @@ const AdminFilesUpload = () => {
       return;
     }
 
+    if (sourceType === 'real-data' && selectedProvinceId === null) {
+      toast({
+        variant: "destructive",
+        title: "Provincia requerida",
+        description: "Selecciona la provincia para los Datos Reales Excel.",
+      });
+      return;
+    }
+
     try {
       console.log('Processing Excel file:', selectedFile.name);
       
@@ -161,7 +180,7 @@ const AdminFilesUpload = () => {
       let processingResult: ProcessingResult;
       
       if (isRealData) {
-        processingResult = await processFileInBatches(selectedFile, electionId, sourceType);
+        processingResult = await processFileInBatches(selectedFile, electionId, sourceType, undefined, undefined, 100, selectedProvinceId ?? undefined);
       } else {
         processingResult = await processExcelFile(selectedFile, electionId, sourceType, isRealData);
       }
@@ -170,7 +189,7 @@ const AdminFilesUpload = () => {
       if (processingResult.unresolvedParties && processingResult.unresolvedParties.length > 0) {
         console.log('Found unresolved parties:', processingResult.unresolvedParties);
         setUnresolvedParties(processingResult.unresolvedParties);
-        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData });
+        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData, provinceIdp: selectedProvinceId ?? undefined });
         setShowPartyResolutionDialog(true);
         return;
       }
@@ -179,7 +198,7 @@ const AdminFilesUpload = () => {
       if (processingResult.unresolvedMunicipalities && processingResult.unresolvedMunicipalities.length > 0) {
         console.log('Found unresolved municipalities:', processingResult.unresolvedMunicipalities);
         setUnresolvedMunicipalities(processingResult.unresolvedMunicipalities);
-        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData });
+        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData, provinceIdp: selectedProvinceId ?? undefined });
         setShowResolutionDialog(true);
         return;
       }
@@ -208,6 +227,8 @@ const AdminFilesUpload = () => {
         // Reset form after successful processing
         setSelectedFile(null);
         (e.target as HTMLFormElement).reset();
+        setSelectedSourceType('');
+        setSelectedProvinceId(null);
       } else {
         toast({
           variant: "destructive",
@@ -242,7 +263,9 @@ const AdminFilesUpload = () => {
           pendingProcessing.electionId,
           pendingProcessing.sourceType,
           undefined, // no municipality resolutions yet
-          resolutions
+          resolutions,
+          100,
+          pendingProcessing.provinceIdp
         );
       } else {
         processingResult = await processExcelFile(
@@ -322,7 +345,10 @@ const AdminFilesUpload = () => {
           pendingProcessing.file,
           pendingProcessing.electionId,
           pendingProcessing.sourceType,
-          resolutions
+          resolutions,
+          undefined,
+          100,
+          pendingProcessing.provinceIdp
         );
       } else {
         processingResult = await processExcelFile(
@@ -378,23 +404,25 @@ const AdminFilesUpload = () => {
     }
   };
 
-
-  const handleCancelResolution = () => {
-    setShowResolutionDialog(false);
-    setShowPartyResolutionDialog(false);
-    setPendingProcessing(null);
-    setUnresolvedMunicipalities([]);
-    setUnresolvedParties([]);
-    
-    toast({
-      title: "Importación cancelada",
-      description: "La importación del archivo ha sido cancelada.",
-    });
-  };
-
-
-  return (
-    <div className="space-y-6">
+  // Load provinces when selecting real-data source
+  React.useEffect(() => {
+    const loadProvinces = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('admin-municipality-operations', {
+          body: { action: 'get_provinces' },
+        });
+        if (error) throw error;
+        if (data?.success && Array.isArray(data.data)) {
+          setProvinces(data.data);
+        }
+      } catch (err) {
+        console.error('Error loading provinces:', err);
+      }
+    };
+    if (selectedSourceType === 'real-data' && provinces.length === 0) {
+      loadProvinces();
+    }
+  }, [selectedSourceType]);
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -404,7 +432,7 @@ const AdminFilesUpload = () => {
             <p className="text-muted-foreground">
               Sube un nuevo archivo Excel o CSV con resultados electorales.
             </p>
-          </div>
+      </div>
         </div>
         <Button asChild variant="outline">
           <Link to="/admin/files">
@@ -425,7 +453,7 @@ const AdminFilesUpload = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="election">Elección Asociada *</Label>
+              <Label htmlFor="election">Elección Asociada *</nLabel>
               <Select name="election" required disabled={electionsLoading}>
                 <SelectTrigger>
                   <SelectValue placeholder={electionsLoading ? "Cargando elecciones..." : "Selecciona la elección"} />
@@ -447,7 +475,7 @@ const AdminFilesUpload = () => {
 
             <div className="space-y-2">
               <Label htmlFor="sourceType">Tipo de Fuente del Fichero *</Label>
-              <Select name="sourceType" required>
+              <Select name="sourceType" required onValueChange={(v) => setSelectedSourceType(v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona el tipo de fuente" />
                 </SelectTrigger>
@@ -458,9 +486,30 @@ const AdminFilesUpload = () => {
                   <SelectItem value="real-data">Datos Reales Excel</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
+            {selectedSourceType === 'real-data' && (
+              <div className="space-y-2">
+                <Label htmlFor="province">Provincia (Datos Reales Excel) *</Label>
+                <Select 
+                  value={selectedProvinceId?.toString() || ''}
+                  onValueChange={(v) => setSelectedProvinceId(parseInt(v))}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona la provincia" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[280px] z-[200]">
+                    <div className="max-h-[240px] overflow-y-auto">
+                      {provinces.map((p) => (
+                        <SelectItem key={p.idp} value={p.idp.toString()}>
+                          {p.provincia} ({p.ca})
+                        </SelectItem>
+                      ))}
+                    </div>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Filtraremos los municipios por esta provincia para evitar asociaciones incorrectas.</p>
+              </div>
+            )}
               <Label htmlFor="file">Archivo Excel/CSV *</Label>
               <div className="flex items-center space-x-4">
                 <Input

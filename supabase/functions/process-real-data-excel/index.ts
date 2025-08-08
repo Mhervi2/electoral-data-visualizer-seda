@@ -84,6 +84,9 @@ serve(async (req) => {
     const file = formData.get('file') as File;
     const sourceType = formData.get('sourceType') as string;
     const electionId = formData.get('electionId') as string;
+    // Optional province filter (IDP) to restrict matching to a single province for Real Data Excel
+    const provinceIdpParam = formData.get('provinceIdp') as string | null;
+    const selectedProvinceIdp = provinceIdpParam ? parseInt(provinceIdpParam) : undefined;
 
     // Get optional batch processing and resolution parameters
     const batchStart = formData.get('batchStart') ? parseInt(formData.get('batchStart') as string) : 0;
@@ -388,7 +391,7 @@ serve(async (req) => {
     console.log(`🏛️ Loaded ${municipalityMap.size} municipalities and ${allParties.length} parties`);
     console.log(`📊 Available parties in database:`, allParties.map(p => `${p.name} (${p.siglas})`).join(', '));
 
-    // Enhanced normalize text function for better party matching
+    // Enhanced normalize text function for better party and municipality matching
     function normalizeText(text: string): string {
       return text
         .toLowerCase()
@@ -397,6 +400,40 @@ serve(async (req) => {
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^\w\s]/g, ' ')
         .replace(/\s+/g, ' ');
+    }
+
+    // Move article at the end in parentheses to the beginning: "Ejido (EL)" -> "EL Ejido"
+    function moveArticleAtEndToStart(name: string): string {
+      if (!name) return name;
+      const m = name.match(/\s*\((el|la|los|las)\)\s*$/i);
+      if (!m) return name;
+      const article = m[1].toUpperCase();
+      const base = name.replace(/\s*\((el|la|los|las)\)\s*$/i, '').trim();
+      return `${article} ${base}`;
+    }
+
+    function normalizeMunicipalityCandidate(name: string): string {
+      return normalizeText(moveArticleAtEndToStart(name));
+    }
+
+    // Convert Google Drive share/open links to direct usercontent URLs
+    function convertDriveLink(url: string | null): string | null {
+      if (!url) return null;
+      try {
+        const u = url.trim();
+        if (u.includes('drive.usercontent.google.com')) return u;
+        // id from uc?export=view&id=XXXX
+        const m1 = u.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        // id from /file/d/XXXX/view
+        const m2 = u.match(/\/file\/d\/([a-zA-Z0-9_-]+)\//);
+        const id = (m1 && m1[1]) || (m2 && m2[1]);
+        if (id) {
+          return `https://drive.usercontent.google.com/download?id=${id}&export=view&authuser=0`;
+        }
+        return u;
+      } catch {
+        return url;
+      }
     }
 
     // Extract siglas from party names (text inside parentheses)
@@ -462,22 +499,40 @@ serve(async (req) => {
       return null;
     }
 
-    // Enhanced municipality lookup function
+    // Enhanced municipality lookup function (exact match only, province-aware)
     function findMunicipality(municipioName: string): MpcaData | null {
-      const normalized = normalizeText(municipioName);
-      
-      // Direct match
-      if (municipalityMap.has(normalized)) {
-        return municipalityMap.get(normalized)!;
+      const normalized = normalizeMunicipalityCandidate(municipioName);
+
+      // Prefer match within selected province if provided
+      if (selectedProvinceIdp !== undefined) {
+        const inProvince = (mpcaData || []).find((item: any) => 
+          normalizeMunicipalityCandidate(item.municipio) === normalized && 
+          Number(item.idp) === Number(selectedProvinceIdp)
+        );
+        if (inProvince) return {
+          idm: inProvince.idm,
+          municipio: inProvince.municipio,
+          idp: inProvince.idp,
+          provincia: inProvince.provincia,
+          idca: inProvince.idca,
+          ca: inProvince.ca,
+          idc: inProvince.idc,
+        };
       }
 
-      // Try partial matches
-      for (const [key, value] of municipalityMap.entries()) {
-        if (key.includes(normalized) || normalized.includes(key)) {
-          console.log(`🔍 Partial match found: "${municipioName}" -> "${value.municipio}"`);
-          return value;
-        }
-      }
+      // Fallback: exact match in any province
+      const anyMatch = (mpcaData || []).find((item: any) => 
+        normalizeMunicipalityCandidate(item.municipio) === normalized
+      );
+      if (anyMatch) return {
+        idm: anyMatch.idm,
+        municipio: anyMatch.municipio,
+        idp: anyMatch.idp,
+        provincia: anyMatch.provincia,
+        idca: anyMatch.idca,
+        ca: anyMatch.ca,
+        idc: anyMatch.idc,
+      };
 
       return null;
     }
@@ -527,6 +582,11 @@ serve(async (req) => {
     const startIndex = isBatchMode ? batchStart + 1 : 1; // +1 to skip header
     const endIndex = isBatchMode ? Math.min(batchStart + batchSize + 1, jsonData.length) : jsonData.length;
     
+    // Province context for unresolved hint
+    const provinceContext = selectedProvinceIdp !== undefined 
+      ? (mpcaData || []).find((it: any) => Number(it.idp) === Number(selectedProvinceIdp))
+      : undefined;
+    
     // First pass: identify all unresolved municipalities in current batch
     for (let i = startIndex; i < endIndex; i++) {
       const row = jsonData[i] as any[];
@@ -536,7 +596,7 @@ serve(async (req) => {
       const municipioName = row[municipioIndex]?.toString()?.trim();
       if (!municipioName) continue;
 
-      const normalizedMunicipio = normalizeText(municipioName);
+      const normalizedMunicipio = normalizeMunicipalityCandidate(municipioName);
       
       // Check if we have a resolution for this municipality
       let municipalityData: MpcaData | null = null;
@@ -551,14 +611,16 @@ serve(async (req) => {
       if (!municipalityData) {
         // Check if we already have this unresolved municipality
         const alreadyExists = unresolvedMunicipalities.some(
-          unresolved => normalizeText(unresolved.originalName) === normalizedMunicipio
+          unresolved => normalizeMunicipalityCandidate(unresolved.originalName) === normalizedMunicipio
         );
         
         if (!alreadyExists) {
           unresolvedMunicipalities.push({
             originalName: municipioName,
             normalizedName: normalizedMunicipio,
-            rowIndex: i
+            rowIndex: i,
+            provincia: provinceContext?.provincia,
+            ca: provinceContext?.ca,
           });
         }
         continue;
@@ -679,7 +741,8 @@ serve(async (req) => {
         const votantes = parseInt(row[votantesIndex]?.toString() || '0') || 0;
         const blancos = parseInt(row[blancosIndex]?.toString() || '0') || 0;
         const nulos = parseInt(row[nulosIndex]?.toString() || '0') || 0;
-        const fotoUrl = row[fotoIndex]?.toString()?.trim() || null;
+        const fotoUrlRaw = row[fotoIndex]?.toString()?.trim() || null;
+        const fotoUrl = convertDriveLink(fotoUrlRaw);
 
         // Generate full identifier
         const fullIdentifier = `${String(municipalityData.idca).padStart(2, '0')}-${String(municipalityData.idp).padStart(2, '0')}-${municipalityData.idc}-${mesaIdentifier}`;

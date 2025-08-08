@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.admin-municipality-operations]
 verify_jwt = false
+
+[functions.process-real-data-excel]
+verify_jwt = false
