@@ -17,6 +17,8 @@ import MunicipalityResolutionDialog from '@/components/admin/MunicipalityResolut
 import PartyResolutionDialog from '@/components/admin/PartyResolutionDialog';
 import { UnresolvedMunicipality, MunicipalityResolution } from '@/hooks/useMunicipalityResolution';
 import { UnresolvedParty, PartyResolution } from '@/hooks/usePartyResolution';
+import { ServerMunicipalityCombobox } from '@/components/acta/ServerMunicipalityCombobox';
+import { MpcaData } from '@/types/acta';
 
 interface ProcessingResult {
   success: boolean;
@@ -53,8 +55,8 @@ const AdminFilesUpload = () => {
   } | null>(null);
 
   const [selectedSourceType, setSelectedSourceType] = useState<string>('');
-  const [provinces, setProvinces] = useState<Array<{ idp: number; provincia: string; idca: number; ca: string }>>([]);
-  const [selectedProvinceId, setSelectedProvinceId] = useState<number | null>(null);
+  const [selectedReferenceMunicipalityId, setSelectedReferenceMunicipalityId] = useState<string>('');
+  const [referenceMunicipalityData, setReferenceMunicipalityData] = useState<MpcaData | null>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -94,9 +96,9 @@ const AdminFilesUpload = () => {
       const effectiveSourceType = sourceType === 'real-data' ? 'user' : sourceType;
       formData.append('sourceType', effectiveSourceType);
 
-      // Add province if available (even though this helper is mainly for non-batch)
-      if (selectedProvinceId !== null && sourceType === 'real-data') {
-        formData.append('provinceIdp', String(selectedProvinceId));
+      // Add province if available (derived from reference municipality)
+      if (referenceMunicipalityData?.idp && sourceType === 'real-data') {
+        formData.append('provinceIdp', String(referenceMunicipalityData.idp));
       }
 
       // Add municipality resolutions if provided
@@ -162,11 +164,11 @@ const AdminFilesUpload = () => {
       return;
     }
 
-    if (sourceType === 'real-data' && selectedProvinceId === null) {
+    if (sourceType === 'real-data' && !referenceMunicipalityData) {
       toast({
         variant: "destructive",
-        title: "Provincia requerida",
-        description: "Selecciona la provincia para los Datos Reales Excel.",
+        title: "Municipio de referencia requerido",
+        description: "Selecciona un municipio de referencia para los Datos Reales Excel.",
       });
       return;
     }
@@ -180,7 +182,7 @@ const AdminFilesUpload = () => {
       let processingResult: ProcessingResult;
       
       if (isRealData) {
-        processingResult = await processFileInBatches(selectedFile, electionId, sourceType, undefined, undefined, 100, selectedProvinceId ?? undefined);
+        processingResult = await processFileInBatches(selectedFile, electionId, sourceType, undefined, undefined, 100, referenceMunicipalityData?.idp);
       } else {
         processingResult = await processExcelFile(selectedFile, electionId, sourceType, isRealData);
       }
@@ -189,7 +191,7 @@ const AdminFilesUpload = () => {
       if (processingResult.unresolvedParties && processingResult.unresolvedParties.length > 0) {
         console.log('Found unresolved parties:', processingResult.unresolvedParties);
         setUnresolvedParties(processingResult.unresolvedParties);
-        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData, provinceIdp: selectedProvinceId ?? undefined });
+        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData, provinceIdp: referenceMunicipalityData?.idp });
         setShowPartyResolutionDialog(true);
         return;
       }
@@ -198,7 +200,7 @@ const AdminFilesUpload = () => {
       if (processingResult.unresolvedMunicipalities && processingResult.unresolvedMunicipalities.length > 0) {
         console.log('Found unresolved municipalities:', processingResult.unresolvedMunicipalities);
         setUnresolvedMunicipalities(processingResult.unresolvedMunicipalities);
-        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData, provinceIdp: selectedProvinceId ?? undefined });
+        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData, provinceIdp: referenceMunicipalityData?.idp });
         setShowResolutionDialog(true);
         return;
       }
@@ -228,7 +230,8 @@ const AdminFilesUpload = () => {
         setSelectedFile(null);
         (e.target as HTMLFormElement).reset();
         setSelectedSourceType('');
-        setSelectedProvinceId(null);
+        setSelectedReferenceMunicipalityId('');
+        setReferenceMunicipalityData(null);
       } else {
         toast({
           variant: "destructive",
@@ -417,25 +420,12 @@ const AdminFilesUpload = () => {
     });
   };
 
-  // Load provinces when selecting real-data source
-  React.useEffect(() => {
-    const loadProvinces = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('admin-municipality-operations', {
-          body: { action: 'get_provinces' },
-        });
-        if (error) throw error;
-        if (data?.success && Array.isArray(data.data)) {
-          setProvinces(data.data);
-        }
-      } catch (err) {
-        console.error('Error loading provinces:', err);
-      }
-    };
-    if (selectedSourceType === 'real-data' && provinces.length === 0) {
-      loadProvinces();
-    }
-  }, [selectedSourceType]);
+  // Handle reference municipality selection for real-data source
+  const handleReferenceMunicipalitySelect = (municipalityId: string, municipalityData?: MpcaData) => {
+    console.log('Selected reference municipality:', municipalityData);
+    setSelectedReferenceMunicipalityId(municipalityId);
+    setReferenceMunicipalityData(municipalityData || null);
+  };
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -501,30 +491,30 @@ const AdminFilesUpload = () => {
                   <SelectItem value="real-data">Datos Reales Excel</SelectItem>
                 </SelectContent>
               </Select>
-            {selectedSourceType === 'real-data' && (
-              <div className="space-y-2">
-                <Label htmlFor="province">Provincia (Datos Reales Excel) *</Label>
-                <Select 
-                  value={selectedProvinceId?.toString() || ''}
-                  onValueChange={(v) => setSelectedProvinceId(parseInt(v))}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona la provincia" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[280px] z-[200]">
-                    <div className="max-h-[240px] overflow-y-auto">
-                      {provinces.map((p) => (
-                        <SelectItem key={p.idp} value={p.idp.toString()}>
-                          {p.provincia} ({p.ca})
-                        </SelectItem>
-                      ))}
+              {selectedSourceType === 'real-data' && (
+                <div className="space-y-2">
+                  <Label htmlFor="referenceMunicipality">Municipio de Referencia (Datos Reales Excel) *</Label>
+                  <ServerMunicipalityCombobox
+                    selectedValue={selectedReferenceMunicipalityId}
+                    onSelect={handleReferenceMunicipalitySelect}
+                    placeholder="Buscar municipio de referencia..."
+                  />
+                  {referenceMunicipalityData && (
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p><strong>Municipio seleccionado:</strong> {referenceMunicipalityData.municipio}</p>
+                      <p><strong>Provincia:</strong> {referenceMunicipalityData.provincia} (ID: {referenceMunicipalityData.idp})</p>
+                      <p><strong>Comunidad Autónoma:</strong> {referenceMunicipalityData.ca} (ID: {referenceMunicipalityData.idca})</p>
+                      <p className="mt-2 font-medium">Los datos del Excel se filtrarán por la provincia "{referenceMunicipalityData.provincia}" para evitar asociaciones incorrectas.</p>
                     </div>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">Filtraremos los municipios por esta provincia para evitar asociaciones incorrectas.</p>
-              </div>
-            )}
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Selecciona un municipio de la provincia de referencia. Usaremos su provincia para filtrar correctamente los datos del Excel.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="file">Archivo Excel/CSV *</Label>
               <div className="flex items-center space-x-4">
                 <Input
