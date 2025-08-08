@@ -2,3 +2,6 @@ project_id = "bzufsrhmxaiqnmkvketb"
 
 [functions.proxy-drive-image]
 verify_jwt = false
+
+[functions.admin-municipality-operations]
+verify_jwt = false

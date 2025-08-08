@@ -146,30 +146,23 @@ export const useMunicipalityResolution = () => {
     }
   };
 
-  // Get available provinces for municipality creation
+  // Get available provinces for municipality creation using admin endpoint
   const getAvailableProvinces = async (): Promise<Array<{ idp: number; provincia: string; idca: number; ca: string }>> => {
     try {
-      const { data, error } = await supabase
-        .from('mpca')
-        .select('idp, provincia, idca, ca')
-        .order('provincia');
-
-      if (error) throw error;
-
-      // Get unique provinces
-      const uniqueProvinces = new Map();
-      (data || []).forEach(item => {
-        if (!uniqueProvinces.has(item.idp)) {
-          uniqueProvinces.set(item.idp, {
-            idp: item.idp,
-            provincia: item.provincia,
-            idca: item.idca,
-            ca: item.ca
-          });
-        }
+      const response = await supabase.functions.invoke('admin-municipality-operations', {
+        body: { action: 'get_provinces' }
       });
 
-      return Array.from(uniqueProvinces.values());
+      if (response.error) {
+        console.error('Error calling admin function:', response.error);
+        throw new Error(response.error.message || 'Error al obtener provincias');
+      }
+
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Error en la respuesta del servidor');
+      }
+
+      return response.data.data;
     } catch (error) {
       console.error('Error fetching provinces:', error);
       return [];
@@ -222,34 +215,27 @@ export const useMunicipalityResolution = () => {
     }
   };
 
-  // Create a new municipality
+  // Create a new municipality using admin endpoint that bypasses RLS
   const createNewMunicipality = async (municipalityData: MunicipalityCreationData): Promise<MpcaData> => {
     setIsLoading(true);
     try {
-      const [idm, idc] = await Promise.all([
-        getNextAvailableIdm(),
-        getNextAvailableIdc(municipalityData.idp)
-      ]);
+      const response = await supabase.functions.invoke('admin-municipality-operations', {
+        body: { 
+          action: 'create_municipality',
+          ...municipalityData
+        }
+      });
 
-      const { data, error } = await supabase
-        .from('mpca')
-        .insert({
-          idm: idm,
-          municipio: municipalityData.municipio,
-          idp: municipalityData.idp,
-          provincia: municipalityData.provincia,
-          idca: municipalityData.idca,
-          ca: municipalityData.ca,
-          idc: idc
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw new Error(`Error al crear municipio: ${error.message}`);
+      if (response.error) {
+        console.error('Error calling admin function:', response.error);
+        throw new Error(response.error.message || 'Error al crear municipio');
       }
 
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Error en la respuesta del servidor');
+      }
+
+      const data = response.data.data;
       return {
         idm: data.idm,
         municipio: data.municipio,
