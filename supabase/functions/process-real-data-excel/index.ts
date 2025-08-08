@@ -21,6 +21,9 @@ interface ProcessingResult {
   totalBatches?: number;
   nextBatchStart?: number;
   progressPercentage?: number;
+  // Extras for client progress
+  totalRows?: number;
+  pausedForResolution?: boolean;
 }
 
 interface UnresolvedMunicipality {
@@ -141,10 +144,43 @@ serve(async (req) => {
     // Read Excel file
     const arrayBuffer = await file.arrayBuffer();
     const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
-    const firstSheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
+    // Select the best sheet: one that contains expected headers and most data rows
+    let selectedSheetName = workbook.SheetNames[0];
+    let selectedJsonData: any[] = [];
+    let maxDataRows = 0;
+
+    const normalize = (s: string) => s?.toLowerCase()?.trim()?.normalize('NFD')?.replace(/[\u0300-\u036f]/g, '') || '';
+    const hasExpectedHeaders = (headers: string[]) => {
+      const norm = headers.map(h => normalize(h));
+      const hasMunicipio = norm.some(h => h.includes('municipio') || h.includes('municipality'));
+      const hasMesa = norm.some(h => h.includes('mesa') || h.includes('table') || h.includes('polling'));
+      return hasMunicipio && hasMesa;
+    };
+
+    for (const sheetName of workbook.SheetNames) {
+      const ws = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      if (!Array.isArray(data) || data.length < 2) continue; // needs header + at least 1 row
+      const headersRow = data[0] as string[];
+      const dataRows = data.length - 1;
+      const qualifies = hasExpectedHeaders(headersRow);
+      if (qualifies && dataRows > maxDataRows) {
+        selectedSheetName = sheetName;
+        selectedJsonData = data as any[];
+        maxDataRows = dataRows;
+      } else if (!selectedJsonData.length && dataRows > maxDataRows) {
+        // Fallback: keep the sheet with most rows if none qualified yet
+        selectedSheetName = sheetName;
+        selectedJsonData = data as any[];
+        maxDataRows = dataRows;
+      }
+    }
+
+    const worksheet = workbook.Sheets[selectedSheetName];
+    const jsonData = selectedJsonData.length ? selectedJsonData : XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    console.log(`📄 Selected sheet: ${selectedSheetName}`);
     if (!jsonData || jsonData.length < 2) {
       return new Response(JSON.stringify({ 
         error: 'Excel file must have at least 2 rows (header + data)' 
@@ -179,7 +215,7 @@ serve(async (req) => {
       'mesa', 'table', 'polling', 'poll', 'voting table',
       'provincia', 'province', 'prov',
       'comunidad autonoma', 'comunidad autónoma', 'ca', 'ccaa',
-      'codigo', 'código', 'code', 'id',
+      'codigo', 'código', 'code',
       // Vote count columns
       'censo', 'census', 'electores', 'voters', 'número de electores censados', 'numero de electores censados',
       'votantes', 'total voters', 'total votantes', 'número total de votantes', 'numero total de votantes',
@@ -207,16 +243,26 @@ serve(async (req) => {
         return true;
       }
       
-      // Check if it's a formula or calculation
-      if (normalizedHeader.includes('=') || normalizedHeader.includes('+') || normalizedHeader.includes('-')) {
+      // Check if it's a formula (only if header starts with '=')
+      if (normalizedHeader.startsWith('=')) {
         console.log(`🔍 Filtering out calculation column: "${header}"`);
         return true;
       }
       
-      // Check against system column keywords
+      // Tokenize header to avoid substring false positives (e.g., 'suma' vs 'sumar')
+      const tokens = normalizedHeader.split(/\s+/).filter(Boolean);
+
+      // Check against system column keywords (word-level for single words, substring for multi-word phrases)
       const isSystem = systemColumns.some(systemCol => {
         const normalizedSystemCol = systemCol.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        const matches = normalizedHeader.includes(normalizedSystemCol) || normalizedSystemCol.includes(normalizedHeader);
+        let matches = false;
+        if (normalizedSystemCol.includes(' ')) {
+          // Multi-word phrase: require full phrase in header
+          matches = normalizedHeader.includes(normalizedSystemCol);
+        } else {
+          // Single word: require token match
+          matches = tokens.includes(normalizedSystemCol);
+        }
         if (matches) {
           console.log(`🔍 Filtering out system column: "${header}" (matched: "${systemCol}")`);
         }
@@ -533,10 +579,12 @@ serve(async (req) => {
         errors: [],
         unresolvedParties: unresolvedParties,
         batchComplete: false,
-        currentBatch: isBatchMode ? Math.floor(batchStart / batchSize) + 1 : 1,
-        totalBatches: isBatchMode ? Math.ceil((jsonData.length - 1) / batchSize) : 1,
+        currentBatch: isBatchMode ? currentBatch : 1,
+        totalBatches: isBatchMode ? totalBatches : 1,
         nextBatchStart: batchStart,
-        progressPercentage: 0
+        progressPercentage: 0,
+        totalRows: totalDataRows,
+        pausedForResolution: true
       };
 
       return new Response(JSON.stringify(result), {
@@ -555,10 +603,12 @@ serve(async (req) => {
         errors: [],
         unresolvedMunicipalities: unresolvedMunicipalities,
         batchComplete: false,
-        currentBatch: isBatchMode ? Math.floor(batchStart / batchSize) + 1 : 1,
-        totalBatches: isBatchMode ? Math.ceil((jsonData.length - 1) / batchSize) : 1,
+        currentBatch: isBatchMode ? currentBatch : 1,
+        totalBatches: isBatchMode ? totalBatches : 1,
         nextBatchStart: batchStart,
-        progressPercentage: 0
+        progressPercentage: 0,
+        totalRows: totalDataRows,
+        pausedForResolution: true
       };
 
       return new Response(JSON.stringify(result), {
@@ -762,7 +812,8 @@ serve(async (req) => {
       currentBatch: isBatchMode ? currentBatch : 1,
       totalBatches: isBatchMode ? totalBatches : 1,
       nextBatchStart: batchComplete ? undefined : nextBatchStart,
-      progressPercentage
+      progressPercentage,
+      totalRows: totalDataRows
     };
 
     console.log(`✅ Batch ${currentBatch}/${totalBatches} completed: ${processedCount} processed, ${createdMesas} created, ${updatedMesas} updated`);

@@ -199,6 +199,21 @@ export const useBatchProcessing = () => {
         console.log(`Processing batch starting at row ${currentBatchStart + 1}...`);
         
         const batchResult = await processBatch(file, electionId, sourceType, currentBatchStart, batchSize, municipalityResolutions, partyResolutions);
+
+        // If the backend paused for resolution mid-way, stop and return partial
+        if (batchResult.pausedForResolution && ((batchResult.unresolvedParties && batchResult.unresolvedParties.length > 0) || (batchResult.unresolvedMunicipalities && batchResult.unresolvedMunicipalities.length > 0))) {
+          console.warn('⏸️ Paused for resolution during batch processing. Returning partial result.');
+          setBatchProgress(prev => ({ ...prev, isProcessing: false }));
+          return {
+            ...batchResult,
+            processedMesas: totalProcessedMesas,
+            createdMesas: totalCreatedMesas,
+            updatedMesas: totalUpdatedMesas,
+            createdParties: totalCreatedParties,
+            errors: allErrors,
+            totalRows: totalRows,
+          } as BatchProcessingResult;
+        }
         
         // Accumulate results
         totalProcessedMesas += batchResult.processedMesas;
@@ -225,7 +240,28 @@ export const useBatchProcessing = () => {
           break;
         }
 
-        currentBatchStart = batchResult.nextBatchStart || (currentBatchStart + batchSize);
+        const nextStart = batchResult.nextBatchStart ?? (currentBatchStart + batchSize);
+        if (nextStart <= currentBatchStart) {
+          console.warn('⚠️ nextBatchStart did not advance. Preventing potential loop and returning partial result.');
+          setBatchProgress(prev => ({ ...prev, isProcessing: false }));
+          return {
+            success: false,
+            processedMesas: totalProcessedMesas,
+            createdMesas: totalCreatedMesas,
+            updatedMesas: totalUpdatedMesas,
+            createdParties: totalCreatedParties,
+            totalRows,
+            errors: [...allErrors, 'El procesamiento se ha detenido por falta de avance en el lote.'],
+            hasMoreErrors: false,
+            batchComplete: false,
+            currentBatch: batchResult.currentBatch,
+            totalBatches,
+            nextBatchStart: nextStart,
+            progressPercentage: batchResult.progressPercentage,
+          } as BatchProcessingResult;
+        }
+
+        currentBatchStart = nextStart;
       }
 
       // Final result
