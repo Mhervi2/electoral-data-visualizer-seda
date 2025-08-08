@@ -14,7 +14,9 @@ import { useAppData } from '@/hooks/useAppData';
 import { useBatchProcessing } from '@/hooks/useBatchProcessing';
 import { BatchProgress } from '@/components/ui/batch-progress';
 import MunicipalityResolutionDialog from '@/components/admin/MunicipalityResolutionDialog';
+import PartyResolutionDialog from '@/components/admin/PartyResolutionDialog';
 import { UnresolvedMunicipality, MunicipalityResolution } from '@/hooks/useMunicipalityResolution';
+import { UnresolvedParty, PartyResolution } from '@/hooks/usePartyResolution';
 
 interface ProcessingResult {
   success: boolean;
@@ -26,6 +28,7 @@ interface ProcessingResult {
   errors: string[];
   hasMoreErrors: boolean;
   unresolvedMunicipalities?: UnresolvedMunicipality[];
+  unresolvedParties?: UnresolvedParty[];
   pausedForResolution?: boolean;
 }
 
@@ -38,7 +41,9 @@ const AdminFilesUpload = () => {
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<ProcessingResult | null>(null);
   const [showResolutionDialog, setShowResolutionDialog] = useState(false);
+  const [showPartyResolutionDialog, setShowPartyResolutionDialog] = useState(false);
   const [unresolvedMunicipalities, setUnresolvedMunicipalities] = useState<UnresolvedMunicipality[]>([]);
+  const [unresolvedParties, setUnresolvedParties] = useState<UnresolvedParty[]>([]);
   const [pendingProcessing, setPendingProcessing] = useState<{
     file: File;
     electionId: string;

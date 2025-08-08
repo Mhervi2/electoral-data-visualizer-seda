@@ -9,15 +9,12 @@ const corsHeaders = {
 
 interface ProcessingResult {
   success: boolean;
-  processedMesas: number;
-  createdMesas: number;
-  updatedMesas: number;
-  createdParties: number;
-  totalRows: number;
+  processed: number;
+  created: number;
+  updated: number;
   errors: string[];
-  hasMoreErrors: boolean;
   unresolvedMunicipalities?: UnresolvedMunicipality[];
-  pausedForResolution?: boolean;
+  unresolvedParties?: UnresolvedParty[];
   // Batch processing fields
   batchComplete?: boolean;
   currentBatch?: number;
@@ -34,6 +31,12 @@ interface UnresolvedMunicipality {
   ca?: string;
 }
 
+interface UnresolvedParty {
+  originalName: string;
+  normalizedName: string;
+  columnIndex: number;
+}
+
 interface MpcaData {
   idm: number;
   municipio: string;
@@ -47,6 +50,11 @@ interface MpcaData {
 interface MunicipalityResolution {
   originalName: string;
   resolvedIdm: number;
+}
+
+interface PartyResolution {
+  originalName: string;
+  resolvedPartyId: string;
 }
 
 serve(async (req) => {
@@ -73,32 +81,53 @@ serve(async (req) => {
     const file = formData.get('file') as File;
     const sourceType = formData.get('sourceType') as string;
     const electionId = formData.get('electionId') as string;
-    const resolutionsData = formData.get('resolutions') as string;
-    
-    // Batch processing parameters
-    const batchStart = parseInt(formData.get('batchStart') as string || '0');
-    const batchSize = parseInt(formData.get('batchSize') as string || '100');
-    const isBatchMode = formData.get('batchMode') === 'true';
 
-    // Parse municipality resolutions if provided
-    let municipalityResolutions: Map<string, number> = new Map();
-    if (resolutionsData) {
+    // Get optional batch processing and resolution parameters
+    const batchStart = formData.get('batchStart') ? parseInt(formData.get('batchStart') as string) : 0;
+    const batchSize = formData.get('batchSize') ? parseInt(formData.get('batchSize') as string) : 100;
+    const batchMode = formData.get('batchMode') === 'true';
+    const resolutionsJson = formData.get('resolutions') as string;
+    const partyResolutionsJson = formData.get('partyResolutions') as string;
+    
+    let municipalityResolutions = new Map<string, number>();
+    if (resolutionsJson) {
       try {
-        const resolutions: MunicipalityResolution[] = JSON.parse(resolutionsData);
+        const resolutions: MunicipalityResolution[] = JSON.parse(resolutionsJson);
         resolutions.forEach(resolution => {
-          municipalityResolutions.set(
-            normalizeText(resolution.originalName),
-            resolution.resolvedIdm
-          );
+          const normalizedName = resolution.originalName
+            .toLowerCase()
+            .trim()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\w\s]/g, ' ')
+            .replace(/\s+/g, ' ');
+          municipalityResolutions.set(normalizedName, resolution.resolvedIdm);
         });
-        console.log(`📋 Loaded ${municipalityResolutions.size} municipality resolutions`);
       } catch (error) {
-        console.error('❌ Error parsing resolutions:', error);
+        console.error('❌ Error parsing municipality resolutions:', error);
+      }
+    }
+
+    let partyResolutions = new Map<string, string>();
+    if (partyResolutionsJson) {
+      try {
+        const resolutions: PartyResolution[] = JSON.parse(partyResolutionsJson);
+        resolutions.forEach(resolution => {
+          const normalizedName = resolution.originalName
+            .toLowerCase()
+            .trim()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\w\s]/g, ' ')
+            .replace(/\s+/g, ' ');
+          partyResolutions.set(normalizedName, resolution.resolvedPartyId);
+        });
+      } catch (error) {
+        console.error('❌ Error parsing party resolutions:', error);
       }
     }
 
     if (!file || !sourceType || !electionId) {
-      console.error('❌ Missing required fields:', { file: !!file, sourceType, electionId });
       return new Response(JSON.stringify({ 
         error: 'Missing required fields: file, sourceType, or electionId' 
       }), {
@@ -107,7 +136,7 @@ serve(async (req) => {
       });
     }
 
-    console.log('📝 Processing real data Excel file:', file.name);
+    console.log(`📝 Processing real data Excel file: ${file.name}`);
 
     // Read Excel file
     const arrayBuffer = await file.arrayBuffer();
@@ -131,53 +160,65 @@ serve(async (req) => {
     const totalDataRows = jsonData.length - 1; // Exclude header
     const totalBatches = Math.ceil(totalDataRows / batchSize);
     const currentBatch = Math.floor(batchStart / batchSize) + 1;
-    const batchEnd = Math.min(batchStart + batchSize, totalDataRows);
+    const isBatchMode = batchMode;
     
-    console.log(`📦 Batch processing: ${currentBatch}/${totalBatches} (rows ${batchStart + 1}-${batchEnd + 1}/${totalDataRows})`);
-    
-    if (isBatchMode && batchStart >= totalDataRows) {
-      return new Response(JSON.stringify({
-        success: true,
-        processedMesas: 0,
-        createdMesas: 0,
-        updatedMesas: 0,
-        createdParties: 0,
-        totalRows: totalDataRows,
-        errors: [],
-        hasMoreErrors: false,
-        batchComplete: true,
-        currentBatch: totalBatches,
-        totalBatches,
-        progressPercentage: 100
-      } as ProcessingResult), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    console.log(`📦 Batch processing: ${currentBatch}/${totalBatches} (rows ${batchStart + 1}-${Math.min(batchStart + batchSize, totalDataRows) + 1}/${totalDataRows})`);
 
     // Parse headers and find column indices
     const headers = jsonData[0] as string[];
-    console.log('📋 Headers found:', headers);
+    console.log(`📋 Headers found:`, headers);
 
-    // Find column indices with fuzzy matching
-    const findColumnIndex = (patterns: string[]) => {
-      return headers.findIndex(header => 
-        patterns.some(pattern => 
-          header?.toLowerCase().includes(pattern.toLowerCase()) ||
-          header?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes(pattern.toLowerCase())
-        )
-      );
+    // System column filters (comprehensive list to avoid treating them as parties)
+    const systemColumns = [
+      'fotografía', 'foto', 'imagen', 'image',
+      'municipio', 'municipality', 'ciudad', 'city',
+      'distrito', 'district', 
+      'sección', 'section', 'seccion',
+      'mesa', 'table', 'polling',
+      'censo', 'census', 'electores', 'voters', 'número de electores censados', 'numero de electores censados',
+      'votantes', 'total voters', 'total votantes', 'número total de votantes', 'numero total de votantes',
+      'blancos', 'blank', 'votos en blanco', 'blank votes',
+      'nulos', 'null', 'invalid', 'votos nulos', 'null votes', 'invalid votes',
+      'suma', 'total', 'suma votos', 'total votes',
+      '=', 'diferencia', 'difference', 'no han votado', 'abstenciones'
+    ];
+
+    // Enhanced function to check if a column is a system column
+    const isSystemColumn = (header: string): boolean => {
+      const normalizedHeader = header.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      
+      return systemColumns.some(systemCol => {
+        const normalizedSystemCol = systemCol.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return normalizedHeader.includes(normalizedSystemCol) || normalizedSystemCol.includes(normalizedHeader);
+      });
     };
 
-    const fotoIndex = findColumnIndex(['Fotografía', 'Fotografia', 'foto']);
-    const municipioIndex = findColumnIndex(['Municipio', 'municipio']);
-    const mesaIndex = findColumnIndex(['Mesa', 'mesa']);
-    const censoIndex = findColumnIndex(['Censo', 'censo']);
-    const votantesIndex = findColumnIndex(['Votantes', 'votantes']);
-    const blancosIndex = findColumnIndex(['Blancos', 'blancos', 'votos blancos', 'voto blanco']);
-    const nulosIndex = findColumnIndex(['Nulos', 'nulos', 'votos nulos', 'voto nulo']);
+    // Find column indices using fuzzy matching for better recognition
+    const findColumnIndex = (headers: string[], searchTerms: string[]): number => {
+      const normalizeHeader = (header: string) => 
+        header.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      
+      for (let i = 0; i < headers.length; i++) {
+        const header = normalizeHeader(headers[i] || '');
+        for (const term of searchTerms) {
+          const normalizedTerm = normalizeHeader(term);
+          if (header.includes(normalizedTerm) || normalizedTerm.includes(header)) {
+            return i;
+          }
+        }
+      }
+      return -1;
+    };
 
-    console.log('📍 Column indices found:', {
+    const fotoIndex = findColumnIndex(headers, ['fotografía', 'foto', 'imagen', 'image']);
+    const municipioIndex = findColumnIndex(headers, ['municipio', 'municipality']);
+    const mesaIndex = findColumnIndex(headers, ['mesa', 'table', 'polling']);
+    const censoIndex = findColumnIndex(headers, ['censo', 'census', 'electores', 'número de electores censados', 'numero de electores censados']);
+    const votantesIndex = findColumnIndex(headers, ['votantes', 'total voters', 'número total de votantes', 'numero total de votantes']);
+    const blancosIndex = findColumnIndex(headers, ['blancos', 'blank', 'votos en blanco', 'blank votes']);
+    const nulosIndex = findColumnIndex(headers, ['nulos', 'null', 'invalid', 'votos nulos', 'null votes']);
+
+    console.log(`📍 Column indices found:`, {
       foto: fotoIndex,
       municipio: municipioIndex,
       mesa: mesaIndex,
@@ -187,16 +228,7 @@ serve(async (req) => {
       nulos: nulosIndex
     });
 
-    if (municipioIndex === -1 || mesaIndex === -1) {
-      return new Response(JSON.stringify({ 
-        error: 'Required columns not found: Municipio and Mesa are mandatory' 
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Find party columns (all columns that are not recognized as system columns)
+    // Filter out system columns to find party columns (improved logic)
     const systemColumnIndices = new Set([
       fotoIndex, municipioIndex, mesaIndex, censoIndex, 
       votantesIndex, blancosIndex, nulosIndex
@@ -204,7 +236,11 @@ serve(async (req) => {
 
     const partyColumnIndices: number[] = [];
     headers.forEach((header, index) => {
-      if (!systemColumnIndices.has(index) && header && header.trim()) {
+      // Only add if: not a system column index AND not a recognized system column name AND has content
+      if (!systemColumnIndices.has(index) && 
+          header && 
+          header.trim() && 
+          !isSystemColumn(header)) {
         partyColumnIndices.push(index);
       }
     });
@@ -294,8 +330,9 @@ serve(async (req) => {
       return null;
     }
 
-    // Process data and collect unresolved municipalities
+    // Process data and collect unresolved municipalities and parties
     const unresolvedMunicipalities: UnresolvedMunicipality[] = [];
+    const unresolvedParties: UnresolvedParty[] = [];
     const mesaDataList: any[] = [];
     let processedCount = 0;
     const errors: string[] = [];
@@ -350,28 +387,71 @@ serve(async (req) => {
       });
     }
 
-    // If we have unresolved municipalities and no resolutions provided, pause for resolution
-    if (unresolvedMunicipalities.length > 0 && !resolutionsData) {
-      console.log(`⏸️ Found ${unresolvedMunicipalities.length} unresolved municipalities. Pausing for resolution.`);
+    // Check for unresolved parties in party columns
+    for (const partyIndex of partyColumnIndices) {
+      const partyName = headers[partyIndex]?.toString()?.trim();
+      if (!partyName) continue;
+
+      const normalizedPartyName = normalizeText(partyName);
       
-      return new Response(JSON.stringify({
+      // Check if we have a resolution for this party
+      let partyExists = false;
+      
+      if (partyResolutions.has(normalizedPartyName)) {
+        partyExists = true;
+      } else {
+        // Check if party exists in database
+        partyExists = partyMap.has(normalizedPartyName);
+      }
+
+      if (!partyExists) {
+        // Check if we already have this unresolved party
+        const alreadyExists = unresolvedParties.some(
+          unresolved => normalizeText(unresolved.originalName) === normalizedPartyName
+        );
+        
+        if (!alreadyExists) {
+          unresolvedParties.push({
+            originalName: partyName,
+            normalizedName: normalizedPartyName,
+            columnIndex: partyIndex
+          });
+        }
+      }
+    }
+
+    // If we have unresolved items and no resolutions provided, pause for resolution
+    if ((unresolvedMunicipalities.length > 0 && !resolutionsJson) || 
+        (unresolvedParties.length > 0 && !partyResolutionsJson)) {
+      
+      let pauseReason = '';
+      if (unresolvedMunicipalities.length > 0 && !resolutionsJson) {
+        pauseReason += `${unresolvedMunicipalities.length} municipios sin resolver`;
+      }
+      if (unresolvedParties.length > 0 && !partyResolutionsJson) {
+        if (pauseReason) pauseReason += ' y ';
+        pauseReason += `${unresolvedParties.length} partidos sin resolver`;
+      }
+      
+      console.log(`⏸️ Found ${pauseReason}. Pausing for resolution.`);
+      
+      const result: ProcessingResult = {
         success: false,
-        processedMesas: 0,
-        createdMesas: 0,
-        updatedMesas: 0,
-        createdParties: 0,
-        totalRows: totalDataRows,
+        processed: 0,
+        created: 0,
+        updated: 0,
         errors: [],
-        hasMoreErrors: false,
-        unresolvedMunicipalities,
-        pausedForResolution: true,
+        unresolvedMunicipalities: unresolvedMunicipalities.length > 0 ? unresolvedMunicipalities : undefined,
+        unresolvedParties: unresolvedParties.length > 0 ? unresolvedParties : undefined,
         batchComplete: false,
-        currentBatch,
-        totalBatches,
-        progressPercentage: Math.round((currentBatch - 1) / totalBatches * 100)
-      } as ProcessingResult), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        currentBatch: isBatchMode ? Math.floor(batchStart / batchSize) + 1 : 1,
+        totalBatches: isBatchMode ? Math.ceil((jsonData.length - 1) / batchSize) : 1,
+        nextBatchStart: batchStart,
+        progressPercentage: 0
+      };
+
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -380,7 +460,7 @@ serve(async (req) => {
     // Process the mesas
     let createdMesas = 0;
     let updatedMesas = 0;
-    const createdParties = new Set<string>();
+    let createdParties = 0;
 
     for (const mesaData of mesaDataList) {
       const { row, municipalityData, rowIndex } = mesaData;
@@ -404,15 +484,23 @@ serve(async (req) => {
         const fullIdentifier = `${String(municipalityData.idca).padStart(2, '0')}-${String(municipalityData.idp).padStart(2, '0')}-${municipalityData.idc}-${mesaIdentifier}`;
 
         // Check if electoral act exists
-        const { data: existingAct } = await supabase
+        const { data: existingAct, error: findError } = await supabase
           .from('electoral_acts')
-          .select('id, version')
+          .select('id')
           .eq('municipality_idm', municipalityData.idm)
           .eq('mesa_identifier', mesaIdentifier)
           .eq('election_id', electionId)
           .maybeSingle();
 
-        let electoralActId: string;
+        if (findError) {
+          console.error('❌ Error finding existing act:', findError);
+          if (errors.length < MAX_ERRORS) {
+            errors.push(`Fila ${rowIndex + 1}: Error buscando acta existente - ${findError.message}`);
+          }
+          continue;
+        }
+
+        let actId: string;
 
         if (existingAct) {
           // Update existing act
@@ -438,14 +526,14 @@ serve(async (req) => {
             continue;
           }
 
-          electoralActId = existingAct.id;
+          actId = existingAct.id;
           updatedMesas++;
 
           // Delete existing party votes for this act
           await supabase
             .from('party_votes')
             .delete()
-            .eq('electoral_act_id', electoralActId);
+            .eq('electoral_act_id', actId);
 
         } else {
           // Create new act
@@ -474,74 +562,65 @@ serve(async (req) => {
             continue;
           }
 
-          electoralActId = newAct.id;
+          actId = newAct.id;
           createdMesas++;
         }
 
-        // Process party votes in batches
-        const partyVotesToInsert: any[] = [];
-
-        for (const partyColumnIndex of partyColumnIndices) {
-          const partyName = headers[partyColumnIndex]?.trim();
-          const votes = parseInt(row[partyColumnIndex]?.toString() || '0') || 0;
-
-          if (!partyName || votes === 0) continue;
+        // Process party votes for this act
+        const partyVotesToInsert = [];
+        
+        for (const partyIndex of partyColumnIndices) {
+          const partyName = headers[partyIndex]?.toString()?.trim();
+          if (!partyName) continue;
 
           const normalizedPartyName = normalizeText(partyName);
+          const votes = parseInt(row[partyIndex]?.toString() || '0') || 0;
+          
+          if (votes <= 0) continue;
+
           let party = partyMap.get(normalizedPartyName);
-
-          if (!party) {
-            // Create new party
-            const { data: newParty, error: partyError } = await supabase
-              .from('political_parties')
-              .insert({
-                name: partyName,
-                siglas: partyName.length <= 10 ? partyName : partyName.substring(0, 10),
-                color: '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')
-              })
-              .select()
-              .single();
-
-            if (partyError) {
-              console.error('❌ Error creating party:', partyError);
-              if (errors.length < MAX_ERRORS) {
-                errors.push(`Fila ${rowIndex + 1}: Error creando partido "${partyName}" - ${partyError.message}`);
+          
+          // Check if we have a resolution for this party
+          if (!party && partyResolutions.has(normalizedPartyName)) {
+            const resolvedPartyId = partyResolutions.get(normalizedPartyName)!;
+            // Find party by resolved ID
+            for (const [key, value] of partyMap.entries()) {
+              if (value.id === resolvedPartyId) {
+                party = value;
+                break;
               }
-              continue;
             }
-
-            party = newParty;
-            partyMap.set(normalizedPartyName, party);
-            createdParties.add(party.id);
+          }
+          
+          if (!party) {
+            // Skip this party - it should have been resolved in the resolution step
+            console.warn(`⚠️ Skipping unresolved party: ${partyName}`);
+            continue;
           }
 
           partyVotesToInsert.push({
-            electoral_act_id: electoralActId,
+            electoral_act_id: actId,
             party_id: party.id,
-            votes
+            votes: votes
           });
         }
 
         // Insert party votes in batch
         if (partyVotesToInsert.length > 0) {
-          const { error: votesError } = await supabase
+          const { error: partyVotesError } = await supabase
             .from('party_votes')
             .insert(partyVotesToInsert);
 
-          if (votesError) {
-            console.error('❌ Error inserting party votes:', votesError);
+          if (partyVotesError) {
+            console.error('❌ Error inserting party votes:', partyVotesError);
             if (errors.length < MAX_ERRORS) {
-              errors.push(`Fila ${rowIndex + 1}: Error insertando votos de partidos - ${votesError.message}`);
+              errors.push(`Fila ${rowIndex + 1}: Error insertando votos de partidos - ${partyVotesError.message}`);
             }
+            continue;
           }
         }
 
         processedCount++;
-        
-        // Progress logging every 50 rows
-        if (processedCount % 50 === 0) {
-          console.log(`✅ Processed ${processedCount}/${mesaDataList.length} mesas in batch ${currentBatch}/${totalBatches}`);
-        }
 
       } catch (error) {
         console.error(`❌ Error processing row ${rowIndex + 1}:`, error);
@@ -551,51 +630,43 @@ serve(async (req) => {
       }
     }
 
-    const hasMoreErrors = errors.length >= MAX_ERRORS;
-    
-    console.log(`✅ Processing completed: ${processedCount} mesas processed, ${createdMesas} created, ${updatedMesas} updated, ${createdParties.size} parties created`);
-
-    // Calculate batch information for result
+    // Calculate batch completion status
     const nextBatchStart = batchStart + batchSize;
-    const isLastBatch = nextBatchStart >= totalDataRows;
-    const progressPercentage = Math.round((Math.min(batchStart + batchSize, totalDataRows) / totalDataRows) * 100);
+    const batchComplete = !isBatchMode || nextBatchStart >= totalDataRows;
+    const progressPercentage = isBatchMode 
+      ? Math.round((Math.min(batchStart + batchSize, totalDataRows) / totalDataRows) * 100)
+      : 100;
 
     const result: ProcessingResult = {
       success: errors.length === 0,
-      processedMesas: processedCount,
-      createdMesas,
-      updatedMesas,
-      createdParties: createdParties.size,
-      totalRows: totalDataRows,
-      errors,
-      hasMoreErrors,
-      batchComplete: isLastBatch,
-      currentBatch,
-      totalBatches,
-      nextBatchStart: isLastBatch ? undefined : nextBatchStart,
+      processed: processedCount,
+      created: createdMesas,
+      updated: updatedMesas,
+      errors: errors.slice(0, MAX_ERRORS),
+      batchComplete,
+      currentBatch: isBatchMode ? currentBatch : 1,
+      totalBatches: isBatchMode ? totalBatches : 1,
+      nextBatchStart: batchComplete ? undefined : nextBatchStart,
       progressPercentage
     };
 
+    console.log(`✅ Batch ${currentBatch}/${totalBatches} completed: ${processedCount} processed, ${createdMesas} created, ${updatedMesas} updated`);
+
     return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('💥 Fatal error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Unknown error',
       success: false,
-      processedMesas: 0,
-      createdMesas: 0,
-      updatedMesas: 0,
-      createdParties: 0,
-      totalRows: 0,
-      errors: [error instanceof Error ? error.message : 'Unknown error'],
-      hasMoreErrors: false
-    }), {
+      processed: 0,
+      created: 0,
+      updated: 0,
+      errors: [error instanceof Error ? error.message : 'Unknown error']
+    } as ProcessingResult), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });
