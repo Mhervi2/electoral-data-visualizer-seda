@@ -18,6 +18,12 @@ interface ProcessingResult {
   hasMoreErrors: boolean;
   unresolvedMunicipalities?: UnresolvedMunicipality[];
   pausedForResolution?: boolean;
+  // Batch processing fields
+  batchComplete?: boolean;
+  currentBatch?: number;
+  totalBatches?: number;
+  nextBatchStart?: number;
+  progressPercentage?: number;
 }
 
 interface UnresolvedMunicipality {
@@ -68,6 +74,11 @@ serve(async (req) => {
     const sourceType = formData.get('sourceType') as string;
     const electionId = formData.get('electionId') as string;
     const resolutionsData = formData.get('resolutions') as string;
+    
+    // Batch processing parameters
+    const batchStart = parseInt(formData.get('batchStart') as string || '0');
+    const batchSize = parseInt(formData.get('batchSize') as string || '100');
+    const isBatchMode = formData.get('batchMode') === 'true';
 
     // Parse municipality resolutions if provided
     let municipalityResolutions: Map<string, number> = new Map();
@@ -115,6 +126,34 @@ serve(async (req) => {
     }
 
     console.log(`📊 Found ${jsonData.length} rows in Excel`);
+    
+    // Calculate batch information
+    const totalDataRows = jsonData.length - 1; // Exclude header
+    const totalBatches = Math.ceil(totalDataRows / batchSize);
+    const currentBatch = Math.floor(batchStart / batchSize) + 1;
+    const batchEnd = Math.min(batchStart + batchSize, totalDataRows);
+    
+    console.log(`📦 Batch processing: ${currentBatch}/${totalBatches} (rows ${batchStart + 1}-${batchEnd + 1}/${totalDataRows})`);
+    
+    if (isBatchMode && batchStart >= totalDataRows) {
+      return new Response(JSON.stringify({
+        success: true,
+        processedMesas: 0,
+        createdMesas: 0,
+        updatedMesas: 0,
+        createdParties: 0,
+        totalRows: totalDataRows,
+        errors: [],
+        hasMoreErrors: false,
+        batchComplete: true,
+        currentBatch: totalBatches,
+        totalBatches,
+        progressPercentage: 100
+      } as ProcessingResult), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Parse headers and find column indices
     const headers = jsonData[0] as string[];
@@ -262,8 +301,12 @@ serve(async (req) => {
     const errors: string[] = [];
     const MAX_ERRORS = 50;
 
-    // First pass: identify all unresolved municipalities
-    for (let i = 1; i < jsonData.length; i++) {
+    // Process only the current batch range
+    const startIndex = isBatchMode ? batchStart + 1 : 1; // +1 to skip header
+    const endIndex = isBatchMode ? Math.min(batchStart + batchSize + 1, jsonData.length) : jsonData.length;
+    
+    // First pass: identify all unresolved municipalities in current batch
+    for (let i = startIndex; i < endIndex; i++) {
       const row = jsonData[i] as any[];
       
       if (!row || row.length === 0) continue;
@@ -317,11 +360,15 @@ serve(async (req) => {
         createdMesas: 0,
         updatedMesas: 0,
         createdParties: 0,
-        totalRows: jsonData.length - 1,
+        totalRows: totalDataRows,
         errors: [],
         hasMoreErrors: false,
         unresolvedMunicipalities,
-        pausedForResolution: true
+        pausedForResolution: true,
+        batchComplete: false,
+        currentBatch,
+        totalBatches,
+        progressPercentage: Math.round((currentBatch - 1) / totalBatches * 100)
       } as ProcessingResult), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -491,9 +538,9 @@ serve(async (req) => {
 
         processedCount++;
         
-        // Progress logging every 100 rows
-        if (processedCount % 100 === 0) {
-          console.log(`✅ Processed ${processedCount}/${mesaDataList.length} mesas (${Math.round(processedCount/mesaDataList.length*100)}%)`);
+        // Progress logging every 50 rows
+        if (processedCount % 50 === 0) {
+          console.log(`✅ Processed ${processedCount}/${mesaDataList.length} mesas in batch ${currentBatch}/${totalBatches}`);
         }
 
       } catch (error) {
@@ -508,15 +555,25 @@ serve(async (req) => {
     
     console.log(`✅ Processing completed: ${processedCount} mesas processed, ${createdMesas} created, ${updatedMesas} updated, ${createdParties.size} parties created`);
 
+    // Calculate batch information for result
+    const nextBatchStart = batchStart + batchSize;
+    const isLastBatch = nextBatchStart >= totalDataRows;
+    const progressPercentage = Math.round((Math.min(batchStart + batchSize, totalDataRows) / totalDataRows) * 100);
+
     const result: ProcessingResult = {
       success: errors.length === 0,
       processedMesas: processedCount,
       createdMesas,
       updatedMesas,
       createdParties: createdParties.size,
-      totalRows: jsonData.length - 1,
+      totalRows: totalDataRows,
       errors,
-      hasMoreErrors
+      hasMoreErrors,
+      batchComplete: isLastBatch,
+      currentBatch,
+      totalBatches,
+      nextBatchStart: isLastBatch ? undefined : nextBatchStart,
+      progressPercentage
     };
 
     return new Response(JSON.stringify(result), {

@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useSecureFileUpload } from '@/hooks/useSecureFileUpload';
 import { useAppData } from '@/hooks/useAppData';
+import { useBatchProcessing } from '@/hooks/useBatchProcessing';
+import { BatchProgress } from '@/components/ui/batch-progress';
 import MunicipalityResolutionDialog from '@/components/admin/MunicipalityResolutionDialog';
 import { UnresolvedMunicipality, MunicipalityResolution } from '@/hooks/useMunicipalityResolution';
 
@@ -31,6 +33,7 @@ const AdminFilesUpload = () => {
   const { toast } = useToast();
   const { uploadFile, uploading } = useSecureFileUpload();
   const { elections, loading: electionsLoading } = useAppData();
+  const { batchProgress, processFileInBatches, resetProgress } = useBatchProcessing();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<ProcessingResult | null>(null);
@@ -64,6 +67,7 @@ const AdminFilesUpload = () => {
 
       setSelectedFile(file);
       setResult(null); // Clear previous results
+      resetProgress(); // Clear batch progress
     }
   };
 
@@ -138,7 +142,15 @@ const AdminFilesUpload = () => {
       console.log('Processing Excel file:', selectedFile.name);
       
       const isRealData = sourceType === 'real-data';
-      const processingResult = await processExcelFile(selectedFile, electionId, sourceType, isRealData);
+      
+      // Use batch processing for real data, regular processing for others
+      let processingResult: ProcessingResult;
+      
+      if (isRealData) {
+        processingResult = await processFileInBatches(selectedFile, electionId, sourceType);
+      } else {
+        processingResult = await processExcelFile(selectedFile, electionId, sourceType, isRealData);
+      }
       
       // Check if we need to resolve municipalities
       if (processingResult.pausedForResolution && processingResult.unresolvedMunicipalities) {
@@ -197,13 +209,25 @@ const AdminFilesUpload = () => {
     
     try {
       console.log('Resuming processing with resolutions:', resolutions);
-      const processingResult = await processExcelFile(
-        pendingProcessing.file,
-        pendingProcessing.electionId,
-        pendingProcessing.sourceType,
-        pendingProcessing.isRealData,
-        resolutions
-      );
+      
+      let processingResult: ProcessingResult;
+      
+      if (pendingProcessing.isRealData) {
+        processingResult = await processFileInBatches(
+          pendingProcessing.file,
+          pendingProcessing.electionId,
+          pendingProcessing.sourceType,
+          resolutions
+        );
+      } else {
+        processingResult = await processExcelFile(
+          pendingProcessing.file,
+          pendingProcessing.electionId,
+          pendingProcessing.sourceType,
+          pendingProcessing.isRealData,
+          resolutions
+        );
+      }
       
       setResult(processingResult);
 
@@ -363,12 +387,12 @@ const AdminFilesUpload = () => {
               type="submit" 
               size="lg" 
               className="w-full" 
-              disabled={processing || uploading || !selectedFile || elections.length === 0}
+              disabled={processing || uploading || !selectedFile || elections.length === 0 || batchProgress.isProcessing}
             >
-              {processing ? (
+              {processing || batchProgress.isProcessing ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Procesando...
+                  {batchProgress.isProcessing ? 'Procesando por lotes...' : 'Procesando...'}
                 </>
               ) : (
                 <>
@@ -380,6 +404,17 @@ const AdminFilesUpload = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* Batch Progress */}
+      <BatchProgress
+        isProcessing={batchProgress.isProcessing}
+        currentBatch={batchProgress.currentBatch}
+        totalBatches={batchProgress.totalBatches}
+        progressPercentage={batchProgress.progressPercentage}
+        processedMesas={batchProgress.processedMesas}
+        totalMesas={batchProgress.totalMesas}
+        errors={batchProgress.errors}
+      />
 
       {/* Processing Results */}
       {result && (
