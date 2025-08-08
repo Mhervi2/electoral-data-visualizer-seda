@@ -76,7 +76,7 @@ const AdminFilesUpload = () => {
     }
   };
 
-  const processExcelFile = async (file: File, electionId: string, sourceType: string, isRealData: boolean = false, resolutions?: MunicipalityResolution[]) => {
+  const processExcelFile = async (file: File, electionId: string, sourceType: string, isRealData: boolean = false, municipalityResolutions?: MunicipalityResolution[], partyResolutions?: PartyResolution[]) => {
     try {
       setProcessing(true);
 
@@ -90,12 +90,21 @@ const AdminFilesUpload = () => {
       formData.append('sourceType', effectiveSourceType);
 
       // Add municipality resolutions if provided
-      if (resolutions && resolutions.length > 0) {
-        const resolutionData = resolutions.map(resolution => ({
+      if (municipalityResolutions && municipalityResolutions.length > 0) {
+        const resolutionData = municipalityResolutions.map(resolution => ({
           originalName: resolution.originalName,
           resolvedIdm: typeof resolution.resolution === 'object' ? resolution.resolution.idm : 0
         }));
         formData.append('resolutions', JSON.stringify(resolutionData));
+      }
+
+      // Add party resolutions if provided
+      if (partyResolutions && partyResolutions.length > 0) {
+        const partyResolutionData = partyResolutions.map(resolution => ({
+          originalName: resolution.originalName,
+          resolvedPartyId: typeof resolution.resolution === 'object' ? resolution.resolution.id : resolution.resolution
+        }));
+        formData.append('partyResolutions', JSON.stringify(partyResolutionData));
       }
 
       // Call the appropriate edge function based on data type
@@ -157,7 +166,15 @@ const AdminFilesUpload = () => {
         processingResult = await processExcelFile(selectedFile, electionId, sourceType, isRealData);
       }
       
-      // Check if we need to resolve municipalities
+      // Check if we need to resolve parties first (new order)
+      if (processingResult.pausedForResolution && processingResult.unresolvedParties) {
+        setUnresolvedParties(processingResult.unresolvedParties);
+        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData });
+        setShowPartyResolutionDialog(true);
+        return;
+      }
+      
+      // Then check if we need to resolve municipalities
       if (processingResult.pausedForResolution && processingResult.unresolvedMunicipalities) {
         setUnresolvedMunicipalities(processingResult.unresolvedMunicipalities);
         setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData });
@@ -207,13 +224,93 @@ const AdminFilesUpload = () => {
     }
   };
 
+  const handlePartyResolutions = async (resolutions: PartyResolution[]) => {
+    if (!pendingProcessing) return;
+
+    setShowPartyResolutionDialog(false);
+    
+    try {
+      console.log('Resuming processing with party resolutions:', resolutions);
+      
+      let processingResult: ProcessingResult;
+      
+      if (pendingProcessing.isRealData) {
+        processingResult = await processFileInBatches(
+          pendingProcessing.file,
+          pendingProcessing.electionId,
+          pendingProcessing.sourceType,
+          undefined, // no municipality resolutions yet
+          resolutions
+        );
+      } else {
+        processingResult = await processExcelFile(
+          pendingProcessing.file,
+          pendingProcessing.electionId,
+          pendingProcessing.sourceType,
+          pendingProcessing.isRealData,
+          undefined, // no municipality resolutions yet
+          resolutions
+        );
+      }
+      
+      // Check if we now need to resolve municipalities
+      if (processingResult.pausedForResolution && processingResult.unresolvedMunicipalities) {
+        setUnresolvedMunicipalities(processingResult.unresolvedMunicipalities);
+        setShowResolutionDialog(true);
+        return;
+      }
+      
+      setResult(processingResult);
+
+      if (processingResult.success) {
+        const createdCount = processingResult.createdMesas || 0;
+        const updatedCount = processingResult.updatedMesas || 0;
+        const totalCount = createdCount + updatedCount;
+        
+        let description = `Se procesaron ${totalCount} mesas electorales`;
+        if (createdCount > 0 && updatedCount > 0) {
+          description += ` (${createdCount} nuevas, ${updatedCount} actualizadas)`;
+        } else if (updatedCount > 0) {
+          description += ` (${updatedCount} actualizadas)`;
+        } else if (createdCount > 0) {
+          description += ` (${createdCount} nuevas)`;
+        }
+        
+        toast({
+          title: "Archivo procesado correctamente",
+          description: description + ".",
+        });
+
+        // Reset form after successful processing
+        setSelectedFile(null);
+        setPendingProcessing(null);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error en el procesamiento",
+          description: "Revisa los errores mostrados abajo.",
+        });
+      }
+
+    } catch (error) {
+      console.error('Processing error after party resolution:', error);
+      toast({
+        variant: "destructive",
+        title: "Error al procesar archivo",
+        description: error instanceof Error ? error.message : "Error desconocido",
+      });
+    } finally {
+      setPendingProcessing(null);
+    }
+  };
+
   const handleMunicipalityResolutions = async (resolutions: MunicipalityResolution[]) => {
     if (!pendingProcessing) return;
 
     setShowResolutionDialog(false);
     
     try {
-      console.log('Resuming processing with resolutions:', resolutions);
+      console.log('Resuming processing with municipality resolutions:', resolutions);
       
       let processingResult: ProcessingResult;
       
@@ -267,7 +364,7 @@ const AdminFilesUpload = () => {
       }
 
     } catch (error) {
-      console.error('Processing error after resolution:', error);
+      console.error('Processing error after municipality resolution:', error);
       toast({
         variant: "destructive",
         title: "Error al procesar archivo",
@@ -280,8 +377,10 @@ const AdminFilesUpload = () => {
 
   const handleCancelResolution = () => {
     setShowResolutionDialog(false);
+    setShowPartyResolutionDialog(false);
     setPendingProcessing(null);
     setUnresolvedMunicipalities([]);
+    setUnresolvedParties([]);
     
     toast({
       title: "Importación cancelada",
@@ -490,7 +589,15 @@ const AdminFilesUpload = () => {
         </Card>
       )}
 
-      {/* Municipality Resolution Dialog */}
+      {/* Party Resolution Dialog - First */}
+      <PartyResolutionDialog
+        isOpen={showPartyResolutionDialog}
+        unresolvedParties={unresolvedParties}
+        onResolutionsComplete={handlePartyResolutions}
+        onCancel={handleCancelResolution}
+      />
+
+      {/* Municipality Resolution Dialog - Second */}
       <MunicipalityResolutionDialog
         isOpen={showResolutionDialog}
         unresolvedMunicipalities={unresolvedMunicipalities}

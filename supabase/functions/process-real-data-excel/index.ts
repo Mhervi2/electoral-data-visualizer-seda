@@ -170,27 +170,60 @@ serve(async (req) => {
 
     // System column filters (comprehensive list to avoid treating them as parties)
     const systemColumns = [
-      'fotografía', 'foto', 'imagen', 'image',
-      'municipio', 'municipality', 'ciudad', 'city',
-      'distrito', 'district', 
-      'sección', 'section', 'seccion',
-      'mesa', 'table', 'polling',
+      // Image/Photo columns
+      'fotografía', 'foto', 'imagen', 'image', 'img', 'picture',
+      // Location columns
+      'municipio', 'municipality', 'ciudad', 'city', 'localidad', 'locality',
+      'distrito', 'district', 'distrit', 'distr',
+      'sección', 'section', 'seccion', 'secc', 'sec',
+      'mesa', 'table', 'polling', 'poll', 'voting table',
+      'provincia', 'province', 'prov',
+      'comunidad autonoma', 'comunidad autónoma', 'ca', 'ccaa',
+      'codigo', 'código', 'code', 'id',
+      // Vote count columns
       'censo', 'census', 'electores', 'voters', 'número de electores censados', 'numero de electores censados',
       'votantes', 'total voters', 'total votantes', 'número total de votantes', 'numero total de votantes',
-      'blancos', 'blank', 'votos en blanco', 'blank votes',
-      'nulos', 'null', 'invalid', 'votos nulos', 'null votes', 'invalid votes',
-      'suma', 'total', 'suma votos', 'total votes',
-      '=', 'diferencia', 'difference', 'no han votado', 'abstenciones'
+      'blancos', 'blank', 'votos en blanco', 'blank votes', 'voto blanco', 'votos blancos',
+      'nulos', 'null', 'invalid', 'votos nulos', 'null votes', 'invalid votes', 'voto nulo',
+      // Calculation columns
+      'suma', 'total', 'suma votos', 'total votes', 'suma de votos', 'total de votos',
+      '=', 'diferencia', 'difference', 'no han votado', 'abstenciones', 'abstention',
+      'participacion', 'participación', 'participation',
+      // Common spreadsheet artifacts
+      'observaciones', 'observations', 'notas', 'notes', 'comentarios', 'comments',
+      // Numeric patterns
+      'voto', 'votos', 'vote', 'votes'
     ];
 
     // Enhanced function to check if a column is a system column
     const isSystemColumn = (header: string): boolean => {
+      if (!header || !header.trim()) return true;
+      
       const normalizedHeader = header.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       
-      return systemColumns.some(systemCol => {
+      // Check if it's purely numeric (likely a mistake)
+      if (/^\d+$/.test(normalizedHeader)) {
+        console.log(`🔍 Filtering out numeric column: "${header}"`);
+        return true;
+      }
+      
+      // Check if it's a formula or calculation
+      if (normalizedHeader.includes('=') || normalizedHeader.includes('+') || normalizedHeader.includes('-')) {
+        console.log(`🔍 Filtering out calculation column: "${header}"`);
+        return true;
+      }
+      
+      // Check against system column keywords
+      const isSystem = systemColumns.some(systemCol => {
         const normalizedSystemCol = systemCol.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        return normalizedHeader.includes(normalizedSystemCol) || normalizedSystemCol.includes(normalizedHeader);
+        const matches = normalizedHeader.includes(normalizedSystemCol) || normalizedSystemCol.includes(normalizedHeader);
+        if (matches) {
+          console.log(`🔍 Filtering out system column: "${header}" (matched: "${systemCol}")`);
+        }
+        return matches;
       });
+      
+      return isSystem;
     };
 
     // Find column indices using fuzzy matching for better recognition
@@ -420,18 +453,50 @@ serve(async (req) => {
       }
     }
 
-    // If we have unresolved items and no resolutions provided, pause for resolution
-    if ((unresolvedMunicipalities.length > 0 && !resolutionsJson) || 
-        (unresolvedParties.length > 0 && !partyResolutionsJson)) {
+    // Check resolution order: parties first, then municipalities
+    if (unresolvedParties.length > 0 && !partyResolutionsJson) {
+      console.log(`⏸️ Found ${unresolvedParties.length} partidos sin resolver. Pausing for party resolution.`);
       
-      let pauseReason = '';
-      if (unresolvedMunicipalities.length > 0 && !resolutionsJson) {
-        pauseReason += `${unresolvedMunicipalities.length} municipios sin resolver`;
-      }
-      if (unresolvedParties.length > 0 && !partyResolutionsJson) {
-        if (pauseReason) pauseReason += ' y ';
-        pauseReason += `${unresolvedParties.length} partidos sin resolver`;
-      }
+      const result: ProcessingResult = {
+        success: false,
+        processed: 0,
+        created: 0,
+        updated: 0,
+        errors: [],
+        unresolvedParties: unresolvedParties,
+        batchComplete: false,
+        currentBatch: isBatchMode ? Math.floor(batchStart / batchSize) + 1 : 1,
+        totalBatches: isBatchMode ? Math.ceil((jsonData.length - 1) / batchSize) : 1,
+        nextBatchStart: batchStart,
+        progressPercentage: 0
+      };
+
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    if (unresolvedMunicipalities.length > 0 && !resolutionsJson) {
+      console.log(`⏸️ Found ${unresolvedMunicipalities.length} municipios sin resolver. Pausing for municipality resolution.`);
+      
+      const result: ProcessingResult = {
+        success: false,
+        processed: 0,
+        created: 0,
+        updated: 0,
+        errors: [],
+        unresolvedMunicipalities: unresolvedMunicipalities,
+        batchComplete: false,
+        currentBatch: isBatchMode ? Math.floor(batchStart / batchSize) + 1 : 1,
+        totalBatches: isBatchMode ? Math.ceil((jsonData.length - 1) / batchSize) : 1,
+        nextBatchStart: batchStart,
+        progressPercentage: 0
+      };
+
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
       
       console.log(`⏸️ Found ${pauseReason}. Pausing for resolution.`);
       

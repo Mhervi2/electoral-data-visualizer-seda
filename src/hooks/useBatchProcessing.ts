@@ -13,6 +13,7 @@ interface BatchProcessingResult {
   errors: string[];
   hasMoreErrors: boolean;
   unresolvedMunicipalities?: any[];
+  unresolvedParties?: any[];
   pausedForResolution?: boolean;
   batchComplete?: boolean;
   currentBatch?: number;
@@ -50,7 +51,8 @@ export const useBatchProcessing = () => {
     sourceType: string,
     batchStart: number = 0,
     batchSize: number = 100,
-    resolutions?: MunicipalityResolution[]
+    municipalityResolutions?: MunicipalityResolution[],
+    partyResolutions?: any[]
   ): Promise<BatchProcessingResult> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -60,12 +62,20 @@ export const useBatchProcessing = () => {
     formData.append('batchSize', batchSize.toString());
     formData.append('batchMode', 'true');
 
-    if (resolutions && resolutions.length > 0) {
-      const resolutionData = resolutions.map(resolution => ({
+    if (municipalityResolutions && municipalityResolutions.length > 0) {
+      const resolutionData = municipalityResolutions.map(resolution => ({
         originalName: resolution.originalName,
         resolvedIdm: typeof resolution.resolution === 'object' ? resolution.resolution.idm : 0
       }));
       formData.append('resolutions', JSON.stringify(resolutionData));
+    }
+
+    if (partyResolutions && partyResolutions.length > 0) {
+      const partyResolutionData = partyResolutions.map(resolution => ({
+        originalName: resolution.originalName,
+        resolvedPartyId: typeof resolution.resolution === 'object' ? resolution.resolution.id : resolution.resolution
+      }));
+      formData.append('partyResolutions', JSON.stringify(partyResolutionData));
     }
 
     const { data, error } = await supabase.functions.invoke('process-real-data-excel', {
@@ -83,7 +93,8 @@ export const useBatchProcessing = () => {
     file: File,
     electionId: string,
     sourceType: string,
-    resolutions?: MunicipalityResolution[],
+    municipalityResolutions?: MunicipalityResolution[],
+    partyResolutions?: any[],
     batchSize: number = 100
   ): Promise<BatchProcessingResult> => {
     let currentBatchStart = 0;
@@ -108,10 +119,10 @@ export const useBatchProcessing = () => {
     try {
       // First batch to get total information
       console.log('Starting batch processing...');
-      const firstBatch = await processBatch(file, electionId, sourceType, 0, batchSize, resolutions);
+      const firstBatch = await processBatch(file, electionId, sourceType, 0, batchSize, municipalityResolutions, partyResolutions);
       
-      // Handle unresolved municipalities in first batch
-      if (firstBatch.pausedForResolution && firstBatch.unresolvedMunicipalities) {
+      // Handle unresolved parties or municipalities in first batch
+      if (firstBatch.pausedForResolution && (firstBatch.unresolvedParties || firstBatch.unresolvedMunicipalities)) {
         setBatchProgress(prev => ({ ...prev, isProcessing: false }));
         return firstBatch; // Return to show resolution dialog
       }
@@ -166,7 +177,7 @@ export const useBatchProcessing = () => {
       while (currentBatchStart < totalRows) {
         console.log(`Processing batch starting at row ${currentBatchStart + 1}...`);
         
-        const batchResult = await processBatch(file, electionId, sourceType, currentBatchStart, batchSize, resolutions);
+        const batchResult = await processBatch(file, electionId, sourceType, currentBatchStart, batchSize, municipalityResolutions, partyResolutions);
         
         // Accumulate results
         totalProcessedMesas += batchResult.processedMesas;
