@@ -4,12 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Search, Users } from 'lucide-react';
 import { useAppData } from '@/hooks/useAppData';
+import { useAuth } from '@/context/AuthContext';
 import PartySuggestions from '@/components/admin/PartySuggestions';
 import CreatePartyDialog from '@/components/admin/CreatePartyDialog';
 import EditPartyDialog from '@/components/admin/EditPartyDialog';
 
 const PoliticalParties = () => {
   const { politicalParties, loading, error } = useAppData();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
   const handlePartyChange = () => {
@@ -61,7 +63,7 @@ const PoliticalParties = () => {
             {politicalParties.length} partidos disponibles para el proceso electoral
           </p>
         </div>
-        <CreatePartyDialog onPartyCreated={handlePartyChange} />
+        {user && <CreatePartyDialog onPartyCreated={handlePartyChange} />}
       </div>
 
       {/* Buscador */}
@@ -105,7 +107,7 @@ const PoliticalParties = () => {
                   <Users className="h-4 w-4 mr-1" />
                   <span>Participante activo</span>
                 </div>
-                <EditPartyDialog party={party} onPartyUpdated={handlePartyChange} />
+                {user && <EditPartyDialog party={party} onPartyUpdated={handlePartyChange} />}
               </div>
             </CardContent>
           </Card>
