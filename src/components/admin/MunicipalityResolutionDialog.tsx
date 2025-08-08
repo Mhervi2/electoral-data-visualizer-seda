@@ -329,12 +329,14 @@ const MunicipalityResolutionDialog: React.FC<MunicipalityResolutionDialogProps> 
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona la provincia" />
                       </SelectTrigger>
-                      <SelectContent className="max-h-[300px] overflow-y-auto z-[200]">
-                        {provinces.map((province) => (
-                          <SelectItem key={province.idp} value={province.idp.toString()}>
-                            {province.provincia} ({province.ca})
-                          </SelectItem>
-                        ))}
+                      <SelectContent className="max-h-[200px] z-[200]">
+                        <div className="max-h-[180px] overflow-y-auto">
+                          {provinces.map((province) => (
+                            <SelectItem key={province.idp} value={province.idp.toString()}>
+                              {province.provincia} ({province.ca})
+                            </SelectItem>
+                          ))}
+                        </div>
                       </SelectContent>
                     </Select>
                   </div>
