@@ -46,8 +46,9 @@ const ToggleGroupItem = React.forwardRef<
           variant: context.variant || variant,
           size: context.size || size,
         }),
-        // Custom styles for active state with yellow/golden color
-        "data-[state=on]:bg-accent data-[state=on]:text-accent-foreground data-[state=on]:border-accent data-[state=on]:shadow-sm",
+        // Custom styles for active state with yellow color and inactive state with no color
+        "data-[state=on]:bg-yellow-400 data-[state=on]:text-yellow-900 data-[state=on]:border-yellow-400 data-[state=on]:shadow-sm",
+        "data-[state=off]:bg-transparent data-[state=off]:text-muted-foreground data-[state=off]:border-border",
         className
       )}
       {...props}
