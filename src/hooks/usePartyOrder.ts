@@ -36,7 +36,7 @@ export const usePartyOrder = (provincia: string | undefined, parties: PoliticalP
       
       // Query the table directly using SQL
       const { data: orderData, error } = await supabase
-        .from('political_party_provincial_order' as any)
+        .from('political_party_provincial_order')
         .select('party_id, order_position')
         .eq('provincia', provincia)
         .order('order_position', { ascending: true });
@@ -77,39 +77,59 @@ export const usePartyOrder = (provincia: string | undefined, parties: PoliticalP
   };
 
   const savePartyOrder = async (newOrder: PoliticalParty[]) => {
-    if (!provincia) return;
+    if (!provincia) {
+      console.warn('🎭 No provincia provided for saving party order');
+      return;
+    }
 
     try {
-      // Delete existing order for this province
-      await supabase
-        .from('political_party_provincial_order' as any)
-        .delete()
-        .eq('provincia', provincia);
-
-      // Insert new order
+      console.log(`🎭 Saving party order for provincia: ${provincia}`);
+      
+      // Use upsert instead of delete + insert for better reliability
       const orderData = newOrder.map((party, index) => ({
         provincia,
         party_id: party.id,
         order_position: index + 1
       }));
 
-      const { error } = await supabase
-        .from('political_party_provincial_order' as any)
-        .insert(orderData);
+      // First, delete existing records for this province
+      const { error: deleteError } = await supabase
+        .from('political_party_provincial_order')
+        .delete()
+        .eq('provincia', provincia);
 
-      if (error) {
-        console.error('Error saving party order:', error);
+      if (deleteError) {
+        console.error('❌ Error deleting existing party order:', deleteError);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "No se pudo guardar el orden de partidos.",
+          description: `Error al eliminar orden existente: ${deleteError.message}`,
         });
         return;
       }
 
-      console.log(`✅ Party order saved for province: ${provincia}`);
+      // Then insert new order
+      const { error: insertError } = await supabase
+        .from('political_party_provincial_order')
+        .insert(orderData);
+
+      if (insertError) {
+        console.error('❌ Error inserting party order:', insertError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: `Error al guardar el orden: ${insertError.message}`,
+        });
+        return;
+      }
+
+      console.log(`✅ Party order saved successfully for province: ${provincia}`);
+      toast({
+        title: "Éxito",
+        description: "Orden de partidos guardado correctamente.",
+      });
     } catch (error) {
-      console.error('Fatal error saving party order:', error);
+      console.error('💥 Fatal error saving party order:', error);
       toast({
         variant: "destructive",
         title: "Error",
