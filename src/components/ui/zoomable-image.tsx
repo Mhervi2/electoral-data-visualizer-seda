@@ -80,7 +80,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
       <img 
         src={proxiedSrc} 
         alt={alt} 
-        className="w-full h-auto rounded-lg border shadow-sm transition-all group-hover:shadow-md" 
+        className="w-full h-full object-contain rounded-lg border shadow-sm transition-all group-hover:shadow-md" 
       />
       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center">
         <div className="opacity-0 group-hover:opacity-100 transition-all bg-white bg-opacity-90 rounded-full p-2">
@@ -132,19 +132,23 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
 
         {/* Contenedor de la imagen */}
         <div 
-          className="relative overflow-hidden bg-gray-50 mx-6 mb-6 rounded-lg border"
-          style={{ height: '60vh' }}
+          className="relative overflow-hidden bg-gray-50 mx-6 mb-6 rounded-lg border flex items-center justify-center"
+          style={{ height: '70vh' }}
           onWheel={handleWheel}
         >
           <img
             ref={imageRef}
             src={proxiedSrc}
             alt={alt}
-            className={`max-w-none transition-transform duration-200 ${
+            className={`transition-transform duration-200 ${
+              scale === 1 ? 'max-w-full max-h-full object-contain' : 'max-w-none'
+            } ${
               scale > 1 ? 'cursor-grab' : 'cursor-default'
             } ${isDragging ? 'cursor-grabbing' : ''}`}
             style={{
-              transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+              transform: scale === 1 
+                ? 'none' 
+                : `translate(${position.x}px, ${position.y}px) scale(${scale})`,
               transformOrigin: 'center center',
             }}
             onMouseDown={handleMouseDown}

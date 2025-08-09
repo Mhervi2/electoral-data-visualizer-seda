@@ -129,19 +129,19 @@ export const ActDetailsDialog = ({ act }: ActDetailsDialogProps) => {
           <Image className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl max-h-[95vh] p-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>Imagen del Acta</DialogTitle>
           <DialogDescription>
             Mesa {act.mesa_identifier} ({table}) - {getLocationDisplay(act)} D:{district} S:{section}
           </DialogDescription>
         </DialogHeader>
         {act.image_url && (
-          <div className="flex justify-center">
+          <div className="px-6 pb-6 flex-1 min-h-0">
             <ZoomableImage 
               src={act.image_url} 
               alt="Acta electoral"
-              className="max-h-[70vh] w-auto"
+              className="w-full h-full"
             />
           </div>
         )}
