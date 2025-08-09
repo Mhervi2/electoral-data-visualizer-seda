@@ -108,29 +108,32 @@ export const SubmitActaForm = () => {
         
         <TabsContent value="complete" className="mt-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <ElectionSelection 
-              elections={elections}
-              selectedElectionId={actaData.electionId}
-              onElectionChange={(value) => handleInputChange('electionId', value)}
-            />
+            {/* Three-column layout for desktop, single column for mobile */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <ElectionSelection 
+                elections={elections}
+                selectedElectionId={actaData.electionId}
+                onElectionChange={(value) => handleInputChange('electionId', value)}
+              />
 
-            <MesaIdentification 
-              selectedMpcaRecord={selectedMpcaRecord}
-              municipio={actaData.municipio}
-              mesaIdentifier={actaData.mesaIdentifier}
-              onMunicipalityChange={handleMunicipalityChange}
-              onInputChange={handleInputChange}
-              onBlur={checkExistingAct}
-            />
+              <MesaIdentification 
+                selectedMpcaRecord={selectedMpcaRecord}
+                municipio={actaData.municipio}
+                mesaIdentifier={actaData.mesaIdentifier}
+                onMunicipalityChange={handleMunicipalityChange}
+                onInputChange={handleInputChange}
+                onBlur={checkExistingAct}
+              />
 
-            <ImageUploadSection 
-              imagen={actaData.imagen}
-              imageUrl={actaData.imageUrl}
-              uploading={uploading}
-              onImageUpload={handleImageUpload}
-            />
+              <ImageUploadSection 
+                imagen={actaData.imagen}
+                imageUrl={actaData.imageUrl}
+                uploading={uploading}
+                onImageUpload={handleImageUpload}
+              />
+            </div>
 
-            <ResultsData 
+            <ResultsData
               censo={actaData.censo}
               votantes={actaData.votantes}
               blancos={actaData.blancos}
