@@ -20,7 +20,7 @@ export const ImageUploadSection = ({ imagen, imageUrl, uploading, onImageUpload 
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center">
           <Button 
             type="button" 
             variant="outline" 
@@ -29,10 +29,6 @@ export const ImageUploadSection = ({ imagen, imageUrl, uploading, onImageUpload 
           >
             <Upload className="h-4 w-4 mr-2" />
             {uploading ? 'Subiendo...' : 'Subir Imagen'}
-          </Button>
-          <Button type="button" variant="outline" disabled>
-            <Camera className="h-4 w-4 mr-2" />
-            Tomar Foto (Próximamente)
           </Button>
           <input
             id="file-upload"

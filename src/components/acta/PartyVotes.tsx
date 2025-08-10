@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -17,8 +16,7 @@ interface PartyVotesProps {
 
 export const PartyVotes = ({ politicalParties, votos, onVoteChange, provincia }: PartyVotesProps) => {
   const { orderedParties, loading } = usePartyOrder(provincia, politicalParties);
-  const [selectedParty, setSelectedParty] = useState<PoliticalParty | null>(null);
-  const [inputValue, setInputValue] = useState('');
+  const [confirmedVotes, setConfirmedVotes] = useState(false);
 
   if (!politicalParties || politicalParties.length === 0) {
     return (
@@ -50,107 +48,70 @@ export const PartyVotes = ({ politicalParties, votos, onVoteChange, provincia }:
     );
   }
 
-  const handlePartyClick = (party: PoliticalParty) => {
-    setSelectedParty(party);
-    setInputValue(votos[party.id] || '');
+  const handleConfirmVotes = () => {
+    setConfirmedVotes(true);
   };
 
-  const handleInputSubmit = () => {
-    if (selectedParty && inputValue !== '') {
-      onVoteChange(selectedParty.id, inputValue);
-    }
-    setSelectedParty(null);
-    setInputValue('');
+  const handleEditVotes = () => {
+    setConfirmedVotes(false);
   };
 
-  const handleInputChange = (value: string) => {
-    setInputValue(value);
-    if (selectedParty) {
-      onVoteChange(selectedParty.id, value);
-    }
-  };
+  const totalVotesEntered = Object.values(votos).filter(v => v && v !== '0').length;
+  const allPartiesCompleted = orderedParties.every(party => votos[party.id] && votos[party.id] !== '');
 
   return (
     <TooltipProvider>
       <Card>
         <CardHeader>
-          <CardTitle>Votos a Candidaturas</CardTitle>
-          {selectedParty && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Introduciendo votos para:</span>
-              <Badge 
-                variant="outline" 
-                style={{ borderColor: selectedParty.color }}
-                className="text-sm"
-              >
-                {selectedParty.siglas} - {selectedParty.name}
+          <CardTitle className="flex items-center justify-between">
+            <span>Votos a Candidaturas</span>
+            {confirmedVotes && (
+              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                ✓ Votos confirmados
               </Badge>
-            </div>
-          )}
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Campo de entrada central */}
-          <div className="flex flex-col items-center space-y-4">
-            <div className="w-full max-w-xs">
-              <Input
-                type="number"
-                value={inputValue}
-                onChange={(e) => handleInputChange(e.target.value)}
-                placeholder={selectedParty ? `Votos para ${selectedParty.siglas}` : "Selecciona un partido"}
-                className="text-center text-lg h-12"
-                min="0"
-                disabled={!selectedParty}
-              />
-            </div>
-            {selectedParty && (
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleInputSubmit}>
-                  Confirmar
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => {
-                    setSelectedParty(null);
-                    setInputValue('');
-                  }}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Grid de botones de partidos */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+          {/* Grid de partidos con inputs integrados */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {orderedParties.map(partido => (
               <Tooltip key={partido.id}>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant={selectedParty?.id === partido.id ? "default" : "outline"}
-                    className={`h-16 p-2 flex flex-col items-center justify-center relative transition-all ${
-                      votos[partido.id] ? 'ring-2 ring-green-500' : ''
-                    }`}
-                    style={{
-                      borderColor: partido.color,
-                      color: selectedParty?.id === partido.id ? 'white' : partido.color,
-                      backgroundColor: selectedParty?.id === partido.id ? partido.color : 'transparent'
-                    }}
-                    onClick={() => handlePartyClick(partido)}
+                  <div 
+                    className={`relative border rounded-lg p-3 transition-all ${
+                      votos[partido.id] && votos[partido.id] !== '0' 
+                        ? 'ring-2 ring-green-500 bg-green-50' 
+                        : 'hover:shadow-md'
+                    } ${confirmedVotes ? 'opacity-75' : ''}`}
+                    style={{ borderColor: partido.color }}
                   >
-                    <div className="font-bold text-xs">{partido.siglas}</div>
-                    {votos[partido.id] && (
-                      <div className="text-xs mt-1 font-semibold">
-                        {votos[partido.id]}
+                    <div className="text-center space-y-2">
+                      <div 
+                        className="font-bold text-sm px-2 py-1 rounded text-white"
+                        style={{ backgroundColor: partido.color }}
+                      >
+                        {partido.siglas}
                       </div>
-                    )}
-                  </Button>
+                      <Input
+                        type="number"
+                        value={votos[partido.id] || ''}
+                        onChange={(e) => onVoteChange(partido.id, e.target.value)}
+                        placeholder="Votos"
+                        className="text-center h-8 text-sm"
+                        min="0"
+                        disabled={confirmedVotes}
+                      />
+                    </div>
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent>
                   <div className="text-center">
                     <div className="font-semibold">{partido.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {votos[partido.id] ? `${votos[partido.id]} votos` : 'Sin votos'}
+                      {votos[partido.id] && votos[partido.id] !== '0' 
+                        ? `${votos[partido.id]} votos` 
+                        : 'Sin votos'}
                     </div>
                   </div>
                 </TooltipContent>
@@ -158,26 +119,49 @@ export const PartyVotes = ({ politicalParties, votos, onVoteChange, provincia }:
             ))}
           </div>
 
-          {/* Resumen de votos introducidos */}
-          <div className="pt-4 border-t">
-            <div className="text-sm text-muted-foreground mb-2">
-              Votos introducidos: {Object.values(votos).filter(v => v).length} partidos
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {orderedParties
-                .filter(partido => votos[partido.id])
-                .map(partido => (
-                  <Badge 
-                    key={partido.id}
-                    variant="secondary"
-                    style={{ borderColor: partido.color }}
-                    className="text-xs"
-                  >
-                    {partido.siglas}: {votos[partido.id]}
-                  </Badge>
-                ))}
-            </div>
+          {/* Botones de acción */}
+          <div className="flex justify-center pt-4 border-t">
+            {!confirmedVotes ? (
+              <Button 
+                onClick={handleConfirmVotes}
+                disabled={totalVotesEntered === 0}
+                className="px-8"
+              >
+                Confirmar Votos ({totalVotesEntered} partidos)
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleEditVotes}
+                variant="outline"
+                className="px-8"
+              >
+                Editar Votos
+              </Button>
+            )}
           </div>
+
+          {/* Resumen de votos introducidos */}
+          {totalVotesEntered > 0 && (
+            <div className="pt-4 border-t">
+              <div className="text-sm text-muted-foreground mb-2">
+                Resumen de votos: {totalVotesEntered} de {orderedParties.length} partidos
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {orderedParties
+                  .filter(partido => votos[partido.id] && votos[partido.id] !== '0')
+                  .map(partido => (
+                    <Badge 
+                      key={partido.id}
+                      variant="secondary"
+                      style={{ borderColor: partido.color }}
+                      className="text-xs"
+                    >
+                      {partido.siglas}: {votos[partido.id]}
+                    </Badge>
+                  ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </TooltipProvider>

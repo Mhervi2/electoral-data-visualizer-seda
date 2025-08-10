@@ -19,6 +19,19 @@ export const useProvincialSeats = (electionId?: string) => {
   const fetchProvincialSeats = async () => {
     try {
       setLoading(true);
+      
+      // First, get all Spanish provinces from MPCA data
+      const { data: provincesData, error: provincesError } = await supabase
+        .from('mpca')
+        .select('provincia')
+        .order('provincia');
+
+      if (provincesError) throw provincesError;
+
+      // Get unique provinces
+      const uniqueProvinces = Array.from(new Set(provincesData?.map(p => p.provincia) || []));
+
+      // Get existing provincial seats for the selected election
       let query = supabase
         .from('provincial_seats')
         .select('*')
@@ -30,10 +43,23 @@ export const useProvincialSeats = (electionId?: string) => {
         query = query.is('election_id', null);
       }
 
-      const { data, error } = await query;
+      const { data: seatsData, error: seatsError } = await query;
+      if (seatsError) throw seatsError;
 
-      if (error) throw error;
-      setProvincialSeats(data || []);
+      // Create a complete list with all provinces, using existing data or defaults
+      const completeSeats = uniqueProvinces.map(provincia => {
+        const existingSeat = seatsData?.find(s => s.provincia === provincia);
+        return existingSeat || {
+          id: `temp-${provincia}`,
+          provincia,
+          seats: getDefaultSeats(provincia),
+          election_id: electionId || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+      });
+
+      setProvincialSeats(completeSeats);
     } catch (error) {
       console.error('Error fetching provincial seats:', error);
       toast({
@@ -44,6 +70,24 @@ export const useProvincialSeats = (electionId?: string) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Default seats based on 2019 election distribution
+  const getDefaultSeats = (provincia: string): number => {
+    const defaultSeats: Record<string, number> = {
+      'Madrid': 37, 'Barcelona': 32, 'Valencia': 16, 'Sevilla': 12, 'Alicante': 12,
+      'Murcia': 10, 'Cádiz': 9, 'Baleares': 8, 'Córdoba': 7, 'Santa Cruz de Tenerife': 7,
+      'Las Palmas': 7, 'Málaga': 11, 'Vizcaya': 8, 'Asturias': 8, 'La Coruña': 8,
+      'Pontevedra': 7, 'Cantabria': 5, 'Gipuzkoa': 6, 'Tarragona': 6, 'Girona': 6,
+      'Lleida': 4, 'Castellón': 5, 'Almería': 6, 'Ciudad Real': 5, 'Badajoz': 6,
+      'Huelva': 5, 'Jaén': 6, 'Granada': 7, 'Cáceres': 4, 'Toledo': 6,
+      'Albacete': 4, 'Cuenca': 3, 'Guadalajara': 3, 'Álava': 4, 'La Rioja': 4,
+      'Navarra': 5, 'Huesca': 3, 'Teruel': 3, 'Zaragoza': 7, 'Zamora': 3,
+      'Salamanca': 4, 'Ávila': 3, 'Segovia': 3, 'Soria': 2, 'Valladolid': 5,
+      'Palencia': 3, 'Burgos': 4, 'León': 4, 'Lugo': 4, 'Ourense': 4,
+      'Ceuta': 1, 'Melilla': 1
+    };
+    return defaultSeats[provincia] || 3;
   };
 
   const updateProvincialSeat = async (provincia: string, seats: number, electionId?: string) => {

@@ -26,24 +26,7 @@ const AdminFiles = () => {
     { id: '2', name: 'Elecciones Generales 2023' }
   ]);
 
-  const [files] = useState<FileRecord[]>([
-    {
-      id: '1',
-      filename: 'Resultados_Indra_Municipales_2023.xlsx',
-      electionId: '1',
-      sourceType: 'indra',
-      scope: 'Nacional',
-      uploadDate: '2023-05-29',
-    },
-    {
-      id: '2',
-      filename: 'Escrutinio_Oficial_Generales_2023.xlsx',
-      electionId: '2',
-      sourceType: 'escrutinio',
-      scope: 'Nacional',
-      uploadDate: '2023-07-24',
-    }
-  ]);
+  const [files] = useState<FileRecord[]>([]);
 
   const getElectionName = (electionId: string) => {
     const election = mockElections.find(e => e.id === electionId);

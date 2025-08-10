@@ -114,11 +114,21 @@ export const ProvincialSeatsManager = () => {
             </TableBody>
           </Table>
         </div>
-        <div className="mt-4 text-sm text-muted-foreground">
-          <p>
-            Los valores mostrados corresponden a la distribución de escaños para el Congreso de los Diputados.
-            Puede modificar estos valores según la elección específica si es necesario.
-          </p>
+        <div className="mt-4 space-y-2">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">
+              Total de escaños: 
+            </span>
+            <span className="font-semibold text-lg">
+              {provincialSeats.reduce((total, seat) => total + getCurrentSeats(seat.provincia), 0)}
+            </span>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            <p>
+              Los valores mostrados corresponden a la distribución de escaños para el Congreso de los Diputados.
+              Puede modificar estos valores según la elección específica si es necesario.
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>
