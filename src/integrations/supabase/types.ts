@@ -623,6 +623,10 @@ export type Database = {
         }
         Returns: string
       }
+      initialize_provincial_seats_for_election: {
+        Args: { p_election_id: string }
+        Returns: number
+      }
       update_municipality_name: {
         Args: { p_idm: number; p_new_name: string }
         Returns: number
