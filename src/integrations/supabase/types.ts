@@ -614,6 +614,10 @@ export type Database = {
       }
     }
     Functions: {
+      copy_provincial_seats_between_elections: {
+        Args: { p_from_election_id: string; p_to_election_id: string }
+        Returns: number
+      }
       generate_full_identifier: {
         Args: {
           p_idca: number

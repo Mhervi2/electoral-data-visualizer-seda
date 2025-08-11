@@ -59,7 +59,23 @@ export const useElectionManagement = () => {
           throw partiesError;
         }
 
-        console.log('✅ Election parties linked:', electionParties.length);
+      console.log('✅ Election parties linked:', electionParties.length);
+      }
+
+      // Initialize provincial seats for the new election
+      try {
+        const { error: seatsError } = await supabase.rpc('initialize_provincial_seats_for_election', {
+          p_election_id: election.id
+        });
+
+        if (seatsError) {
+          console.error('⚠️ Error initializing provincial seats:', seatsError);
+          // Don't throw here - seats can be initialized later
+        } else {
+          console.log('✅ Provincial seats initialized');
+        }
+      } catch (seatsError) {
+        console.error('⚠️ Non-fatal error initializing provincial seats:', seatsError);
       }
 
       toast({

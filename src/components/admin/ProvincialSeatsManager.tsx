@@ -12,7 +12,8 @@ import { Save, RefreshCw } from 'lucide-react';
 export const ProvincialSeatsManager = () => {
   const { elections } = useElections();
   const [selectedElection, setSelectedElection] = useState<string>('default');
-  const { provincialSeats, loading, updateProvincialSeat, refetch } = useProvincialSeats(selectedElection === 'default' ? '' : selectedElection);
+  const [copyFromElection, setCopyFromElection] = useState<string>('');
+  const { provincialSeats, loading, updateProvincialSeat, copyProvincialSeats, refetch } = useProvincialSeats(selectedElection === 'default' ? '' : selectedElection);
   const [editingSeats, setEditingSeats] = useState<Record<string, number>>({});
 
   const handleSeatChange = (provincia: string, seats: string) => {
@@ -43,6 +44,13 @@ export const ProvincialSeatsManager = () => {
     return editingSeats[provincia] !== undefined;
   };
 
+  const handleCopySeats = async () => {
+    if (!copyFromElection || !selectedElection || selectedElection === 'default') return;
+    
+    await copyProvincialSeats(copyFromElection, selectedElection);
+    setCopyFromElection('');
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -57,21 +65,53 @@ export const ProvincialSeatsManager = () => {
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </CardTitle>
-        <div className="space-y-2">
-          <Label htmlFor="election-select">Elección (opcional)</Label>
-          <Select value={selectedElection} onValueChange={setSelectedElection}>
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar elección específica o usar valores por defecto" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Valores por defecto (aplicable a todas las elecciones)</SelectItem>
-              {elections.map((election) => (
-                <SelectItem key={election.id} value={election.id}>
-                  {election.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="election-select">Elección (opcional)</Label>
+            <Select value={selectedElection} onValueChange={setSelectedElection}>
+              <SelectTrigger className="w-[300px]">
+                <SelectValue placeholder="Seleccionar elección específica o usar valores por defecto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Valores por defecto (aplicable a todas las elecciones)</SelectItem>
+                {elections.map((election) => (
+                  <SelectItem key={election.id} value={election.id}>
+                    {election.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {selectedElection && selectedElection !== 'default' && (
+            <div className="space-y-2">
+              <Label>Copiar desde otra elección</Label>
+              <div className="flex items-center gap-2">
+                <Select value={copyFromElection} onValueChange={setCopyFromElection}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Copiar desde..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {elections
+                      .filter(election => election.id !== selectedElection)
+                      .map((election) => (
+                        <SelectItem key={election.id} value={election.id}>
+                          {election.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={handleCopySeats}
+                  disabled={!copyFromElection}
+                  variant="outline"
+                  size="sm"
+                >
+                  Copiar Escaños
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>

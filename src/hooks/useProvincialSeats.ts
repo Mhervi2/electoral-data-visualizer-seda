@@ -20,17 +20,6 @@ export const useProvincialSeats = (electionId?: string) => {
     try {
       setLoading(true);
       
-      // First, get all Spanish provinces from MPCA data
-      const { data: provincesData, error: provincesError } = await supabase
-        .from('mpca')
-        .select('provincia')
-        .order('provincia');
-
-      if (provincesError) throw provincesError;
-
-      // Get unique provinces
-      const uniqueProvinces = Array.from(new Set(provincesData?.map(p => p.provincia) || []));
-
       // Get existing provincial seats for the selected election
       let query = supabase
         .from('provincial_seats')
@@ -46,20 +35,21 @@ export const useProvincialSeats = (electionId?: string) => {
       const { data: seatsData, error: seatsError } = await query;
       if (seatsError) throw seatsError;
 
-      // Create a complete list with all provinces, using existing data or defaults
-      const completeSeats = uniqueProvinces.map(provincia => {
-        const existingSeat = seatsData?.find(s => s.provincia === provincia);
-        return existingSeat || {
-          id: `temp-${provincia}`,
-          provincia,
-          seats: getDefaultSeats(provincia),
-          election_id: electionId || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-      });
-
-      setProvincialSeats(completeSeats);
+      // If no data exists for this election, initialize it
+      if (electionId && (!seatsData || seatsData.length === 0)) {
+        await initializeProvincialSeats(electionId);
+        // Refetch after initialization
+        const { data: newSeatsData, error: newSeatsError } = await supabase
+          .from('provincial_seats')
+          .select('*')
+          .eq('election_id', electionId)
+          .order('provincia');
+        
+        if (newSeatsError) throw newSeatsError;
+        setProvincialSeats(newSeatsData || []);
+      } else {
+        setProvincialSeats(seatsData || []);
+      }
     } catch (error) {
       console.error('Error fetching provincial seats:', error);
       toast({
@@ -69,6 +59,28 @@ export const useProvincialSeats = (electionId?: string) => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const initializeProvincialSeats = async (electionId: string) => {
+    try {
+      const { error } = await supabase.rpc('initialize_provincial_seats_for_election', {
+        p_election_id: electionId
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Éxito",
+        description: "Escaños provinciales inicializados con valores por defecto",
+      });
+    } catch (error) {
+      console.error('Error initializing provincial seats:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron inicializar los escaños provinciales",
+        variant: "destructive",
+      });
     }
   };
 
@@ -122,10 +134,37 @@ export const useProvincialSeats = (electionId?: string) => {
     fetchProvincialSeats();
   }, [electionId]);
 
+  const copyProvincialSeats = async (fromElectionId: string, toElectionId: string) => {
+    try {
+      const { error } = await supabase.rpc('copy_provincial_seats_between_elections', {
+        p_from_election_id: fromElectionId,
+        p_to_election_id: toElectionId
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Éxito",
+        description: "Escaños copiados correctamente",
+      });
+
+      fetchProvincialSeats();
+    } catch (error) {
+      console.error('Error copying provincial seats:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron copiar los escaños",
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     provincialSeats,
     loading,
     updateProvincialSeat,
+    initializeProvincialSeats,
+    copyProvincialSeats,
     refetch: fetchProvincialSeats,
   };
 };
