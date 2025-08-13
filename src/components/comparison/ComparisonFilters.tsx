@@ -21,7 +21,15 @@ export const ComparisonFiltersComponent = ({
       municipalities
     },
     loading 
-  } = useAvailableFilters(filters.electionIds[0] ? { electionId: filters.electionIds[0] } : {});
+  } = useAvailableFilters({
+    autonomousCommunity: filters.autonomousCommunity || '',
+    province: filters.province || '',
+    municipality: filters.municipality || '',
+    district: '',
+    section: '',
+    table: '',
+    sourceTypes: filters.sourceTypes
+  });
 
   const handleSelectChange = (field: keyof ComparisonFilters, value: string | undefined) => {
     const updates: Partial<ComparisonFilters> = { [field]: value };
