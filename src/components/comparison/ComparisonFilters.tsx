@@ -32,7 +32,9 @@ export const ComparisonFiltersComponent = ({
   });
 
   const handleSelectChange = (field: keyof ComparisonFilters, value: string | undefined) => {
-    const updates: Partial<ComparisonFilters> = { [field]: value };
+    // Convert "all" back to undefined for the filters
+    const filterValue = value === "all" ? undefined : value;
+    const updates: Partial<ComparisonFilters> = { [field]: filterValue };
     
     // Clear dependent filters when a higher level changes
     if (field === 'autonomousCommunity') {
@@ -60,9 +62,9 @@ export const ComparisonFiltersComponent = ({
           <div className="space-y-2">
             <label className="text-sm font-medium">Comunidad Autónoma</label>
             <Select
-              value={filters.autonomousCommunity || ""}
+              value={filters.autonomousCommunity || "all"}
               onValueChange={(value) => 
-                handleSelectChange('autonomousCommunity', value || undefined)
+                handleSelectChange('autonomousCommunity', value)
               }
               disabled={loading}
             >
@@ -70,7 +72,7 @@ export const ComparisonFiltersComponent = ({
                 <SelectValue placeholder="Todas las comunidades" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas las comunidades</SelectItem>
+                <SelectItem value="all">Todas las comunidades</SelectItem>
                 {autonomousCommunities.map((ca) => (
                   <SelectItem key={ca} value={ca}>
                     {ca}
@@ -83,9 +85,9 @@ export const ComparisonFiltersComponent = ({
           <div className="space-y-2">
             <label className="text-sm font-medium">Provincia</label>
             <Select
-              value={filters.province || ""}
+              value={filters.province || "all"}
               onValueChange={(value) => 
-                handleSelectChange('province', value || undefined)
+                handleSelectChange('province', value)
               }
               disabled={loading || !filters.autonomousCommunity}
             >
@@ -93,7 +95,7 @@ export const ComparisonFiltersComponent = ({
                 <SelectValue placeholder="Todas las provincias" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas las provincias</SelectItem>
+                <SelectItem value="all">Todas las provincias</SelectItem>
                 {provinces.map((province) => (
                   <SelectItem key={province} value={province}>
                     {province}
@@ -106,9 +108,9 @@ export const ComparisonFiltersComponent = ({
           <div className="space-y-2">
             <label className="text-sm font-medium">Municipio</label>
             <Select
-              value={filters.municipality || ""}
+              value={filters.municipality || "all"}
               onValueChange={(value) => 
-                handleSelectChange('municipality', value || undefined)
+                handleSelectChange('municipality', value)
               }
               disabled={loading || !filters.province}
             >
@@ -116,7 +118,7 @@ export const ComparisonFiltersComponent = ({
                 <SelectValue placeholder="Todos los municipios" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los municipios</SelectItem>
+                <SelectItem value="all">Todos los municipios</SelectItem>
                 {municipalities.map((municipality) => (
                   <SelectItem key={municipality} value={municipality}>
                     {municipality}
