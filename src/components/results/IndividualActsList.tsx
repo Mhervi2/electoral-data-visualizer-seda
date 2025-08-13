@@ -8,6 +8,7 @@ import { Image, ChevronDown } from 'lucide-react';
 import { ActDetailsDialog } from './ActDetailsDialog';
 import { MailVotersDialog } from './MailVotersDialog';
 import { ElectoralAct } from '@/types/acta';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
 
 interface IndividualActsListProps {
   individualActas: ElectoralAct[];
@@ -15,6 +16,7 @@ interface IndividualActsListProps {
 }
 
 export const IndividualActsList = ({ individualActas, onActaClick }: IndividualActsListProps) => {
+  const { isMailVotingEnabled } = useSystemSettings();
   const [displayCount, setDisplayCount] = useState(5);
 
   const getSourceTypeLabel = (sourceType: string) => {
@@ -135,16 +137,18 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
                           {acta.image_url ? (
-                            <ActDetailsDialog act={acta} />
-                          ) : (
-                            <Button size="sm" variant="outline" disabled>
-                              <Image className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <MailVotersDialog 
-                            actId={acta.id} 
-                            mesaIdentifier={acta.mesa_identifier}
-                          />
+                           <ActDetailsDialog act={acta} />
+                           ) : (
+                             <Button size="sm" variant="outline" disabled>
+                               <Image className="h-4 w-4" />
+                             </Button>
+                           )}
+                           {isMailVotingEnabled() && (
+                             <MailVotersDialog 
+                               actId={acta.id} 
+                               mesaIdentifier={acta.mesa_identifier}
+                             />
+                           )}
                         </div>
                       </TableCell>
                     </TableRow>

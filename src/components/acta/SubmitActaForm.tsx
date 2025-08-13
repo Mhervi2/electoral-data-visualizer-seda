@@ -17,8 +17,10 @@ import { PartyVotes } from './PartyVotes';
 import { MailVotersSection } from './MailVotersSection';
 import { ExistingActDialog } from './ExistingActDialog';
 import { MunicipalitySelector } from './MunicipalitySelector';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
 
 export const SubmitActaForm = () => {
+  const { isMailVotingEnabled } = useSystemSettings();
   const [activeTab, setActiveTab] = useState('complete');
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imageOnlyElectionId, setImageOnlyElectionId] = useState('');
@@ -148,10 +150,12 @@ export const SubmitActaForm = () => {
               provincia={selectedMpcaRecord?.provincia}
             />
 
-            <MailVotersSection 
-              mailVoters={actaData.mailVoters}
-              onMailVotersChange={handleMailVotersChange}
-            />
+            {isMailVotingEnabled() && (
+              <MailVotersSection 
+                mailVoters={actaData.mailVoters}
+                onMailVotersChange={handleMailVotersChange}
+              />
+            )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting || uploading}>
               {isSubmitting ? 'Enviando...' : 'Enviar Acta Electoral'}

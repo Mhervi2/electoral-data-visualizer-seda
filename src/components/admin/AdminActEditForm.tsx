@@ -10,6 +10,7 @@ import { useAppData } from '@/hooks/useAppData';
 import { MunicipalitySelector } from '@/components/acta/MunicipalitySelector';
 import { validateActaData } from '@/utils/actaValidation';
 import { useToast } from '@/hooks/use-toast';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { DraggablePartyList } from './DraggablePartyList';
 import { usePartyOrder } from '@/hooks/usePartyOrder';
 import { ZoomableImage } from '@/components/ui/zoomable-image';
@@ -30,6 +31,7 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
   onCancel
 }) => {
   const { toast } = useToast();
+  const { isMailVotingEnabled } = useSystemSettings();
   const { politicalParties, mpcaData } = useAppData();
 
   const [formData, setFormData] = useState({
@@ -207,10 +209,12 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
         <div className="space-y-6">
 
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className={`grid w-full ${isMailVotingEnabled() ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <TabsTrigger value="basic">Datos Básicos</TabsTrigger>
           <TabsTrigger value="votes">Votos por Partido</TabsTrigger>
-          <TabsTrigger value="mail">Votos por Correo</TabsTrigger>
+          {isMailVotingEnabled() && (
+            <TabsTrigger value="mail">Votos por Correo</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="basic" className="space-y-4">
@@ -311,41 +315,43 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
           </Card>
         </TabsContent>
 
-        <TabsContent value="mail" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Votos por Correo</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="DNI del votante por correo"
-                  value={newMailDni}
-                  onChange={(e) => setNewMailDni(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddMailVote()}
-                />
-                <Button onClick={handleAddMailVote} size="sm">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
+        {isMailVotingEnabled() && (
+          <TabsContent value="mail" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Votos por Correo</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="DNI del votante por correo"
+                    value={newMailDni}
+                    onChange={(e) => setNewMailDni(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddMailVote()}
+                  />
+                  <Button onClick={handleAddMailVote} size="sm">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
 
-              <div className="space-y-2">
-                {mailVotes.map((voter, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 border rounded">
-                    <span>{voter.dni}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRemoveMailVote(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                <div className="space-y-2">
+                  {mailVotes.map((voter, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 border rounded">
+                      <span>{voter.dni}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRemoveMailVote(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       <div className="flex justify-end gap-2">

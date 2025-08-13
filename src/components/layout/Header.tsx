@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Home, BarChart3, UploadCloud, Calculator, Users, Shield, Settings, LogOut, LogIn } from 'lucide-react';
+import { Home, BarChart3, UploadCloud, Calculator, Users, Shield, Settings, LogOut, LogIn, BarChart2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 const Header = () => {
@@ -17,6 +17,7 @@ const Header = () => {
     { id: 'submit-acta', label: 'Enviar Acta', path: '/submit-acta', icon: UploadCloud },
     { id: 'political-parties', label: 'Partidos Políticos', path: '/political-parties', icon: Users },
     { id: 'dhondt-calculator', label: 'Calculadora D\'Hondt', path: '/dhondt-calculator', icon: Calculator },
+    { id: 'electoral-comparison', label: 'Comparación Electoral', path: '/electoral-comparison', icon: BarChart2 },
   ];
 
   if (user?.isAdmin) {
@@ -30,6 +31,7 @@ const Header = () => {
     if (currentPath.startsWith('/submit-acta')) return 'submit-acta';
     if (currentPath.startsWith('/dhondt-calculator')) return 'dhondt-calculator';
     if (currentPath.startsWith('/political-parties')) return 'political-parties';
+    if (currentPath.startsWith('/electoral-comparison')) return 'electoral-comparison';
     if (currentPath.startsWith('/admin')) return 'admin';
     return 'home';
   };

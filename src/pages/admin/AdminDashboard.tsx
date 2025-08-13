@@ -3,9 +3,10 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart3, Upload, Users, FileText, Settings, Eye, Calculator, Shield, Download, Github, MapPin } from 'lucide-react';
+import { BarChart3, Upload, Users, FileText, Settings, Eye, Calculator, Shield, Download, Github, MapPin, BarChart2 } from 'lucide-react';
 import { useDataExport } from '@/hooks/useDataExport';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { SystemSettingsManager } from '@/components/admin/SystemSettingsManager';
 
 const AdminDashboard = () => {
   const { exportData, isExporting } = useDataExport();
@@ -127,6 +128,33 @@ const AdminDashboard = () => {
             </Button>
           </CardContent>
         </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-3">
+            <div className="flex items-center space-x-2">
+              <BarChart2 className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Comparación Electoral</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <CardDescription className="mb-4">
+              Comparar resultados entre diferentes elecciones
+            </CardDescription>
+            <Button asChild className="w-full">
+              <Link to="/electoral-comparison">Ver Comparaciones</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* System Configuration Section */}
+      <div className="space-y-6">
+        <div className="flex items-center space-x-3">
+          <Settings className="h-6 w-6 text-primary" />
+          <h2 className="text-2xl font-bold font-space-grotesk">Configuración del Sistema</h2>
+        </div>
+        
+        <SystemSettingsManager />
       </div>
 
       {/* Security & Backup Section */}

@@ -14,6 +14,7 @@ import SubmitActa from "./pages/SubmitActa";
 import DHondtCalculator from "./pages/DHondtCalculator";
 import PoliticalParties from "./pages/PoliticalParties";
 import Settings from "./pages/Settings";
+import ElectoralComparison from "./pages/ElectoralComparison";
 import Terminos from "./pages/Terminos";
 import Privacidad from "./pages/Privacidad";
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -64,6 +65,7 @@ const App = () => (
                   <Route path="/submit-acta" element={<SubmitActa />} />
                   <Route path="/dhondt-calculator" element={<DHondtCalculator />} />
                   <Route path="/political-parties" element={<PoliticalParties />} />
+                  <Route path="/electoral-comparison" element={<ElectoralComparison />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/terminos" element={<Terminos />} />
                   <Route path="/privacidad" element={<Privacidad />} />
