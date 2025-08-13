@@ -14,6 +14,7 @@ import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { DraggablePartyList } from './DraggablePartyList';
 import { usePartyOrder } from '@/hooks/usePartyOrder';
 import { ZoomableImage } from '@/components/ui/zoomable-image';
+import { FullMesaIdentifier } from '@/components/ui/mesa-identifier-display';
 
 interface AdminActEditFormProps {
   act: ElectoralActAdmin;
@@ -223,6 +224,21 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
               <CardTitle>Información de la Mesa</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Mostrar identificador completo si está disponible */}
+              {(act.mesa_identifier_full || act.full_identifier) && (
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <Label className="text-sm font-medium">Identificador Completo</Label>
+                  <div className="mt-1">
+                    <FullMesaIdentifier
+                      mesaIdentifierFull={act.mesa_identifier_full}
+                      fullIdentifier={act.full_identifier}
+                      variant="outline"
+                      size="default"
+                    />
+                  </div>
+                </div>
+              )}
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="mesa_identifier">Identificador de Mesa</Label>

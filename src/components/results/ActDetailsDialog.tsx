@@ -4,12 +4,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from '@/components/ui/button';
 import { Image, ExternalLink } from 'lucide-react';
 import { ZoomableImage } from '@/components/ui/zoomable-image';
+import { FullMesaIdentifier } from '@/components/ui/mesa-identifier-display';
 
 
 interface ElectoralAct {
   id: string;
   municipality_idm: number;
   mesa_identifier: string;
+  mesa_identifier_full?: string;
+  full_identifier?: string;
   census_total: number;
   total_voters: number;
   blank_votes: number;
@@ -132,8 +135,14 @@ export const ActDetailsDialog = ({ act }: ActDetailsDialogProps) => {
       <DialogContent className="max-w-6xl max-h-[95vh] p-0">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle>Imagen del Acta</DialogTitle>
-          <DialogDescription>
-            Mesa {act.mesa_identifier} ({table}) - {getLocationDisplay(act)} D:{district} S:{section}
+          <DialogDescription className="flex items-center gap-2">
+            <FullMesaIdentifier 
+              mesaIdentifierFull={act.mesa_identifier_full}
+              fullIdentifier={act.full_identifier}
+              variant="outline"
+              size="sm"
+            />
+            - {getLocationDisplay(act)}
           </DialogDescription>
         </DialogHeader>
         {act.image_url && (

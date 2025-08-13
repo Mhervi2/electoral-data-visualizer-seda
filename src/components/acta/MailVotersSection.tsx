@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, Plus } from 'lucide-react';
 import { MailVoter } from '@/types/acta';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
 
 interface MailVotersSectionProps {
   mailVoters: MailVoter[];
@@ -13,6 +14,12 @@ interface MailVotersSectionProps {
 }
 
 export const MailVotersSection = ({ mailVoters, onMailVotersChange }: MailVotersSectionProps) => {
+  const { isMailVotingEnabled } = useSystemSettings();
+
+  // Don't render if mail voting is disabled
+  if (!isMailVotingEnabled()) {
+    return null;
+  }
   const addMailVoter = () => {
     onMailVotersChange([...mailVoters, { dni: '' }]);
   };

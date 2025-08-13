@@ -7,6 +7,8 @@ export interface ElectoralActAdmin {
   election_id: string;
   municipality_idm: number | null;
   mesa_identifier: string | null;
+  mesa_identifier_full?: string;
+  full_identifier?: string;
   census_total: number | null;
   total_voters: number | null;
   blank_votes: number;
