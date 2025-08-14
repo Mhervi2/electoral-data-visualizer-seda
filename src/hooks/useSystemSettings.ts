@@ -48,20 +48,46 @@ export const useSystemSettings = () => {
 
   const updateSetting = async (key: string, value: any) => {
     try {
-      const { error } = await supabase
+      // Log auth status for debugging
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Current user:', user?.id, user?.email);
+      
+      // Try updating existing setting first
+      const { data: existing, error: selectError } = await supabase
         .from('system_settings')
-        .upsert({
-          setting_key: key,
-          setting_value: value
-        }, {
-          onConflict: 'setting_key'
-        });
+        .select('id')
+        .eq('setting_key', key)
+        .single();
+      
+      if (selectError && selectError.code !== 'PGRST116') {
+        console.error('Error checking existing setting:', selectError);
+        throw selectError;
+      }
+
+      let error;
+      if (existing) {
+        // Update existing setting
+        const { error: updateError } = await supabase
+          .from('system_settings')
+          .update({ setting_value: value })
+          .eq('setting_key', key);
+        error = updateError;
+      } else {
+        // Insert new setting
+        const { error: insertError } = await supabase
+          .from('system_settings')
+          .insert({
+            setting_key: key,
+            setting_value: value
+          });
+        error = insertError;
+      }
 
       if (error) {
         console.error('Error updating setting:', error);
         toast({
           title: "Error",
-          description: "No se pudo actualizar la configuración.",
+          description: `Error específico: ${error.message} (Código: ${error.code})`,
           variant: "destructive"
         });
         return;
