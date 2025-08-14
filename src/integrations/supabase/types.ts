@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -575,6 +575,33 @@ export type Database = {
           },
         ]
       }
+      system_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       electoral_acts_with_municipalities: {
@@ -620,9 +647,9 @@ export type Database = {
       }
       generate_full_identifier: {
         Args: {
+          p_idc: string
           p_idca: number
           p_idp: number
-          p_idc: string
           p_mesa_identifier: string
         }
         Returns: string
@@ -636,7 +663,7 @@ export type Database = {
         Returns: number
       }
       update_territorial_name: {
-        Args: { p_type: string; p_old_name: string; p_new_name: string }
+        Args: { p_new_name: string; p_old_name: string; p_type: string }
         Returns: number
       }
     }

@@ -16,10 +16,26 @@ export const useSystemSettings = () => {
 
   const fetchSettings = async () => {
     try {
-      // For now, use default values since system_settings table isn't in types yet
-      setSettings({
-        mail_voting_enabled: true
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('setting_key, setting_value');
+
+      if (error) {
+        console.error('Error fetching system settings:', error);
+        // Use default values on error
+        setSettings({
+          mail_voting_enabled: true
+        });
+        return;
+      }
+
+      // Convert array to object
+      const settingsObj: Record<string, any> = {};
+      data?.forEach((setting) => {
+        settingsObj[setting.setting_key] = setting.setting_value;
       });
+
+      setSettings(settingsObj);
     } catch (error) {
       console.error('Error fetching system settings:', error);
       setSettings({
@@ -32,7 +48,26 @@ export const useSystemSettings = () => {
 
   const updateSetting = async (key: string, value: any) => {
     try {
-      // For now, just update local state since table doesn't exist in types
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: key,
+          setting_value: value
+        }, {
+          onConflict: 'setting_key'
+        });
+
+      if (error) {
+        console.error('Error updating setting:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar la configuración.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update local state after successful database update
       setSettings(prev => ({
         ...prev,
         [key]: value
@@ -40,7 +75,7 @@ export const useSystemSettings = () => {
 
       toast({
         title: "Configuración actualizada",
-        description: `La configuración ${key} se ha actualizado correctamente.`,
+        description: `La configuración se ha actualizado correctamente.`,
       });
     } catch (error) {
       console.error('Error updating setting:', error);
