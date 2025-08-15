@@ -58,9 +58,14 @@ export const useResultsData = () => {
       setLoading(true);
       
       let query = supabase
-        .from('electoral_acts_with_municipalities')
+        .from('electoral_acts')
         .select(`
           *,
+          mpca:mpca!electoral_acts_municipality_idm_fkey (
+            municipio,
+            provincia,
+            ca
+          ),
           party_votes (
             votes,
             political_parties (
@@ -73,7 +78,7 @@ export const useResultsData = () => {
 
       // Apply filters only if they have values
       if (filters.municipality.trim()) {
-        query = query.ilike('municipio', `%${filters.municipality.trim()}%`);
+        query = query.filter('mpca.municipio', 'ilike', `%${filters.municipality.trim()}%`);
       }
       
       // For mesa_identifier filtering, we need to construct the identifier
@@ -114,6 +119,9 @@ export const useResultsData = () => {
         // Transform the data to match the ElectoralAct interface with proper null handling
         const transformedData: ElectoralAct[] = data?.map(act => ({
           ...act,
+          municipio: act.mpca?.municipio || 'N/A',
+          provincia: act.mpca?.provincia || 'N/A',
+          comunidad_autonoma: act.mpca?.ca || 'N/A',
           party_votes: act.party_votes?.map((pv: any) => ({
             party: pv.political_parties || { name: 'N/A', siglas: 'N/A', color: '#6B7280' },
             votes: pv.votes || 0
