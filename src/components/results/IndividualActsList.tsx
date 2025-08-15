@@ -102,7 +102,6 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
                 <TableRow>
                   <TableHead>Ubicación</TableHead>
                   <TableHead>Mesa</TableHead>
-                  <TableHead>Identificador Completo</TableHead>
                   <TableHead>Censo</TableHead>
                   <TableHead>Votantes</TableHead>
                   <TableHead>Fuente</TableHead>
@@ -128,14 +127,6 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{table}</TableCell>
-                      <TableCell>
-                        <FullMesaIdentifier
-                          mesaIdentifierFull={acta.mesa_identifier_full}
-                          fullIdentifier={acta.full_identifier}
-                          variant="outline"
-                          size="sm"
-                        />
-                      </TableCell>
                       <TableCell>{acta.census_total}</TableCell>
                       <TableCell>{acta.total_voters}</TableCell>
                       <TableCell>
