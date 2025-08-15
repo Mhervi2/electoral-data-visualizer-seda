@@ -9,7 +9,7 @@ import { ActDetailsDialog } from './ActDetailsDialog';
 import { MailVotersDialog } from './MailVotersDialog';
 import { FullMesaIdentifier } from '@/components/ui/mesa-identifier-display';
 import { ElectoralAct } from '@/types/acta';
-import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { useSystemConfig } from '@/contexts/SystemConfigContext';
 
 interface IndividualActsListProps {
   individualActas: ElectoralAct[];
@@ -17,7 +17,7 @@ interface IndividualActsListProps {
 }
 
 export const IndividualActsList = ({ individualActas, onActaClick }: IndividualActsListProps) => {
-  const { isMailVotingEnabled } = useSystemSettings();
+  const { isMailVotingEnabled } = useSystemConfig();
   const [displayCount, setDisplayCount] = useState(5);
 
   const getSourceTypeLabel = (sourceType: string) => {

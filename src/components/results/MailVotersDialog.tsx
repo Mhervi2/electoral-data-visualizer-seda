@@ -13,7 +13,7 @@ import { Mail, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { maskDniRandomly } from '@/utils/dniMask';
-import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { useSystemConfig } from '@/contexts/SystemConfigContext';
 
 interface MailVoter {
   id: string;
@@ -28,7 +28,7 @@ interface MailVotersDialogProps {
 
 export const MailVotersDialog = ({ actId, mesaIdentifier }: MailVotersDialogProps) => {
   const { toast } = useToast();
-  const { isMailVotingEnabled } = useSystemSettings();
+  const { isMailVotingEnabled } = useSystemConfig();
 
   // Don't render if mail voting is disabled
   if (!isMailVotingEnabled()) {

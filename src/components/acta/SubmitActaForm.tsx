@@ -17,10 +17,10 @@ import { PartyVotes } from './PartyVotes';
 import { MailVotersSection } from './MailVotersSection';
 import { ExistingActDialog } from './ExistingActDialog';
 import { MunicipalitySelector } from './MunicipalitySelector';
-import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { useSystemConfig } from '@/contexts/SystemConfigContext';
 
 export const SubmitActaForm = () => {
-  const { isMailVotingEnabled } = useSystemSettings();
+  const { isMailVotingEnabled } = useSystemConfig();
   const [activeTab, setActiveTab] = useState('complete');
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imageOnlyElectionId, setImageOnlyElectionId] = useState('');
