@@ -8,8 +8,9 @@ import { Save, X, Plus, Trash2 } from 'lucide-react';
 import { ElectoralActAdmin } from '@/hooks/useElectoralActsAdmin';
 import { useAppData } from '@/hooks/useAppData';
 import { MunicipalitySelector } from '@/components/acta/MunicipalitySelector';
-import { validateActaData } from '@/utils/actaValidation';
+import { validateActaData, validateActaDataWithWarnings } from '@/utils/actaValidation';
 import { useToast } from '@/hooks/use-toast';
+import { ValidationWarningDialog } from '@/components/ui/validation-warning-dialog';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { DraggablePartyList } from './DraggablePartyList';
 import { usePartyOrder } from '@/hooks/usePartyOrder';
@@ -47,6 +48,8 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
   const [partyVotes, setPartyVotes] = useState<{ party_id: string; votes: number }[]>([]);
   const [mailVotes, setMailVotes] = useState<{ dni: string }[]>(act.mail_votes || []);
   const [newMailDni, setNewMailDni] = useState('');
+  const [showWarningDialog, setShowWarningDialog] = useState(false);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     // Initialize party votes
@@ -119,17 +122,30 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
         imageUrl: act.image_url
       };
 
-      const validation = validateActaData(actaData);
-      if (!validation.isValid) {
+      const validation = validateActaDataWithWarnings(actaData);
+      
+      // Check for critical errors first
+      if (validation.hasErrors) {
         toast({
           variant: "destructive",
           title: "Error de validación",
-          description: validation.message,
+          description: validation.errors.join(' '),
         });
+        return;
+      }
+
+      // If there are warnings, show confirmation dialog
+      if (validation.hasWarnings) {
+        setValidationWarnings(validation.warnings);
+        setShowWarningDialog(true);
         return;
       }
     }
 
+    await saveInternal();
+  };
+
+  const saveInternal = async () => {
     const success = await onSave(formData, partyVotes, mailVotes);
     if (success) {
       toast({
@@ -137,6 +153,15 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
         description: "Acta actualizada correctamente."
       });
     }
+  };
+
+  const handleWarningDialogContinue = async () => {
+    setShowWarningDialog(false);
+    await saveInternal();
+  };
+
+  const handleWarningDialogCancel = () => {
+    setShowWarningDialog(false);
   };
 
   const selectedMunicipality = mpcaData?.find(m => m.idm === formData.municipality_idm);
@@ -382,6 +407,14 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
       </div>
         </div>
       </div>
+
+      <ValidationWarningDialog
+        open={showWarningDialog}
+        onOpenChange={() => {}}
+        warnings={validationWarnings}
+        onContinue={handleWarningDialogContinue}
+        onCancel={handleWarningDialogCancel}
+      />
     </div>
   );
 };

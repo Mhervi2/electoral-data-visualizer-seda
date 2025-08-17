@@ -16,6 +16,7 @@ import { ResultsData } from './ResultsData';
 import { PartyVotes } from './PartyVotes';
 import { MailVotersSection } from './MailVotersSection';
 import { ExistingActDialog } from './ExistingActDialog';
+import { ValidationWarningDialog } from '@/components/ui/validation-warning-dialog';
 import { MunicipalitySelector } from './MunicipalitySelector';
 import { useSystemConfig } from '@/contexts/SystemConfigContext';
 
@@ -40,6 +41,8 @@ export const SubmitActaForm = () => {
     showExistingActDialog,
     selectedMpcaRecord,
     isSubmitting,
+    showWarningDialog,
+    validationWarnings,
     setShowExistingActDialog,
     handleMunicipalityChange,
     handleInputChange,
@@ -47,7 +50,9 @@ export const SubmitActaForm = () => {
     handleMailVotersChange,
     checkExistingAct,
     submitActa,
-    navigateToResults
+    navigateToResults,
+    handleWarningDialogContinue,
+    handleWarningDialogCancel
   } = useSubmitActa();
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,6 +105,14 @@ export const SubmitActaForm = () => {
         onOpenChange={setShowExistingActDialog}
         existingAct={existingAct}
         onNavigateToResults={navigateToResults}
+      />
+
+      <ValidationWarningDialog
+        open={showWarningDialog}
+        onOpenChange={() => {}}
+        warnings={validationWarnings}
+        onContinue={handleWarningDialogContinue}
+        onCancel={handleWarningDialogCancel}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
