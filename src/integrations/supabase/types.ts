@@ -240,6 +240,13 @@ export type Database = {
             referencedRelation: "mpca"
             referencedColumns: ["idm"]
           },
+          {
+            foreignKeyName: "electoral_acts_municipality_idm_fkey"
+            columns: ["municipality_idm"]
+            isOneToOne: false
+            referencedRelation: "mpca_search_optimized"
+            referencedColumns: ["idm"]
+          },
         ]
       }
       electoral_acts_audit_log: {
@@ -604,6 +611,14 @@ export type Database = {
       }
     }
     Views: {
+      comunidades_autonomas: {
+        Row: {
+          ca: string | null
+          idca: number | null
+          total_municipios: number | null
+        }
+        Relationships: []
+      }
       electoral_acts_with_municipalities: {
         Row: {
           blank_votes: number | null
@@ -637,7 +652,38 @@ export type Database = {
             referencedRelation: "mpca"
             referencedColumns: ["idm"]
           },
+          {
+            foreignKeyName: "electoral_acts_municipality_idm_fkey"
+            columns: ["municipality_idm"]
+            isOneToOne: false
+            referencedRelation: "mpca_search_optimized"
+            referencedColumns: ["idm"]
+          },
         ]
+      }
+      mpca_search_optimized: {
+        Row: {
+          ca: string | null
+          display_name: string | null
+          idc: string | null
+          idca: number | null
+          idm: number | null
+          idp: number | null
+          municipio: string | null
+          provincia: string | null
+          search_vector: unknown | null
+        }
+        Relationships: []
+      }
+      provincias_by_ca: {
+        Row: {
+          ca: string | null
+          idca: number | null
+          idp: number | null
+          provincia: string | null
+          total_municipios: number | null
+        }
+        Relationships: []
       }
     }
     Functions: {
