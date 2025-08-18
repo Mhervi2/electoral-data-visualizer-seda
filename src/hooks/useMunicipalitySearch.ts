@@ -25,19 +25,35 @@ export const useMunicipalitySearch = (searchTerm: string, delay: number = 300) =
       try {
         console.log('🔍 Searching municipalities for:', debouncedSearchTerm);
         
-        // Debug specific case for Zaragoza
-        if (debouncedSearchTerm.toLowerCase().includes('zaragoza')) {
-          console.log('🔍 Searching for Zaragoza specifically...');
-        }
+        // Use optimized search view if available, fallback to regular table
+        const searchQuery = debouncedSearchTerm
+          .trim()
+          .split(' ')
+          .map(term => `${term}:*`)
+          .join(' & ');
 
-        const searchPattern = `%${debouncedSearchTerm.toLowerCase()}%`;
-        
-        const { data, error: queryError } = await supabase
-          .from('mpca')
+        let { data, error: queryError } = await supabase
+          .from('mpca_search_optimized')
           .select('idm, municipio, provincia, ca, idp, idca, idc')
-          .or(`municipio.ilike.${searchPattern},provincia.ilike.${searchPattern},ca.ilike.${searchPattern}`)
+          .textSearch('search_vector', searchQuery)
           .order('municipio', { ascending: true })
-          .limit(300); // Increased limit for better search results
+          .limit(100);
+
+        // Fallback to regular search if optimized view fails
+        if (queryError) {
+          console.log('🔄 Fallback to regular search');
+          const searchPattern = `%${debouncedSearchTerm.toLowerCase()}%`;
+          
+          const fallbackResult = await supabase
+            .from('mpca')
+            .select('idm, municipio, provincia, ca, idp, idca, idc')
+            .or(`municipio.ilike.${searchPattern},provincia.ilike.${searchPattern},ca.ilike.${searchPattern}`)
+            .order('municipio', { ascending: true })
+            .limit(100);
+          
+          data = fallbackResult.data;
+          queryError = fallbackResult.error;
+        }
 
         if (queryError) {
           console.error('❌ Search error:', queryError);
