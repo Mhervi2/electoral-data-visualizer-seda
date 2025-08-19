@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,7 +25,8 @@ const AdminElectoralActs = () => {
     updateAct,
     updatePartyVotes,
     updateMailVotes,
-    getActAuditLog
+    getActAuditLog,
+    deleteAct
   } = useElectoralActsAdmin();
 
   const [selectedAct, setSelectedAct] = useState<ElectoralActAdmin | null>(null);
@@ -55,6 +57,16 @@ const AdminElectoralActs = () => {
     if (success) {
       await updatePartyVotes(selectedAct.id, partyVotes);
       await updateMailVotes(selectedAct.id, mailVotes);
+      setShowEditDialog(false);
+      setSelectedAct(null);
+      return true;
+    }
+    return false;
+  };
+
+  const handleDeleteAct = async (actId: string) => {
+    const success = await deleteAct(actId);
+    if (success) {
       setShowEditDialog(false);
       setSelectedAct(null);
       return true;
@@ -185,6 +197,7 @@ const AdminElectoralActs = () => {
               act={selectedAct}
               onSave={handleSaveAct}
               onCancel={() => setShowEditDialog(false)}
+              onDelete={handleDeleteAct}
             />
           )}
         </DialogContent>

@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Save, X, Plus, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ElectoralActAdmin } from '@/hooks/useElectoralActsAdmin';
 import { useAppData } from '@/hooks/useAppData';
 import { MunicipalitySelector } from '@/components/acta/MunicipalitySelector';
@@ -25,12 +26,14 @@ interface AdminActEditFormProps {
     mailVotes: { dni: string }[]
   ) => Promise<boolean>;
   onCancel: () => void;
+  onDelete: (actId: string) => Promise<boolean>;
 }
 
 export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
   act,
   onSave,
-  onCancel
+  onCancel,
+  onDelete
 }) => {
   const { toast } = useToast();
   const { isMailVotingEnabled } = useSystemSettings();
@@ -50,6 +53,7 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
   const [newMailDni, setNewMailDni] = useState('');
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
     // Initialize party votes
@@ -162,6 +166,13 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
 
   const handleWarningDialogCancel = () => {
     setShowWarningDialog(false);
+  };
+
+  const handleDelete = async () => {
+    const success = await onDelete(act.id);
+    if (success) {
+      setShowDeleteDialog(false);
+    }
   };
 
   const selectedMunicipality = mpcaData?.find(m => m.idm === formData.municipality_idm);
@@ -395,15 +406,56 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
         )}
       </Tabs>
 
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>
-          <X className="h-4 w-4 mr-1" />
-          Cancelar
-        </Button>
-        <Button onClick={handleSave}>
-          <Save className="h-4 w-4 mr-1" />
-          Guardar Cambios
-        </Button>
+      <div className="flex justify-between items-center">
+        <div>
+          <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="flex items-center gap-2">
+                <Trash2 className="h-4 w-4" />
+                Eliminar Acta
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar acta electoral?</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2">
+                  <div>
+                    Esta acción eliminará permanentemente toda la información del acta:
+                  </div>
+                  <div className="bg-muted p-3 rounded-lg text-sm">
+                    <div><strong>Mesa:</strong> {act.mesa_identifier}</div>
+                    <div><strong>Municipio:</strong> {act.municipio || 'Sin municipio'}</div>
+                    <div><strong>Censo:</strong> {act.census_total}</div>
+                    <div><strong>Votantes:</strong> {act.total_voters}</div>
+                  </div>
+                  <div className="text-destructive font-medium">
+                    ⚠️ Esta acción no se puede deshacer y eliminará todos los votos, historial de cambios y datos asociados.
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDelete}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Eliminar definitivamente
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+        
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onCancel}>
+            <X className="h-4 w-4 mr-1" />
+            Cancelar
+          </Button>
+          <Button onClick={handleSave}>
+            <Save className="h-4 w-4 mr-1" />
+            Guardar Cambios
+          </Button>
+        </div>
       </div>
         </div>
       </div>

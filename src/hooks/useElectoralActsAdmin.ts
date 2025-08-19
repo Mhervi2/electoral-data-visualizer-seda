@@ -312,6 +312,93 @@ export const useElectoralActsAdmin = () => {
     }
   };
 
+  const deleteAct = async (actId: string) => {
+    try {
+      // Delete in transaction order: mail_votes -> party_votes -> audit_log -> electoral_acts
+      
+      // 1. Delete mail votes
+      const { error: mailVotesError } = await supabase
+        .from('mail_votes')
+        .delete()
+        .eq('electoral_act_id', actId);
+
+      if (mailVotesError) {
+        console.error('Error deleting mail votes:', mailVotesError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudieron eliminar los votos por correo."
+        });
+        return false;
+      }
+
+      // 2. Delete party votes
+      const { error: partyVotesError } = await supabase
+        .from('party_votes')
+        .delete()
+        .eq('electoral_act_id', actId);
+
+      if (partyVotesError) {
+        console.error('Error deleting party votes:', partyVotesError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudieron eliminar los votos de partidos."
+        });
+        return false;
+      }
+
+      // 3. Delete audit log entries
+      const { error: auditLogError } = await supabase
+        .from('electoral_acts_audit_log')
+        .delete()
+        .eq('electoral_act_id', actId);
+
+      if (auditLogError) {
+        console.error('Error deleting audit log:', auditLogError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo eliminar el historial de cambios."
+        });
+        return false;
+      }
+
+      // 4. Finally, delete the electoral act
+      const { error: actError } = await supabase
+        .from('electoral_acts')
+        .delete()
+        .eq('id', actId);
+
+      if (actError) {
+        console.error('Error deleting electoral act:', actError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo eliminar el acta electoral."
+        });
+        return false;
+      }
+
+      toast({
+        title: "Éxito",
+        description: "Acta eliminada correctamente."
+      });
+
+      // Refresh the list
+      await fetchActs();
+      return true;
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Error inesperado al eliminar el acta."
+      });
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchActs();
   }, [searchTerm, municipalityFilter]);
@@ -327,6 +414,7 @@ export const useElectoralActsAdmin = () => {
     updatePartyVotes,
     updateMailVotes,
     getActAuditLog,
+    deleteAct,
     fetchActs
   };
 };
