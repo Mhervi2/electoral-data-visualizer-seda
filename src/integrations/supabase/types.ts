@@ -178,6 +178,7 @@ export type Database = {
           mesa_identifier_full: string | null
           municipality_idm: number | null
           null_votes: number
+          observations: string | null
           source_type: string
           submitted_by: string | null
           total_voters: number | null
@@ -198,6 +199,7 @@ export type Database = {
           mesa_identifier_full?: string | null
           municipality_idm?: number | null
           null_votes?: number
+          observations?: string | null
           source_type?: string
           submitted_by?: string | null
           total_voters?: number | null
@@ -218,6 +220,7 @@ export type Database = {
           mesa_identifier_full?: string | null
           municipality_idm?: number | null
           null_votes?: number
+          observations?: string | null
           source_type?: string
           submitted_by?: string | null
           total_voters?: number | null

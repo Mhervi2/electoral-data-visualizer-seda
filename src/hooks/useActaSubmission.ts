@@ -31,6 +31,7 @@ export const useActaSubmission = () => {
           null_votes: parseInt(actaData.nulos),
           source_type: 'user',
           image_url: actaData.imageUrl,
+          observations: actaData.observations || null,
           submitted_by: null // No user authentication required
         })
         .select()

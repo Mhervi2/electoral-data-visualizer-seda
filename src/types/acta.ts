@@ -38,6 +38,7 @@ export interface ActaData {
   imagen?: File;
   imageUrl?: string;
   mailVoters: MailVoter[];
+  observations?: string;
 }
 
 export interface ExistingAct {
@@ -76,4 +77,5 @@ export interface ElectoralAct {
   municipio?: string;
   provincia?: string;
   comunidad_autonoma?: string;
+  observations?: string;
 }

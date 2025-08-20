@@ -12,7 +12,7 @@ export const useMunicipalitySearch = (searchTerm: string, delay: number = 300) =
 
   useEffect(() => {
     const searchMunicipalities = async () => {
-      // Don't search if term is too short
+      // Don't search if term is too short or too long  
       if (!debouncedSearchTerm.trim() || debouncedSearchTerm.trim().length < 2) {
         setMunicipalities([]);
         setLoading(false);

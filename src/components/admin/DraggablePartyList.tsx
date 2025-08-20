@@ -87,6 +87,7 @@ interface DraggablePartyListProps {
   onVoteChange: (partidoId: string, votes: string) => void;
   onPartyOrderChange: (newOrder: PoliticalParty[]) => void;
   provincia?: string;
+  showAllParties?: boolean;
 }
 
 export const DraggablePartyList = ({ 
@@ -94,7 +95,8 @@ export const DraggablePartyList = ({
   votos, 
   onVoteChange, 
   onPartyOrderChange,
-  provincia 
+  provincia,
+  showAllParties = true
 }: DraggablePartyListProps) => {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -115,10 +117,22 @@ export const DraggablePartyList = ({
     }
   };
 
-  if (!parties || parties.length === 0) {
+  // Filter parties based on showAllParties flag
+  const filteredParties = showAllParties 
+    ? parties 
+    : parties.filter(party => {
+        // Show party if it has votes or if we don't have vote data yet
+        const hasVotes = votos[party.id] && parseInt(votos[party.id]) > 0;
+        return hasVotes || !votos[party.id];
+      });
+
+  if (!filteredParties || filteredParties.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        No hay partidos políticos disponibles. Cargando...
+        {!showAllParties 
+          ? 'No hay partidos con votos registrados.' 
+          : 'No hay partidos políticos disponibles. Cargando...'
+        }
       </div>
     );
   }
@@ -142,7 +156,7 @@ export const DraggablePartyList = ({
           strategy={verticalListSortingStrategy}
         >
           <div className="space-y-3">
-            {parties.map(party => (
+            {filteredParties.map(party => (
               <SortablePartyItem
                 key={party.id}
                 party={party}

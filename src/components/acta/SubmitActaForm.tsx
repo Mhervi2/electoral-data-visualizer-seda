@@ -153,6 +153,7 @@ export const SubmitActaForm = () => {
               votantes={actaData.votantes}
               blancos={actaData.blancos}
               nulos={actaData.nulos}
+              observations={actaData.observations}
               onInputChange={handleInputChange}
             />
 

@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, X, Plus, Trash2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Save, X, Plus, Trash2, Eye, EyeOff } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ElectoralActAdmin } from '@/hooks/useElectoralActsAdmin';
 import { useAppData } from '@/hooks/useAppData';
@@ -46,6 +47,7 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
     total_voters: act.total_voters || 0,
     blank_votes: act.blank_votes,
     null_votes: act.null_votes,
+    observations: act.observations || '',
   });
 
   const [partyVotes, setPartyVotes] = useState<{ party_id: string; votes: number }[]>([]);
@@ -54,6 +56,7 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAllParties, setShowAllParties] = useState(true);
 
   useEffect(() => {
     // Initialize party votes
@@ -70,10 +73,17 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
   }, [politicalParties, act.party_votes]);
 
   const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: typeof value === 'string' ? parseInt(value) || 0 : value
-    }));
+    if (field === 'observations') {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value as string
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [field]: typeof value === 'string' ? parseInt(value) || 0 : value
+      }));
+    }
   };
 
   const handlePartyVoteChange = (partyId: string, votes: string) => {
@@ -322,15 +332,6 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="blank_votes">Votos en Blanco</Label>
-                  <Input
-                    id="blank_votes"
-                    type="number"
-                    value={formData.blank_votes}
-                    onChange={(e) => handleInputChange('blank_votes', e.target.value)}
-                  />
-                </div>
-                <div>
                   <Label htmlFor="null_votes">Votos Nulos</Label>
                   <Input
                     id="null_votes"
@@ -339,6 +340,27 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
                     onChange={(e) => handleInputChange('null_votes', e.target.value)}
                   />
                 </div>
+                <div>
+                  <Label htmlFor="blank_votes">Votos en Blanco</Label>
+                  <Input
+                    id="blank_votes"
+                    type="number"
+                    value={formData.blank_votes}
+                    onChange={(e) => handleInputChange('blank_votes', e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              {/* Observations field */}
+              <div className="space-y-2">
+                <Label htmlFor="observations">Observaciones</Label>
+                <Textarea
+                  id="observations"
+                  value={formData.observations || ''}
+                  onChange={(e) => handleInputChange('observations', e.target.value)}
+                  placeholder="Observaciones opcionales sobre el acta electoral..."
+                  rows={3}
+                />
               </div>
             </CardContent>
           </Card>
@@ -347,7 +369,26 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
         <TabsContent value="votes" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Votos por Partido Político</CardTitle>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Votos por Partido Político</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Gestiona los votos de cada partido político
+                  </p>
+                </div>
+                
+                {/* Toggle button for showing/hiding parties */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllParties(!showAllParties)}
+                  className="flex items-center gap-2"
+                >
+                  {showAllParties ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showAllParties ? 'Ocultar sin votos' : 'Mostrar todos'}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {orderLoading ? (
@@ -361,6 +402,7 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
                   onVoteChange={handleVoteChange}
                   onPartyOrderChange={handlePartyOrderChange}
                   provincia={selectedMunicipality?.provincia}
+                  showAllParties={showAllParties}
                 />
               )}
             </CardContent>

@@ -23,6 +23,7 @@ export interface ElectoralActAdmin {
   municipio?: string;
   provincia?: string;
   comunidad_autonoma?: string;
+  observations?: string;
   party_votes: {
     id: string;
     votes: number;

@@ -14,6 +14,7 @@ export const useActaFormState = () => {
     nulos: '',
     votos: {},
     mailVoters: [],
+    observations: '',
   });
 
   const handleMunicipalityChange = (municipalityId: string, municipalityData: MpcaData | null) => {
@@ -48,6 +49,7 @@ export const useActaFormState = () => {
       nulos: '',
       votos: {},
       mailVoters: [],
+      observations: '',
     });
     setSelectedMpcaRecord(null);
   };
