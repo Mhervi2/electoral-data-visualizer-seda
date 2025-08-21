@@ -56,7 +56,6 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showAllParties, setShowAllParties] = useState(true);
 
   useEffect(() => {
     // Initialize party votes
@@ -73,7 +72,7 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
   }, [politicalParties, act.party_votes]);
 
   const handleInputChange = (field: string, value: string | number) => {
-    if (field === 'observations') {
+    if (field === 'observations' || field === 'mesa_identifier') {
       setFormData(prev => ({
         ...prev,
         [field]: value as string
@@ -377,17 +376,6 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
                   </p>
                 </div>
                 
-                {/* Toggle button for showing/hiding parties */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAllParties(!showAllParties)}
-                  className="flex items-center gap-2"
-                >
-                  {showAllParties ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  {showAllParties ? 'Ocultar sin votos' : 'Mostrar todos'}
-                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -402,7 +390,6 @@ export const AdminActEditForm: React.FC<AdminActEditFormProps> = ({
                   onVoteChange={handleVoteChange}
                   onPartyOrderChange={handlePartyOrderChange}
                   provincia={selectedMunicipality?.provincia}
-                  showAllParties={showAllParties}
                 />
               )}
             </CardContent>

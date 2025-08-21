@@ -5,6 +5,8 @@ import { Edit, Trash2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import PoliticalPartyForm, { PoliticalPartyFormData } from './PoliticalPartyForm';
 import { usePoliticalPartiesManagement, type PoliticalPartyData } from '@/hooks/usePoliticalPartiesManagement';
+import { ProvinceManagement } from './ProvinceManagement';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface PoliticalParty {
   id: string;
@@ -53,7 +55,7 @@ const EditPartyDialog: React.FC<EditPartyDialogProps> = ({ party, onPartyUpdated
           Editar
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             Editar Partido Político
@@ -88,16 +90,30 @@ const EditPartyDialog: React.FC<EditPartyDialogProps> = ({ party, onPartyUpdated
             </AlertDialog>
           </DialogTitle>
         </DialogHeader>
-        <PoliticalPartyForm
-          initialData={{
-            name: party.name,
-            siglas: party.siglas,
-            color: party.color,
-          }}
-          onSubmit={handleSubmit}
-          submitLabel="Actualizar Partido"
-          isSubmitting={isUpdating}
-        />
+        
+        <Tabs defaultValue="basic" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="basic">Datos Básicos</TabsTrigger>
+            <TabsTrigger value="provinces">Disponibilidad por Provincia</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="basic" className="space-y-4">
+            <PoliticalPartyForm
+              initialData={{
+                name: party.name,
+                siglas: party.siglas,
+                color: party.color,
+              }}
+              onSubmit={handleSubmit}
+              submitLabel="Actualizar Partido"
+              isSubmitting={isUpdating}
+            />
+          </TabsContent>
+
+          <TabsContent value="provinces" className="space-y-4">
+            <ProvinceManagement partyId={party.id} />
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

@@ -429,6 +429,41 @@ export type Database = {
         }
         Relationships: []
       }
+      party_provinces: {
+        Row: {
+          created_at: string
+          id: string
+          is_available: boolean
+          party_id: string
+          provincia: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          party_id: string
+          provincia: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          party_id?: string
+          provincia?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_provinces_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "political_parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party_votes: {
         Row: {
           created_at: string | null

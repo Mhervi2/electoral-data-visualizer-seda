@@ -52,6 +52,8 @@ interface AggregatedResults {
   blankVotes: number;
   nullVotes: number;
   validVotes: number;
+  abstention: number;
+  abstentionPercentage: number;
   partyResults: PartyResultBySource[];
   sourceComparison: {
     source: string;
@@ -211,6 +213,8 @@ export const useElectoralAggregation = () => {
           blankVotes: 0,
           nullVotes: 0,
           validVotes: 0,
+          abstention: 0,
+          abstentionPercentage: 0,
           partyResults: [],
           sourceComparison: [],
           sourceMetrics: [],
@@ -278,6 +282,10 @@ export const useElectoralAggregation = () => {
     const totalVotes = acts.reduce((sum, act) => sum + (act.total_voters || 0), 0);
     const blankVotes = acts.reduce((sum, act) => sum + (act.blank_votes || 0), 0);
     const nullVotes = acts.reduce((sum, act) => sum + (act.null_votes || 0), 0);
+    
+    // Calculate abstention (census - total votes)
+    const abstention = totalCensus - totalVotes;
+    const abstentionPercentage = totalCensus > 0 ? (abstention / totalCensus) * 100 : 0;
     // FIXED: Valid votes now include blank votes (only exclude null votes)
     const validVotes = totalVotes - nullVotes;
     const participation = totalCensus > 0 ? (totalVotes / totalCensus) * 100 : 0;
@@ -465,6 +473,8 @@ export const useElectoralAggregation = () => {
       blankVotes,
       nullVotes,
       validVotes,
+      abstention,
+      abstentionPercentage,
       partyResults,
       sourceComparison,
       sourceMetrics,

@@ -23,10 +23,12 @@ interface PartyResultBySource {
 interface ElectoralChartsProps {
   partyResults: PartyResultBySource[];
   totalVotes: number;
+  totalCensus: number;
+  abstention: number;
   selectedSources: string[];
 }
 
-export const ElectoralCharts = ({ partyResults, totalVotes, selectedSources }: ElectoralChartsProps) => {
+export const ElectoralCharts = ({ partyResults, totalVotes, totalCensus, abstention, selectedSources }: ElectoralChartsProps) => {
   if (!partyResults || partyResults.length === 0) {
     return (
       <Card>
@@ -53,7 +55,7 @@ export const ElectoralCharts = ({ partyResults, totalVotes, selectedSources }: E
   };
 
   const createPieChartData = (sourceType: string) => {
-    return partyResults
+    const partyData = partyResults
       .map(result => ({
         name: result.party.siglas,
         fullName: result.party.name,
@@ -64,6 +66,25 @@ export const ElectoralCharts = ({ partyResults, totalVotes, selectedSources }: E
       .filter(item => item.value > 0)
       .sort((a, b) => b.value - a.value)
       .slice(0, 10); // Limit to top 10 parties per chart
+
+    // Calculate abstention for this source
+    const sourceActs = partyResults.length > 0 ? 
+      // We need to calculate source-specific abstention
+      // For now, distribute abstention proportionally
+      Math.round(abstention * (partyData.reduce((sum, p) => sum + p.value, 0) / totalVotes)) : 0;
+    
+    // Add abstention to the chart data
+    if (sourceActs > 0) {
+      partyData.push({
+        name: 'ABST',
+        fullName: 'Abstención',
+        value: sourceActs,
+        fill: '#94a3b8', // Gray color for abstention
+        percentage: totalCensus > 0 ? (sourceActs / totalCensus) * 100 : 0
+      });
+    }
+
+    return partyData;
   };
 
   const CustomTooltip = ({ active, payload }: any) => {
