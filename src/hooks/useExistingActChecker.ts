@@ -17,7 +17,25 @@ export const useExistingActChecker = () => {
     }
 
     try {
-      console.log('🔍 Checking for existing act with mesa identifier...');
+      console.log('🔍 Checking for existing act with full identifier check...');
+      
+      // First get municipality data to build full identifier for comparison
+      const { data: mpcaData, error: mpcaError } = await supabase
+        .from('mpca')
+        .select('idca, idp, idc')
+        .eq('idm', parseInt(actaData.municipio))
+        .single();
+
+      if (mpcaError || !mpcaData) {
+        console.error('❌ Error getting municipality data:', mpcaError);
+        return false;
+      }
+
+      // Build full identifier: idca-idp-idc-mesa_identifier for comparison
+      const expectedFullIdentifier = `${String(mpcaData.idca).padStart(2, '0')}-${String(mpcaData.idp).padStart(2, '0')}-${mpcaData.idc}-${actaData.mesaIdentifier}`;
+      console.log('🔍 Expected full identifier:', expectedFullIdentifier);
+
+      // Get acts that match the basic criteria first
       const { data, error } = await supabase
         .from('electoral_acts_with_municipalities')
         .select(`

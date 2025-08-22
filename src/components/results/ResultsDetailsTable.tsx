@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import { getSourceTooltip } from '@/utils/sourceTooltips';
 
 interface PartyResultBySource {
@@ -27,6 +29,13 @@ interface ResultsDetailsTableProps {
 }
 
 export const ResultsDetailsTable = ({ partyResults, totalVotes, selectedSources }: ResultsDetailsTableProps) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredResults = partyResults.filter(result => 
+    result.party.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    result.party.siglas.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const getSourceLabel = (sourceType: string) => {
     const labels = {
       'user': 'Usuario',
@@ -62,6 +71,15 @@ export const ResultsDetailsTable = ({ partyResults, totalVotes, selectedSources 
       <Card>
         <CardHeader>
           <CardTitle>Resultados Detallados por Partido</CardTitle>
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar partido..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -70,8 +88,6 @@ export const ResultsDetailsTable = ({ partyResults, totalVotes, selectedSources 
                 <TableRow>
                   <TableHead>Partido</TableHead>
                   <TableHead>Siglas</TableHead>
-                  <TableHead className="text-right">Total Votos</TableHead>
-                  <TableHead className="text-right">% Total</TableHead>
                   {selectedSources.map(sourceType => (
                     <TableHead key={sourceType} className="text-right">
                       {renderSourceHeader(sourceType, '(Votos)')}
@@ -85,7 +101,7 @@ export const ResultsDetailsTable = ({ partyResults, totalVotes, selectedSources 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {partyResults.map((result, index) => (
+                {filteredResults.map((result, index) => (
                   <TableRow key={result.party.siglas}>
                     <TableCell>
                       <div className="flex items-center space-x-2">
@@ -97,12 +113,6 @@ export const ResultsDetailsTable = ({ partyResults, totalVotes, selectedSources 
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">{result.party.siglas}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {result.totalVotes.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {result.percentage.toFixed(2)}%
-                    </TableCell>
                     {selectedSources.map(sourceType => (
                       <TableCell key={sourceType} className="text-right font-mono">
                         {(result.sourceResults[sourceType]?.votes || 0).toLocaleString()}

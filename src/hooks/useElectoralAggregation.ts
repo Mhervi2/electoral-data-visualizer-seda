@@ -286,8 +286,8 @@ export const useElectoralAggregation = () => {
     // Calculate abstention (census - total votes)
     const abstention = totalCensus - totalVotes;
     const abstentionPercentage = totalCensus > 0 ? (abstention / totalCensus) * 100 : 0;
-    // FIXED: Valid votes now include blank votes (only exclude null votes)
-    const validVotes = totalVotes - nullVotes;
+    // Valid votes for party calculations (exclude null and blank votes)
+    const validVotes = totalVotes - nullVotes - blankVotes;
     const participation = totalCensus > 0 ? (totalVotes / totalCensus) * 100 : 0;
 
     // Calculate metrics by source
@@ -342,12 +342,12 @@ export const useElectoralAggregation = () => {
       }
     });
 
-    // Calculate valid votes by source for percentages (now includes blank votes)
+    // Calculate valid votes by source for percentages (exclude null and blank votes)
     const validVotesBySource = new Map<string, number>();
     filters.sourceTypes.forEach(sourceType => {
       const sourceValidVotes = acts
         .filter(act => act.source_type === sourceType)
-        .reduce((sum, act) => sum + (act.total_voters - act.null_votes), 0);
+        .reduce((sum, act) => sum + (act.total_voters - act.null_votes - act.blank_votes), 0);
       validVotesBySource.set(sourceType, sourceValidVotes);
     });
 

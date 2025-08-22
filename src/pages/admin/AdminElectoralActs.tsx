@@ -144,7 +144,9 @@ const AdminElectoralActs = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {acts.map((act) => (
+                {acts
+                  .sort((a, b) => (a.municipio || '').localeCompare(b.municipio || ''))
+                  .map((act) => (
                   <TableRow key={act.id}>
                     <TableCell className="font-medium">
                       {act.mesa_identifier}

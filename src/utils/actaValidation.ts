@@ -121,7 +121,7 @@ export const validateActaDataWithWarnings = (actaData: ActaData): ValidationWith
   if (expectedTotal !== votantes) {
     const difference = Math.abs(expectedTotal - votantes);
     warnings.push(
-      `La suma de votos no coincide: votos a candidaturas (${totalVotosCandidaturas}) + blancos (${blancos}) + nulos (${nulos}) = ${expectedTotal}, pero el total de votantes es ${votantes}. Diferencia: ${difference} votos.`
+      `La suma de votos no coincide: votos a candidaturas (${totalVotosCandidaturas}) + nulos (${nulos}) + blancos (${blancos}) = ${expectedTotal}, pero el total de votantes es ${votantes}. Diferencia: ${difference} votos.`
     );
   }
 

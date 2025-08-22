@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Image, ChevronDown } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Image, ChevronDown, FileText } from 'lucide-react';
 import { ActDetailsDialog } from './ActDetailsDialog';
 import { MailVotersDialog } from './MailVotersDialog';
 import { FullMesaIdentifier } from '@/components/ui/mesa-identifier-display';
@@ -102,6 +103,7 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
                 <TableRow>
                   <TableHead>Ubicación</TableHead>
                   <TableHead>Mesa</TableHead>
+                  <TableHead>Id Mesa</TableHead>
                   <TableHead>Censo</TableHead>
                   <TableHead>Votantes</TableHead>
                   <TableHead>Fuente</TableHead>
@@ -127,6 +129,9 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{table}</TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {acta.full_identifier || 'N/A'}
+                      </TableCell>
                       <TableCell>{acta.census_total}</TableCell>
                       <TableCell>{acta.total_voters}</TableCell>
                       <TableCell>
@@ -143,6 +148,23 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
                              <Button size="sm" variant="outline" disabled>
                                <Image className="h-4 w-4" />
                              </Button>
+                           )}
+                           {acta.observations && (
+                             <Dialog>
+                               <DialogTrigger asChild>
+                                 <Button size="sm" variant="outline">
+                                   <FileText className="h-4 w-4" />
+                                 </Button>
+                               </DialogTrigger>
+                               <DialogContent>
+                                 <DialogHeader>
+                                   <DialogTitle>Observaciones del Acta</DialogTitle>
+                                 </DialogHeader>
+                                 <div className="mt-4">
+                                   <p className="text-sm whitespace-pre-wrap">{acta.observations}</p>
+                                 </div>
+                               </DialogContent>
+                             </Dialog>
                            )}
                            {isMailVotingEnabled() && (
                              <MailVotersDialog 

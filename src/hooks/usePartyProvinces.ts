@@ -56,8 +56,6 @@ export const usePartyProvinces = (partyId?: string) => {
           party_id: partyId,
           provincia,
           is_available: isAvailable
-        }, {
-          onConflict: 'party_id,provincia'
         });
 
       if (error) {
@@ -92,9 +90,7 @@ export const usePartyProvinces = (partyId?: string) => {
 
       const { error } = await supabase
         .from('party_provinces')
-        .upsert(updates, {
-          onConflict: 'party_id,provincia'
-        });
+        .upsert(updates);
 
       if (error) {
         console.error('Error updating multiple party provinces:', error);
