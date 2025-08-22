@@ -67,20 +67,18 @@ export const ElectoralCharts = ({ partyResults, totalVotes, totalCensus, abstent
       .sort((a, b) => b.value - a.value)
       .slice(0, 10); // Limit to top 10 parties per chart
 
-    // Calculate abstention for this source
-    const sourceActs = partyResults.length > 0 ? 
-      // We need to calculate source-specific abstention
-      // For now, distribute abstention proportionally
-      Math.round(abstention * (partyData.reduce((sum, p) => sum + p.value, 0) / totalVotes)) : 0;
+    // Calculate abstention for this source - abstention is people who didn't vote at all
+    // So we show it as total abstention percentage in each chart
+    const abstentionPercentage = totalCensus > 0 ? (abstention / totalCensus) * 100 : 0;
     
-    // Add abstention to the chart data
-    if (sourceActs > 0) {
+    // Add abstention to the chart data (same for all sources since it's people who didn't vote)
+    if (abstention > 0) {
       partyData.push({
         name: 'ABST',
         fullName: 'Abstención',
-        value: sourceActs,
+        value: abstention,
         fill: '#94a3b8', // Gray color for abstention
-        percentage: totalCensus > 0 ? (sourceActs / totalCensus) * 100 : 0
+        percentage: abstentionPercentage
       });
     }
 

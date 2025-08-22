@@ -283,7 +283,7 @@ export const useElectoralAggregation = () => {
     const blankVotes = acts.reduce((sum, act) => sum + (act.blank_votes || 0), 0);
     const nullVotes = acts.reduce((sum, act) => sum + (act.null_votes || 0), 0);
     
-    // Calculate abstention (census - total votes)
+    // Calculate abstention (people who didn't vote)
     const abstention = totalCensus - totalVotes;
     const abstentionPercentage = totalCensus > 0 ? (abstention / totalCensus) * 100 : 0;
     // Valid votes for party calculations (exclude null and blank votes)
