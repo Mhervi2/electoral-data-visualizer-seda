@@ -23,6 +23,7 @@ interface ElectoralAct {
   id: string;
   municipality_idm: number;
   mesa_identifier: string;
+  full_identifier?: string;
   census_total: number;
   total_voters: number;
   blank_votes: number;
@@ -30,9 +31,15 @@ interface ElectoralAct {
   source_type: string;
   image_url?: string;
   created_at: string;
+  observations?: string;
   municipio?: string;
   provincia?: string;
   comunidad_autonoma?: string;
+  mpca?: {
+    municipio: string;
+    provincia: string;
+    ca: string;
+  };
 }
 
 interface SourceMetrics {
@@ -125,17 +132,17 @@ export const useElectoralAggregation = () => {
     if (filters.autonomousCommunity?.trim()) {
       const trimmedValue = filters.autonomousCommunity.trim();
       console.log('🎯 Applying CA filter:', trimmedValue);
-      query = query.eq('comunidad_autonoma', trimmedValue);
+      query = query.eq('mpca.ca', trimmedValue);
     }
     if (filters.province?.trim()) {
       const trimmedValue = filters.province.trim();
       console.log('🎯 Applying Province filter:', trimmedValue);
-      query = query.eq('provincia', trimmedValue);
+      query = query.eq('mpca.provincia', trimmedValue);
     }
     if (filters.municipality?.trim()) {
       const trimmedValue = filters.municipality.trim();
       console.log('🎯 Applying Municipality filter:', trimmedValue);
-      query = query.eq('municipio', trimmedValue);
+      query = query.eq('mpca.municipio', trimmedValue);
     }
     if (filters.district?.trim() || filters.section?.trim() || filters.table?.trim()) {
       // Si tenemos filtros de mesa específicos, necesitamos filtrar por mesa_identifier
@@ -182,8 +189,15 @@ export const useElectoralAggregation = () => {
 
       // Get individual electoral acts first
       let individualQuery = supabase
-        .from('electoral_acts_with_municipalities')
-        .select('*')
+        .from('electoral_acts')
+        .select(`
+          *,
+          mpca!inner(
+            municipio,
+            provincia,
+            ca
+          )
+        `)
         .order('created_at', { ascending: false });
 
       individualQuery = buildQuery(individualQuery);
@@ -466,23 +480,28 @@ export const useElectoralAggregation = () => {
       individualActas: acts.length
     });
 
-    return {
-      totalVotes,
-      totalCensus,
-      participation,
-      blankVotes,
-      nullVotes,
-      validVotes,
-      abstention,
-      abstentionPercentage,
-      partyResults,
-      sourceComparison,
-      sourceMetrics,
-      selectedSources: filters.sourceTypes,
-      individualActas: acts,
-      provincialSeats: dhondtProvincialResults,
-      autonomousSeats: dhondtAutonomousResults
-    };
+      return {
+        totalVotes,
+        totalCensus,
+        participation,
+        blankVotes,
+        nullVotes,
+        validVotes,
+        abstention,
+        abstentionPercentage,
+        partyResults,
+        sourceComparison,
+        sourceMetrics,
+        selectedSources: filters.sourceTypes,
+        individualActas: acts.map(act => ({
+          ...act,
+          municipio: act.mpca?.municipio,
+          provincia: act.mpca?.provincia,
+          comunidad_autonoma: act.mpca?.ca
+        })),
+        provincialSeats: dhondtProvincialResults,
+        autonomousSeats: dhondtAutonomousResults
+      };
   };
 
   useEffect(() => {
