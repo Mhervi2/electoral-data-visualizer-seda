@@ -102,12 +102,8 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
               <TableHeader>
                 <TableRow>
                   <TableHead>Ubicación</TableHead>
-                  <TableHead>Mesa</TableHead>
-                  <TableHead>Id Mesa</TableHead>
-                  <TableHead>Censo</TableHead>
-                  <TableHead>Votantes</TableHead>
+                  <TableHead>Identificador completo</TableHead>
                   <TableHead>Fuente</TableHead>
-                  <TableHead>Fecha</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -115,66 +111,59 @@ export const IndividualActsList = ({ individualActas, onActaClick }: IndividualA
                 {displayedActas.map((acta) => {
                   const { district, section, table } = parseMesaIdentifier(acta.mesa_identifier);
                   return (
-                    <TableRow 
-                      key={acta.id}
-                      className="cursor-pointer hover:bg-accent/50"
-                      onClick={() => handleActaClick(acta)}
-                    >
-                      <TableCell>
-                        <div className="text-sm">
-                          <div className="font-medium">{getLocationDisplay(acta)}</div>
-                          <div className="text-muted-foreground">
-                            D:{district} S:{section}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{table}</TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {acta.full_identifier || 'N/A'}
-                      </TableCell>
-                      <TableCell>{acta.census_total}</TableCell>
-                      <TableCell>{acta.total_voters}</TableCell>
-                      <TableCell>
-                        <Badge variant={getSourceTypeBadgeVariant(acta.source_type) as any}>
-                          {getSourceTypeLabel(acta.source_type)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{new Date(acta.created_at).toLocaleDateString('es-ES')}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
-                          {acta.image_url ? (
-                           <ActDetailsDialog act={acta} />
-                           ) : (
-                             <Button size="sm" variant="outline" disabled>
-                               <Image className="h-4 w-4" />
-                             </Button>
-                           )}
-                           {acta.observations && (
-                             <Dialog>
-                               <DialogTrigger asChild>
-                                 <Button size="sm" variant="outline">
-                                   <FileText className="h-4 w-4" />
-                                 </Button>
-                               </DialogTrigger>
-                               <DialogContent>
-                                 <DialogHeader>
-                                   <DialogTitle>Observaciones del Acta</DialogTitle>
-                                 </DialogHeader>
-                                 <div className="mt-4">
-                                   <p className="text-sm whitespace-pre-wrap">{acta.observations}</p>
-                                 </div>
-                               </DialogContent>
-                             </Dialog>
-                           )}
-                           {isMailVotingEnabled() && (
-                             <MailVotersDialog 
-                               actId={acta.id} 
-                               mesaIdentifier={acta.mesa_identifier}
-                             />
-                           )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                     <TableRow 
+                       key={acta.id}
+                       className="cursor-pointer hover:bg-accent/50"
+                       onClick={() => handleActaClick(acta)}
+                     >
+                       <TableCell>
+                         <div className="text-sm">
+                           <div className="font-medium">{getLocationDisplay(acta)}</div>
+                         </div>
+                       </TableCell>
+                       <TableCell className="font-mono text-sm">
+                         {acta.full_identifier || 'N/A'}
+                       </TableCell>
+                       <TableCell>
+                         <Badge variant={getSourceTypeBadgeVariant(acta.source_type) as any}>
+                           {getSourceTypeLabel(acta.source_type)}
+                         </Badge>
+                       </TableCell>
+                       <TableCell className="text-right">
+                         <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                           {acta.image_url ? (
+                            <ActDetailsDialog act={acta} />
+                            ) : (
+                              <Button size="sm" variant="outline" disabled>
+                                <Image className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {acta.observations && (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button size="sm" variant="outline">
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Observaciones del Acta</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="mt-4">
+                                    <p className="text-sm whitespace-pre-wrap">{acta.observations}</p>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            )}
+                            {isMailVotingEnabled() && (
+                              <MailVotersDialog 
+                                actId={acta.id} 
+                                mesaIdentifier={acta.mesa_identifier}
+                              />
+                            )}
+                         </div>
+                       </TableCell>
+                     </TableRow>
                   );
                 })}
               </TableBody>
