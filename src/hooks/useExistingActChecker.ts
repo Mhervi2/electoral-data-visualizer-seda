@@ -35,7 +35,7 @@ export const useExistingActChecker = () => {
       const expectedFullIdentifier = `${String(mpcaData.idca).padStart(2, '0')}-${String(mpcaData.idp).padStart(2, '0')}-${mpcaData.idc}-${actaData.mesaIdentifier}`;
       console.log('🔍 Expected full identifier:', expectedFullIdentifier);
 
-      // Get acts that match the basic criteria first
+      // Check for acts using full_identifier for exact match
       const { data, error } = await supabase
         .from('electoral_acts_with_municipalities')
         .select(`
@@ -54,8 +54,7 @@ export const useExistingActChecker = () => {
           )
         `)
         .eq('election_id', actaData.electionId)
-        .eq('municipality_idm', parseInt(actaData.municipio))
-        .eq('mesa_identifier', actaData.mesaIdentifier);
+        .or(`full_identifier.eq.${expectedFullIdentifier},mesa_identifier.eq.${actaData.mesaIdentifier}`);
 
       if (error) {
         console.error('❌ Error checking existing act:', error);
