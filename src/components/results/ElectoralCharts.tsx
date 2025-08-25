@@ -118,42 +118,6 @@ export const ElectoralCharts = ({ partyResults, totalVotes, totalCensus, abstent
         <CardTitle>Distribución Porcentual por Fuente</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Abstention Section - Destacada */}
-        <div className="mb-8 p-6 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-lg border-2 border-slate-200 dark:border-slate-700">
-          <h3 className="text-xl font-bold text-center mb-6 text-slate-800 dark:text-slate-200">
-            📊 Abstención por Fuente
-          </h3>
-          <div className={`grid ${getGridCols()} gap-4`}>
-            {selectedSources.map(sourceType => {
-              const abstentionData = calculateAbstentionBySource(sourceType);
-              const sourceDisplayName = getSourceDisplayName(sourceType);
-              
-              return (
-                <div key={`abstention-${sourceType}`} className="text-center p-4 bg-white dark:bg-slate-950 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800">
-                  <h4 className="text-lg font-semibold mb-3 text-slate-700 dark:text-slate-300">
-                    {sourceDisplayName}
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="text-3xl font-bold text-red-600 dark:text-red-400">
-                      {abstentionData.votes.toLocaleString()}
-                    </div>
-                    <div className="text-sm text-slate-600 dark:text-slate-400">
-                      votos de abstención
-                    </div>
-                    <div className="text-xl font-semibold text-red-500 dark:text-red-300">
-                      {abstentionData.percentage.toFixed(1)}%
-                    </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-500">
-                      del censo total
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Charts Section */}
         <div className={`grid ${getGridCols()} gap-6`}>
           {selectedSources.map(sourceType => {
             const pieChartData = createPieChartData(sourceType);
@@ -171,6 +135,9 @@ export const ElectoralCharts = ({ partyResults, totalVotes, totalCensus, abstent
                 </div>
               );
             }
+
+            const abstentionData = calculateAbstentionBySource(sourceType);
+            const hasSourceData = pieChartData.length > 0;
 
             return (
               <div key={sourceType} className="text-center">
@@ -213,6 +180,16 @@ export const ElectoralCharts = ({ partyResults, totalVotes, totalCensus, abstent
                     </div>
                   ))}
                 </div>
+
+                {/* Discrete abstention info - only show if there's data for this source */}
+                {hasSourceData && abstentionData.votes > 0 && (
+                  <div className="mt-3 pt-2 border-t border-border">
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-medium">Abstención:</span>{' '}
+                      {abstentionData.votes.toLocaleString()} votos ({abstentionData.percentage.toFixed(1)}%)
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

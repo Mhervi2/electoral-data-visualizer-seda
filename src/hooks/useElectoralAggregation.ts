@@ -413,8 +413,9 @@ export const useElectoralAggregation = () => {
     const shouldCalculateSeats = provincialSeats.length > 0 && partyVotes.length > 0;
     const isProvincialLevel = filters.province && !filters.municipality && !filters.district;
     const isAutonomousLevel = filters.autonomousCommunity && !filters.province;
+    const isNationalLevel = !filters.autonomousCommunity && !filters.province && !filters.municipality && !filters.district;
 
-    if (shouldCalculateSeats && (isProvincialLevel || isAutonomousLevel)) {
+    if (shouldCalculateSeats && (isProvincialLevel || isAutonomousLevel || isNationalLevel)) {
       // Prepare data for D'Hondt calculation
       const partyVotesForDHondt = partyVotes
         .map(pv => {
@@ -466,6 +467,21 @@ export const useElectoralAggregation = () => {
 
         if (communitySeats.length > 0 && communityVotes.length > 0) {
           dhondtProvincialResults = calculateProvincialSeats(communityVotes, politicalParties, communitySeats, minimumThreshold);
+          dhondtAutonomousResults = aggregateAutonomousSeats(dhondtProvincialResults, mpcaData);
+        }
+      } else if (isNationalLevel) {
+        // Calculate for all provinces (national level)
+        // Get minimum threshold from election
+        const { data: electionData } = await supabase
+          .from('elections')
+          .select('minimum_threshold')
+          .eq('id', filters.electionId)
+          .single();
+
+        const minimumThreshold = electionData?.minimum_threshold || 3.0;
+
+        if (provincialSeats.length > 0 && partyVotesForDHondt.length > 0) {
+          dhondtProvincialResults = calculateProvincialSeats(partyVotesForDHondt, politicalParties, provincialSeats, minimumThreshold);
           dhondtAutonomousResults = aggregateAutonomousSeats(dhondtProvincialResults, mpcaData);
         }
       }
