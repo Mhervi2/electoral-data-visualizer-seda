@@ -84,7 +84,7 @@ export const useElectoralActsAdmin = () => {
       }
 
       if (municipalityFilter) {
-        query = query.ilike('municipio', `%${municipalityFilter}%`);
+        query = query.ilike('mpca.municipio', `%${municipalityFilter}%`);
       }
 
       const { data, error } = await query;
