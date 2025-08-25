@@ -67,22 +67,23 @@ export const ElectoralCharts = ({ partyResults, totalVotes, totalCensus, abstent
       .sort((a, b) => b.value - a.value)
       .slice(0, 10); // Limit to top 10 parties per chart
 
-    // Calculate abstention for this source - abstention is people who didn't vote at all
-    // So we show it as total abstention percentage in each chart
-    const abstentionPercentage = totalCensus > 0 ? (abstention / totalCensus) * 100 : 0;
-    
-    // Add abstention to the chart data (same for all sources since it's people who didn't vote)
-    if (abstention > 0) {
-      partyData.push({
-        name: 'ABST',
-        fullName: 'Abstención',
-        value: abstention,
-        fill: '#94a3b8', // Gray color for abstention
-        percentage: abstentionPercentage
-      });
-    }
-
     return partyData;
+  };
+
+  const calculateAbstentionBySource = (sourceType: string) => {
+    // Calculate total votes for this specific source
+    const totalVotesInSource = partyResults.reduce((sum, result) => {
+      return sum + (result.sourceResults[sourceType]?.votes || 0);
+    }, 0);
+    
+    // Abstention = Census - Total votes in this source
+    const abstentionInSource = totalCensus - totalVotesInSource;
+    const abstentionPercentage = totalCensus > 0 ? (abstentionInSource / totalCensus) * 100 : 0;
+    
+    return {
+      votes: abstentionInSource,
+      percentage: abstentionPercentage
+    };
   };
 
   const CustomTooltip = ({ active, payload }: any) => {
@@ -117,6 +118,42 @@ export const ElectoralCharts = ({ partyResults, totalVotes, totalCensus, abstent
         <CardTitle>Distribución Porcentual por Fuente</CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Abstention Section - Destacada */}
+        <div className="mb-8 p-6 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-lg border-2 border-slate-200 dark:border-slate-700">
+          <h3 className="text-xl font-bold text-center mb-6 text-slate-800 dark:text-slate-200">
+            📊 Abstención por Fuente
+          </h3>
+          <div className={`grid ${getGridCols()} gap-4`}>
+            {selectedSources.map(sourceType => {
+              const abstentionData = calculateAbstentionBySource(sourceType);
+              const sourceDisplayName = getSourceDisplayName(sourceType);
+              
+              return (
+                <div key={`abstention-${sourceType}`} className="text-center p-4 bg-white dark:bg-slate-950 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800">
+                  <h4 className="text-lg font-semibold mb-3 text-slate-700 dark:text-slate-300">
+                    {sourceDisplayName}
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+                      {abstentionData.votes.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                      votos de abstención
+                    </div>
+                    <div className="text-xl font-semibold text-red-500 dark:text-red-300">
+                      {abstentionData.percentage.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      del censo total
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Charts Section */}
         <div className={`grid ${getGridCols()} gap-6`}>
           {selectedSources.map(sourceType => {
             const pieChartData = createPieChartData(sourceType);
