@@ -50,6 +50,19 @@ export const usePartyProvinces = (partyId?: string) => {
     try {
       setUpdating(true);
       
+      console.log('🔄 Updating party province:', { partyId, provincia, isAvailable });
+      
+      // Validate input data
+      if (!partyId || !provincia) {
+        console.error('❌ Invalid input data:', { partyId, provincia });
+        toast({
+          variant: "destructive",
+          title: "Error de validación",
+          description: "Datos de entrada inválidos para actualizar la provincia.",
+        });
+        return false;
+      }
+
       const { data, error } = await supabase
         .from('party_provinces')
         .upsert({
@@ -61,19 +74,31 @@ export const usePartyProvinces = (partyId?: string) => {
         });
 
       if (error) {
-        console.error('Error updating party province:', error);
+        console.error('❌ Database error updating party province:', error);
         toast({
           variant: "destructive",
-          title: "Error",
-          description: "No se pudo actualizar la configuración de provincia.",
+          title: "Error de base de datos",
+          description: `No se pudo actualizar la configuración: ${error.message}`,
         });
         return false;
       }
 
+      console.log('✅ Party province updated successfully:', data);
+      
+      // Refresh data and show success feedback
       await fetchPartyProvinces();
+      toast({
+        title: "Éxito",
+        description: `Configuración actualizada para ${provincia}`,
+      });
       return true;
     } catch (error) {
-      console.error('Error in updatePartyProvince:', error);
+      console.error('💥 Unexpected error in updatePartyProvince:', error);
+      toast({
+        variant: "destructive",
+        title: "Error inesperado",
+        description: "Error inesperado al actualizar la configuración de provincia.",
+      });
       return false;
     } finally {
       setUpdating(false);

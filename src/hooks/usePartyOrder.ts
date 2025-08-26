@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { PoliticalParty } from '@/types/acta';
+import { usePartyProvinces } from './usePartyProvinces';
 
 export const usePartyOrder = (provincia: string | undefined, parties: PoliticalParty[]) => {
   const [orderedParties, setOrderedParties] = useState<PoliticalParty[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { getPartyAvailability } = usePartyProvinces();
 
   useEffect(() => {
     console.log('🎭 usePartyOrder effect triggered:', { provincia, partiesLength: parties.length });
@@ -51,7 +53,12 @@ export const usePartyOrder = (provincia: string | undefined, parties: PoliticalP
 
       if (!orderData || orderData.length === 0) {
         console.log('🎭 No custom order exists, using default order');
-        setOrderedParties(parties);
+        // Filter parties by province availability even with default order
+        const availableParties = parties.filter(party => 
+          !provincia || getPartyAvailability(party.id, provincia)
+        );
+        console.log('🎭 Available parties for provincia', provincia, ':', availableParties.map(p => p.siglas));
+        setOrderedParties(availableParties);
         return;
       }
 
@@ -59,14 +66,21 @@ export const usePartyOrder = (provincia: string | undefined, parties: PoliticalP
       const orderMap = new Map(orderData.map((item: any) => [item.party_id, item.order_position]));
       console.log('🎭 Order map:', Array.from(orderMap.entries()));
       
+      // Filter parties by province availability first
+      const availableParties = parties.filter(party => 
+        !provincia || getPartyAvailability(party.id, provincia)
+      );
+      
+      console.log('🎭 Available parties for provincia', provincia, ':', availableParties.map(p => p.siglas));
+
       // Sort parties based on saved order, put unordered parties at the end
-      const sorted = [...parties].sort((a, b) => {
+      const sorted = [...availableParties].sort((a, b) => {
         const orderA = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
         const orderB = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
         return orderA - orderB;
       });
 
-      console.log('🎭 Sorted parties:', sorted.map(p => ({ id: p.id, siglas: p.siglas, order: orderMap.get(p.id) })));
+      console.log('🎭 Sorted available parties:', sorted.map(p => ({ id: p.id, siglas: p.siglas, order: orderMap.get(p.id) })));
       setOrderedParties(sorted);
     } catch (error) {
       console.error('💥 Fatal error loading party order:', error);
