@@ -89,6 +89,7 @@ export const ElectoralCharts = ({ partyResults, totalVotes, totalCensus, abstent
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
+      const censusPercentage = totalCensus > 0 ? (data.value / totalCensus) * 100 : 0;
       return (
         <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
           <p className="font-semibold text-gray-800">{data.name}</p>
@@ -97,7 +98,10 @@ export const ElectoralCharts = ({ partyResults, totalVotes, totalCensus, abstent
             <span className="font-medium">Votos:</span> {data.value.toLocaleString()}
           </p>
           <p className="text-blue-600">
-            <span className="font-medium">Porcentaje:</span> {data.percentage.toFixed(1)}%
+            <span className="font-medium">% sobre votos:</span> {data.percentage.toFixed(1)}%
+          </p>
+          <p className="text-green-600">
+            <span className="font-medium">% sobre censo:</span> {censusPercentage.toFixed(1)}%
           </p>
         </div>
       );
@@ -169,16 +173,21 @@ export const ElectoralCharts = ({ partyResults, totalVotes, totalCensus, abstent
                 </div>
                 
                 <div className="flex flex-wrap justify-center gap-2 mt-4">
-                  {pieChartData.slice(0, 6).map((entry) => (
-                    <div key={entry.name} className="flex items-center gap-1 text-xs">
-                      <div 
-                        className="w-2 h-2 rounded-full" 
-                        style={{ backgroundColor: entry.fill }}
-                      />
-                      <span className="text-gray-700 font-medium">{entry.name}</span>
-                      <span className="text-gray-500">({entry.percentage.toFixed(1)}%)</span>
-                    </div>
-                  ))}
+                  {pieChartData.slice(0, 6).map((entry) => {
+                    const censusPercentage = totalCensus > 0 ? (entry.value / totalCensus) * 100 : 0;
+                    return (
+                      <div key={entry.name} className="flex items-center gap-1 text-xs">
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: entry.fill }}
+                        />
+                        <span className="text-gray-700 font-medium">{entry.name}</span>
+                        <span className="text-gray-500">
+                          ({entry.percentage.toFixed(1)}% | {censusPercentage.toFixed(1)}%)
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Discrete abstention info - only show if there's data for this source */}

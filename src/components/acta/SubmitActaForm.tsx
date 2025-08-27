@@ -129,6 +129,7 @@ export const SubmitActaForm = () => {
                 elections={elections}
                 selectedElectionId={actaData.electionId}
                 onElectionChange={(value) => handleInputChange('electionId', value)}
+                autoSelectActive={true}
               />
 
               <MesaIdentification 
@@ -183,6 +184,7 @@ export const SubmitActaForm = () => {
               elections={elections}
               selectedElectionId={imageOnlyElectionId}
               onElectionChange={setImageOnlyElectionId}
+              autoSelectActive={true}
             />
 
             <MunicipalitySelector 

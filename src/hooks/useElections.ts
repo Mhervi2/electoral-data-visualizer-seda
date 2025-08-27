@@ -54,5 +54,9 @@ export const useElections = () => {
     fetchElections();
   }, [toast]);
 
-  return { elections, loading };
+  const getActiveElection = () => {
+    return elections.find(election => election.status === 'active');
+  };
+
+  return { elections, loading, getActiveElection };
 };

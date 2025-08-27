@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,9 +9,19 @@ interface ElectionSelectionProps {
   elections: Election[];
   selectedElectionId: string;
   onElectionChange: (value: string) => void;
+  autoSelectActive?: boolean;
 }
 
-export const ElectionSelection = ({ elections, selectedElectionId, onElectionChange }: ElectionSelectionProps) => {
+export const ElectionSelection = ({ elections, selectedElectionId, onElectionChange, autoSelectActive = false }: ElectionSelectionProps) => {
+  // Auto-select active election if enabled and no election is currently selected
+  React.useEffect(() => {
+    if (autoSelectActive && !selectedElectionId && elections.length > 0) {
+      const activeElection = elections.find(election => election.status === 'active');
+      if (activeElection) {
+        onElectionChange(activeElection.id);
+      }
+    }
+  }, [autoSelectActive, selectedElectionId, elections, onElectionChange]);
   return (
     <Card>
       <CardHeader>
