@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronsUpDown, AlertCircle } from 'lucide-react';
 import { MpcaData } from '@/types/acta';
 import { useAppData } from '@/hooks/useAppData';
-import { ServerMunicipalityCombobox } from './ServerMunicipalityCombobox';
+import { NewMunicipalityCombobox } from './NewMunicipalityCombobox';
 
 interface MunicipalitySelectorProps {
   selectedMunicipalityId: string;
@@ -53,7 +53,7 @@ export const MunicipalitySelector = ({
   return (
     <div>
       <Label htmlFor="municipio">Municipio *</Label>
-      <ServerMunicipalityCombobox
+      <NewMunicipalityCombobox
         selectedValue={selectedMunicipalityId}
         onSelect={handleSelect}
         placeholder="Buscar municipio..."
