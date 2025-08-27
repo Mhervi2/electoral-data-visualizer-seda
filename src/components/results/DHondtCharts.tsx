@@ -9,9 +9,10 @@ interface DHondtChartsProps {
   provincialResults?: ProvincialResult[];
   autonomousResults?: AutonomousResult[];
   title: string;
+  maxColumnsPerRow?: number;
 }
 
-export const DHondtCharts = ({ provincialResults, autonomousResults, title }: DHondtChartsProps) => {
+export const DHondtCharts = ({ provincialResults, autonomousResults, title, maxColumnsPerRow = 3 }: DHondtChartsProps) => {
   if (!provincialResults && !autonomousResults) {
     return null;
   }
@@ -82,6 +83,9 @@ export const DHondtCharts = ({ provincialResults, autonomousResults, title }: DH
   const getGridCols = (resultsLength: number) => {
     if (resultsLength === 1) return 'grid-cols-1';
     if (resultsLength === 2) return 'grid-cols-1 md:grid-cols-2';
+    if (resultsLength === 3) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+    if (resultsLength === 4) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4';
+    if (maxColumnsPerRow >= 5) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5';
     return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
   };
 

@@ -132,17 +132,17 @@ const Results = () => {
           )}
 
           {/* D'Hondt Seat Distribution */}
-          {aggregatedResults.provincialSeats && (
+          {(aggregatedResults.provincialSeats || aggregatedResults.autonomousSeats || aggregatedResults.nationalSeats) && (
             <DHondtResults
               provincialResults={aggregatedResults.provincialSeats}
-              title="Distribución de Escaños por Provincia (Método D'Hondt)"
-            />
-          )}
-
-          {aggregatedResults.autonomousSeats && (
-            <DHondtResults
               autonomousResults={aggregatedResults.autonomousSeats}
-              title="Distribución de Escaños por Comunidad Autónoma (Método D'Hondt)"
+              nationalSeats={aggregatedResults.nationalSeats}
+              title="Distribución de Escaños (Método D'Hondt)"
+              filters={{
+                autonomousCommunity: filters.autonomousCommunity,
+                province: filters.province,
+                municipality: filters.municipality
+              }}
             />
           )}
 

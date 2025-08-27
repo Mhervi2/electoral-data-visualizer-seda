@@ -72,6 +72,7 @@ interface AggregatedResults {
   individualActas: ElectoralAct[];
   provincialSeats?: ProvincialResult[];
   autonomousSeats?: AutonomousResult[];
+  nationalSeats?: { party: string; seats: number; color: string }[];
 }
 
 interface Filters {
@@ -487,6 +488,36 @@ export const useElectoralAggregation = () => {
       }
     }
 
+    // Calculate national seats aggregation (sum of all provincial seats by party)
+    let nationalSeats: { party: string; seats: number; color: string }[] | undefined;
+    
+    if (dhondtProvincialResults && dhondtProvincialResults.length > 0) {
+      const nationalSeatsMap = new Map<string, { seats: number; color: string }>();
+      
+      dhondtProvincialResults.forEach(provinceResult => {
+        provinceResult.parties.forEach(party => {
+          const existing = nationalSeatsMap.get(party.name);
+          // Find the party color from the political parties data
+          const politicalParty = partyVotes.find(pv => pv.political_parties?.name === party.name || pv.political_parties?.siglas === party.name)?.political_parties;
+          const partyColor = politicalParty?.color || '#6B7280';
+          
+          if (existing) {
+            existing.seats += party.seats;
+          } else {
+            nationalSeatsMap.set(party.name, {
+              seats: party.seats,
+              color: partyColor
+            });
+          }
+        });
+      });
+      
+      nationalSeats = Array.from(nationalSeatsMap.entries())
+        .map(([party, data]) => ({ party, seats: data.seats, color: data.color }))
+        .filter(item => item.seats > 0)
+        .sort((a, b) => b.seats - a.seats);
+    }
+
     console.log('📊 Aggregated results completed:', {
       totalVotes,
       totalCensus,
@@ -496,28 +527,29 @@ export const useElectoralAggregation = () => {
       individualActas: acts.length
     });
 
-      return {
-        totalVotes,
-        totalCensus,
-        participation,
-        blankVotes,
-        nullVotes,
-        validVotes,
-        abstention,
-        abstentionPercentage,
-        partyResults,
-        sourceComparison,
-        sourceMetrics,
-        selectedSources: filters.sourceTypes,
-        individualActas: acts.map(act => ({
-          ...act,
-          municipio: act.mpca?.municipio,
-          provincia: act.mpca?.provincia,
-          comunidad_autonoma: act.mpca?.ca
-        })),
-        provincialSeats: dhondtProvincialResults,
-        autonomousSeats: dhondtAutonomousResults
-      };
+    return {
+      totalVotes,
+      totalCensus,
+      participation,
+      blankVotes,
+      nullVotes,
+      validVotes,
+      abstention,
+      abstentionPercentage,
+      partyResults,
+      sourceComparison,
+      sourceMetrics,
+      selectedSources: filters.sourceTypes,
+      individualActas: acts.map(act => ({
+        ...act,
+        municipio: act.mpca?.municipio || act.municipio,
+        provincia: act.mpca?.provincia || act.provincia,
+        comunidad_autonoma: act.mpca?.ca || act.comunidad_autonoma
+      })),
+      provincialSeats: dhondtProvincialResults,
+      autonomousSeats: dhondtAutonomousResults,
+      nationalSeats
+    };
   };
 
   useEffect(() => {
