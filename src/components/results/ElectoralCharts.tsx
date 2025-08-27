@@ -185,8 +185,8 @@ export const ElectoralCharts = ({ partyResults, totalVotes, totalCensus, abstent
                 {hasSourceData && abstentionData.votes > 0 && (
                   <div className="mt-3 pt-2 border-t border-border">
                     <div className="text-xs text-muted-foreground">
-                      <span className="font-medium">Abstención:</span>{' '}
-                      {abstentionData.votes.toLocaleString()} votos ({abstentionData.percentage.toFixed(1)}%)
+                       <span className="font-medium">Abstención:</span>{' '}
+                       {abstentionData.votes.toLocaleString()} ({abstentionData.percentage.toFixed(1)}%)
                     </div>
                   </div>
                 )}
