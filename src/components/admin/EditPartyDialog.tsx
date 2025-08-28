@@ -7,6 +7,8 @@ import PoliticalPartyForm, { PoliticalPartyFormData } from './PoliticalPartyForm
 import { usePoliticalPartiesManagement, type PoliticalPartyData } from '@/hooks/usePoliticalPartiesManagement';
 import { ProvinceManagement } from './ProvinceManagement';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface PoliticalParty {
   id: string;
@@ -23,7 +25,9 @@ interface EditPartyDialogProps {
 const EditPartyDialog: React.FC<EditPartyDialogProps> = ({ party, onPartyUpdated }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const { updateParty, deleteParty, isUpdating, isDeleting } = usePoliticalPartiesManagement();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { updateParty, isUpdating } = usePoliticalPartiesManagement();
+  const { toast } = useToast();
 
   const handleSubmit = async (data: PoliticalPartyFormData) => {
     const partyData: PoliticalPartyData = {
@@ -39,11 +43,95 @@ const EditPartyDialog: React.FC<EditPartyDialogProps> = ({ party, onPartyUpdated
   };
 
   const handleDelete = async () => {
-    const success = await deleteParty(party.id);
-    if (success) {
+    try {
+      setIsDeleting(true);
+      
+      console.log('🗑️ Iniciando eliminación del partido:', party.id);
+
+      // Paso 1: Eliminar votos de partido
+      console.log('🗳️ Eliminando votos del partido...');
+      const { error: partyVotesError } = await supabase
+        .from('party_votes')
+        .delete()
+        .eq('party_id', party.id);
+
+      if (partyVotesError) {
+        console.error('❌ Error eliminando votos del partido:', partyVotesError);
+        throw new Error('Error eliminando votos del partido');
+      }
+      console.log('✅ Votos del partido eliminados');
+
+      // Paso 2: Eliminar disponibilidad por provincia
+      console.log('🏛️ Eliminando disponibilidad por provincia...');
+      const { error: partyProvincesError } = await supabase
+        .from('party_provinces')
+        .delete()
+        .eq('party_id', party.id);
+
+      if (partyProvincesError) {
+        console.error('❌ Error eliminando provincias del partido:', partyProvincesError);
+        throw new Error('Error eliminando disponibilidad por provincia');
+      }
+      console.log('✅ Disponibilidad por provincia eliminada');
+
+      // Paso 3: Eliminar orden provincial
+      console.log('📊 Eliminando orden provincial...');
+      const { error: partyOrderError } = await supabase
+        .from('political_party_provincial_order')
+        .delete()
+        .eq('party_id', party.id);
+
+      if (partyOrderError) {
+        console.error('❌ Error eliminando orden provincial:', partyOrderError);
+        throw new Error('Error eliminando orden provincial');
+      }
+      console.log('✅ Orden provincial eliminado');
+
+      // Paso 4: Eliminar relaciones con elecciones
+      console.log('🗳️ Eliminando relaciones con elecciones...');
+      const { error: electionPartiesError } = await supabase
+        .from('election_parties')
+        .delete()
+        .eq('party_id', party.id);
+
+      if (electionPartiesError) {
+        console.error('❌ Error eliminando relaciones con elecciones:', electionPartiesError);
+        throw new Error('Error eliminando relaciones con elecciones');
+      }
+      console.log('✅ Relaciones con elecciones eliminadas');
+
+      // Paso 5: Eliminar el partido político
+      console.log('🎭 Eliminando partido político...');
+      const { error: partyError } = await supabase
+        .from('political_parties')
+        .delete()
+        .eq('id', party.id);
+
+      if (partyError) {
+        console.error('❌ Error eliminando partido político:', partyError);
+        throw new Error('Error eliminando el partido político');
+      }
+      console.log('✅ Partido político eliminado correctamente');
+
+      // Éxito total
+      toast({
+        title: "Éxito",
+        description: `El partido "${party.name}" (${party.siglas}) y toda su información asociada han sido eliminados correctamente.`,
+      });
+
       setShowDeleteDialog(false);
       setIsOpen(false);
       onPartyUpdated?.();
+
+    } catch (error) {
+      console.error('💥 Error fatal eliminando partido:', error);
+      toast({
+        variant: "destructive",
+        title: "Error al eliminar partido",
+        description: error instanceof Error ? error.message : "No se pudo eliminar el partido político. Inténtalo de nuevo.",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
