@@ -71,6 +71,30 @@ const Results = () => {
     });
   };
 
+  const handleDiscrepancyClick = (discrepancy: any) => {
+    console.log('Discrepancy clicked:', discrepancy);
+    
+    // Parse mesa identifier
+    const parts = discrepancy.mesa_identifier?.split('-') || [];
+    const district = parts[0] || '';
+    const section = parts[1] || '';
+    const table = parts[2] || '';
+    
+    // Auto-fill filters with discrepancy data
+    setFilters(prev => ({
+      ...prev,
+      municipality: discrepancy.municipality || '',
+      district: district,
+      section: section,
+      table: table
+    }));
+
+    toast({
+      title: "Filtros actualizados",
+      description: `Mostrando datos de la discrepancia: Mesa ${discrepancy.mesa_identifier}, ${discrepancy.municipality}`,
+    });
+  };
+
   if (loading && !aggregatedResults) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -101,7 +125,7 @@ const Results = () => {
 
       {/* Discrepancy Detection Section (Admin Only) */}
       {user?.isAdmin && (
-        <DiscrepancyDetector />
+        <DiscrepancyDetector onDiscrepancyClick={handleDiscrepancyClick} />
       )}
 
       {aggregatedResults && (

@@ -3,12 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { AlertTriangle, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface DiscrepancyData {
   municipality: string;
   mesa_identifier: string;
+  municipality_idm: number;
   acts: {
     source_type: string;
     census_total: number;
@@ -19,9 +23,16 @@ interface DiscrepancyData {
   differences: string[];
 }
 
-const DiscrepancyDetector = () => {
+interface DiscrepancyDetectorProps {
+  onDiscrepancyClick?: (discrepancy: DiscrepancyData) => void;
+}
+
+const DiscrepancyDetector: React.FC<DiscrepancyDetectorProps> = ({ onDiscrepancyClick }) => {
   const [discrepancies, setDiscrepancies] = useState<DiscrepancyData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [displayCount, setDisplayCount] = useState(3);
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   useEffect(() => {
     detectDiscrepancies();
@@ -106,6 +117,7 @@ const DiscrepancyDetector = () => {
             foundDiscrepancies.push({
               municipality: firstAct.municipio || 'N/A',
               mesa_identifier: firstAct.mesa_identifier,
+              municipality_idm: firstAct.municipality_idm,
               acts: locationActs.map(act => ({
                 source_type: act.source_type,
                 census_total: act.census_total,
@@ -165,6 +177,23 @@ const DiscrepancyDetector = () => {
     };
   };
 
+  const handleDiscrepancyClick = (discrepancy: DiscrepancyData) => {
+    if (onDiscrepancyClick) {
+      onDiscrepancyClick(discrepancy);
+    }
+  };
+
+  const handleLoadMore = () => {
+    setDisplayCount(prev => prev + 5);
+  };
+
+  // Filter discrepancies by municipality name
+  const filteredDiscrepancies = discrepancies.filter(discrepancy =>
+    discrepancy.municipality.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+  );
+
+  const displayedDiscrepancies = filteredDiscrepancies.slice(0, displayCount);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -194,11 +223,22 @@ const DiscrepancyDetector = () => {
       <CardHeader>
         <CardTitle className="flex items-center">
           <AlertTriangle className="h-5 w-5 mr-2 text-destructive" />
-          Discrepancias Detectadas ({discrepancies.length})
+          Discrepancias Detectadas ({filteredDiscrepancies.length})
         </CardTitle>
         <CardDescription>
           Actas donde los datos no coinciden entre diferentes fuentes
         </CardDescription>
+        <div className="mt-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Buscar por municipio..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -210,10 +250,14 @@ const DiscrepancyDetector = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {discrepancies.map((discrepancy, index) => {
+            {displayedDiscrepancies.map((discrepancy, index) => {
               const { district, section, table } = parseMesaIdentifier(discrepancy.mesa_identifier);
               return (
-                <TableRow key={index}>
+                <TableRow 
+                  key={index}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleDiscrepancyClick(discrepancy)}
+                >
                   <TableCell>
                     <div className="text-sm">
                       <div className="font-medium">{discrepancy.municipality}</div>
@@ -246,6 +290,18 @@ const DiscrepancyDetector = () => {
             })}
           </TableBody>
         </Table>
+        
+        {displayCount < filteredDiscrepancies.length && (
+          <div className="mt-4 text-center">
+            <Button 
+              variant="outline" 
+              onClick={handleLoadMore}
+              className="w-full"
+            >
+              Ver más discrepancias ({filteredDiscrepancies.length - displayCount} restantes)
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
