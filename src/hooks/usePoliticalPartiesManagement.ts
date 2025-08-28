@@ -145,6 +145,53 @@ export const usePoliticalPartiesManagement = () => {
     try {
       setIsDeleting(true);
 
+      // Delete all associated data first to avoid foreign key constraints
+      
+      // Delete party votes
+      const { error: partyVotesError } = await supabase
+        .from('party_votes')
+        .delete()
+        .eq('party_id', id);
+
+      if (partyVotesError) {
+        console.error('Error deleting party votes:', partyVotesError);
+        throw partyVotesError;
+      }
+
+      // Delete party provinces
+      const { error: partyProvincesError } = await supabase
+        .from('party_provinces')
+        .delete()
+        .eq('party_id', id);
+
+      if (partyProvincesError) {
+        console.error('Error deleting party provinces:', partyProvincesError);
+        throw partyProvincesError;
+      }
+
+      // Delete party provincial order
+      const { error: partyOrderError } = await supabase
+        .from('political_party_provincial_order')
+        .delete()
+        .eq('party_id', id);
+
+      if (partyOrderError) {
+        console.error('Error deleting party order:', partyOrderError);
+        throw partyOrderError;
+      }
+
+      // Delete election parties
+      const { error: electionPartiesError } = await supabase
+        .from('election_parties')
+        .delete()
+        .eq('party_id', id);
+
+      if (electionPartiesError) {
+        console.error('Error deleting election parties:', electionPartiesError);
+        throw electionPartiesError;
+      }
+
+      // Finally delete the political party
       const { error } = await supabase
         .from('political_parties')
         .delete()
@@ -152,17 +199,12 @@ export const usePoliticalPartiesManagement = () => {
 
       if (error) {
         console.error('Error deleting party:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "No se pudo eliminar el partido político.",
-        });
-        return false;
+        throw error;
       }
 
       toast({
         title: "Éxito",
-        description: "Partido político eliminado correctamente.",
+        description: "Partido político y toda su información asociada eliminados correctamente.",
       });
       return true;
 
@@ -171,7 +213,7 @@ export const usePoliticalPartiesManagement = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Error inesperado al eliminar el partido.",
+        description: "Error inesperado al eliminar el partido político.",
       });
       return false;
     } finally {
