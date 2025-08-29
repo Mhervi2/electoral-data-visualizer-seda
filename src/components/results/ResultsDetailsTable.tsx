@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
 import { getSourceTooltip } from '@/utils/sourceTooltips';
 
@@ -30,11 +31,25 @@ interface ResultsDetailsTableProps {
 
 export const ResultsDetailsTable = ({ partyResults, totalVotes, selectedSources }: ResultsDetailsTableProps) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [displayCount, setDisplayCount] = useState(10);
 
-  const filteredResults = partyResults.filter(result => 
-    result.party.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    result.party.siglas.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredResults = partyResults
+    .filter(result => 
+      result.party.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      result.party.siglas.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      const aVotes = a.sourceResults['user']?.votes || 0;
+      const bVotes = b.sourceResults['user']?.votes || 0;
+      return bVotes - aVotes;
+    });
+
+  const displayedResults = filteredResults.slice(0, displayCount);
+  const hasMoreResults = filteredResults.length > displayCount;
+
+  const handleLoadMore = () => {
+    setDisplayCount(prev => prev + 5);
+  };
 
   const getSourceLabel = (sourceType: string) => {
     const labels = {
@@ -101,7 +116,7 @@ export const ResultsDetailsTable = ({ partyResults, totalVotes, selectedSources 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredResults.map((result, index) => (
+                {displayedResults.map((result, index) => (
                   <TableRow key={result.party.siglas}>
                     <TableCell>
                       <div className="flex items-center space-x-2">
@@ -128,6 +143,21 @@ export const ResultsDetailsTable = ({ partyResults, totalVotes, selectedSources 
               </TableBody>
             </Table>
           </div>
+          
+          {hasMoreResults && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {displayedResults.length} de {filteredResults.length} partidos (ordenados por votos de usuario)
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={handleLoadMore}
+                className="ml-4"
+              >
+                Ver más (+5)
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </TooltipProvider>
