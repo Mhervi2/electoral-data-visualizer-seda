@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, Vote } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Loader2, Vote, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAvailableFilters } from '@/hooks/useAvailableFilters';
 import { useElections } from '@/hooks/useElections';
 import { getSourceTooltip } from '@/utils/sourceTooltips';
@@ -23,11 +25,13 @@ interface ResultsFiltersProps {
   };
   onFiltersChange: (filters: any) => void;
   isLoading?: boolean;
+  isScrolled?: boolean;
 }
 
-export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: ResultsFiltersProps) => {
+export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false, isScrolled = false }: ResultsFiltersProps) => {
   const { options, loading: optionsLoading } = useAvailableFilters(filters);
   const { elections, loading: electionsLoading } = useElections();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleSelectChange = (key: string, value: string) => {
     const actualValue = value === "all" ? "" : value;
@@ -89,6 +93,36 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
     return selectedElection?.name || null;
   };
 
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (filters.electionId) count++;
+    if (filters.autonomousCommunity) count++;
+    if (filters.province) count++;
+    if (filters.municipality) count++;
+    if (filters.district) count++;
+    if (filters.section) count++;
+    if (filters.table) count++;
+    if (filters.sourceTypes.length > 0) count++;
+    return count;
+  };
+
+  const getFilterSummaryText = () => {
+    const parts = [];
+    if (filters.electionId) {
+      const election = elections.find(e => e.id === filters.electionId);
+      if (election) parts.push(election.name);
+    }
+    if (filters.autonomousCommunity) parts.push(filters.autonomousCommunity);
+    if (filters.province) parts.push(filters.province);
+    if (filters.municipality) parts.push(filters.municipality);
+    if (filters.district) parts.push(`Dist. ${filters.district}`);
+    if (filters.section) parts.push(`Secc. ${filters.section}`);
+    if (filters.table) parts.push(`Mesa ${filters.table}`);
+    if (filters.sourceTypes.length > 0) parts.push(`${filters.sourceTypes.length} fuente(s)`);
+    
+    return parts.length > 0 ? parts.join(' • ') : 'Sin filtros aplicados';
+  };
+
   const renderSourceToggle = (value: string, label: string) => {
     const tooltip = getSourceTooltip(value);
     
@@ -114,17 +148,85 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
     );
   };
 
+  // Versión compacta para cuando hay scroll
+  if (isScrolled && !isExpanded) {
+    return (
+      <TooltipProvider>
+        <Card className="border-b rounded-none shadow-md">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Vote className="h-4 w-4 text-primary" />
+                <div className="flex flex-col">
+                  <div className="text-sm font-medium">Filtros aplicados</div>
+                  <div className="text-xs text-muted-foreground truncate max-w-[500px]">
+                    {getFilterSummaryText()}
+                  </div>
+                </div>
+                {getActiveFiltersCount() > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {getActiveFiltersCount()}
+                  </Badge>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {filters.sourceTypes.length > 0 && (
+                  <div className="hidden md:flex items-center gap-1">
+                    <ToggleGroup 
+                      type="multiple" 
+                      value={filters.sourceTypes} 
+                      onValueChange={handleSourceTypesChange}
+                      className="h-8"
+                      size="sm"
+                    >
+                      {renderSourceToggle("user", "Usuario")}
+                      {renderSourceToggle("escrutinio", "Escrutinio")}
+                      {renderSourceToggle("oficial", "Oficial")}
+                    </ToggleGroup>
+                  </div>
+                )}
+                
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setIsExpanded(true)}
+                  className="h-8 px-3"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </TooltipProvider>
+    );
+  }
+
+  // Versión completa (normal o expandida cuando hay scroll)
   return (
     <TooltipProvider>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Vote className="h-5 w-5" />
-            Filtros de Búsqueda
-            {(isLoading || optionsLoading || electionsLoading) && (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      <Card className={isScrolled ? "border-b rounded-none shadow-md" : ""}>
+        <CardHeader className={isScrolled ? "pb-3" : ""}>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Vote className="h-5 w-5" />
+              Filtros de Búsqueda
+              {(isLoading || optionsLoading || electionsLoading) && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </CardTitle>
+            {isScrolled && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setIsExpanded(false)}
+                className="h-8 px-3"
+              >
+                <ChevronUp className="h-4 w-4" />
+              </Button>
             )}
-          </CardTitle>
+          </div>
           {getSelectedElectionName() && (
             <p className="text-sm text-muted-foreground">
               Mostrando resultados para: <span className="font-medium text-primary">{getSelectedElectionName()}</span>
@@ -291,7 +393,6 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false }: 
               className="justify-start mt-2 flex-wrap"
             >
               {renderSourceToggle("user", "Actas de Usuario")}
-              {renderSourceToggle("indra", "INDRA")}
               {renderSourceToggle("escrutinio", "Escrutinio General")}
               {renderSourceToggle("oficial", "Resultado Oficial")}
             </ToggleGroup>

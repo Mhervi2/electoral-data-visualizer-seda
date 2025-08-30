@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BarChart3 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -16,6 +16,7 @@ const Results = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+  const [isScrolled, setIsScrolled] = useState(false);
   const {
     aggregatedResults,
     loading,
@@ -50,6 +51,17 @@ const Results = () => {
       });
     }
   }, [searchParams, toast]);
+
+  // Handle scroll for sticky filters
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      setIsScrolled(scrollY > 100);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleActaClick = (acta: any) => {
     console.log('Acta clicked:', acta);
@@ -118,11 +130,12 @@ const Results = () => {
       </div>
 
       {/* Filtros fijos en la parte superior */}
-      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 border-b">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 mb-6">
         <ResultsFilters 
           filters={filters} 
           onFiltersChange={setFilters} 
           isLoading={loading} 
+          isScrolled={isScrolled}
         />
       </div>
 
