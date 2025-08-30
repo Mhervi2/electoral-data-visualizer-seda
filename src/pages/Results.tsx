@@ -117,11 +117,14 @@ const Results = () => {
         </div>
       </div>
 
-      <ResultsFilters 
-        filters={filters} 
-        onFiltersChange={setFilters} 
-        isLoading={loading} 
-      />
+      {/* Filtros fijos en la parte superior */}
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 border-b">
+        <ResultsFilters 
+          filters={filters} 
+          onFiltersChange={setFilters} 
+          isLoading={loading} 
+        />
+      </div>
 
       {/* Discrepancy Detection Section (Admin Only) */}
       {user?.isAdmin && (
@@ -156,16 +159,16 @@ const Results = () => {
           )}
 
           {/* D'Hondt Seat Distribution */}
-          {(aggregatedResults.provincialSeats || aggregatedResults.autonomousSeats || aggregatedResults.nationalSeats) && (
+          {aggregatedResults.partyResults.length > 0 && (
             <DHondtResults
-              provincialResults={aggregatedResults.provincialSeats}
-              autonomousResults={aggregatedResults.autonomousSeats}
-              nationalSeats={aggregatedResults.nationalSeats}
-              title="Distribución de Escaños (Método D'Hondt)"
+              partyResults={aggregatedResults.partyResults}
+              totalVotes={aggregatedResults.validVotes}
               filters={{
+                electionId: filters.electionId,
                 autonomousCommunity: filters.autonomousCommunity,
                 province: filters.province,
-                municipality: filters.municipality
+                municipality: filters.municipality,
+                sourceTypes: filters.sourceTypes
               }}
             />
           )}
