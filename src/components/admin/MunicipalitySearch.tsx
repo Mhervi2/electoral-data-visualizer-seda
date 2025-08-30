@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search, Edit3 } from 'lucide-react';
-import { useMunicipalitySearch } from '@/hooks/useMunicipalitySearch';
+import { useSimpleMunicipalitySearch } from '@/hooks/useSimpleMunicipalitySearch';
 import { MpcaData } from '@/types/acta';
 
 interface MunicipalitySearchProps {
@@ -15,7 +15,7 @@ export const MunicipalitySearch: React.FC<MunicipalitySearchProps> = ({
   onEditMunicipality
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const { municipalities, loading, error, hasSearched } = useMunicipalitySearch(searchTerm, 300);
+  const { municipalities, loading, error, hasSearched } = useSimpleMunicipalitySearch(searchTerm, 300);
 
   return (
     <Card>
