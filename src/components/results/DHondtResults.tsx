@@ -433,8 +433,14 @@ export const DHondtResults = ({ partyResults, totalVotes, filters }: DHondtResul
           <CardTitle>Distribución de Escaños (Método D'Hondt)</CardTitle>
           <p className="text-sm text-muted-foreground">
             Reparto de escaños aplicando la Ley D'Hondt con umbral mínimo del {THRESHOLD_PERCENTAGE}%
-            {filters.autonomousCommunity && ` para ${filters.autonomousCommunity}`}
+            {filters.province && ` para la provincia de ${filters.province}`}
+            {!filters.province && filters.autonomousCommunity && ` para ${filters.autonomousCommunity}`}
           </p>
+          {filters.province && (
+            <Badge variant="secondary" className="w-fit">
+              Filtrado por: {filters.province}
+            </Badge>
+          )}
         </CardHeader>
       </Card>
 
