@@ -115,35 +115,108 @@ export const DHondtResults = ({ partyResults, totalVotes, filters }: DHondtResul
   const THRESHOLD_PERCENTAGE = 3.0; // Umbral mínimo del 3%
 
   const provincialResults = useMemo(() => {
-    if (!partyResults.length || !provincialSeats.length) return [];
+    // Validaciones iniciales
+    if (!partyResults.length) {
+      console.log('[DHondt] No hay resultados de partidos disponibles');
+      return [];
+    }
+    
+    if (!provincialSeats.length) {
+      console.log('[DHondt] No hay datos de escaños provinciales configurados');
+      return [];
+    }
 
-    // Determinar qué provincias mostrar
-    const targetProvinces = filters.province 
-      ? [filters.province]
-      : filters.autonomousCommunity
-        ? provincialSeats
-            .map(seat => seat.provincia)
-            .filter(provincia => PROVINCE_TO_CA[provincia] === filters.autonomousCommunity)
-        : provincialSeats.map(seat => seat.provincia);
+    console.log('[DHondt] Filtros actuales:', filters);
+    console.log('[DHondt] Escaños provinciales disponibles:', provincialSeats.map(s => s.provincia));
+    console.log('[DHondt] Resultados de partidos:', partyResults.length);
 
-    return targetProvinces.map(provincia => {
+    // Determinar qué provincias procesar según los filtros
+    let targetProvinces: string[] = [];
+    
+    if (filters.province) {
+      // Filtro específico por provincia
+      console.log('[DHondt] Filtro por provincia específica:', filters.province);
+      
+      // Buscar la provincia exacta o por coincidencia parcial
+      const exactMatch = provincialSeats.find(seat => 
+        seat.provincia.toLowerCase() === filters.province.toLowerCase()
+      );
+      
+      if (exactMatch) {
+        targetProvinces = [exactMatch.provincia];
+        console.log('[DHondt] Provincia encontrada (coincidencia exacta):', exactMatch.provincia);
+      } else {
+        // Buscar coincidencia parcial
+        const partialMatch = provincialSeats.find(seat => 
+          seat.provincia.toLowerCase().includes(filters.province.toLowerCase()) ||
+          filters.province.toLowerCase().includes(seat.provincia.toLowerCase())
+        );
+        
+        if (partialMatch) {
+          targetProvinces = [partialMatch.provincia];
+          console.log('[DHondt] Provincia encontrada (coincidencia parcial):', partialMatch.provincia);
+        } else {
+          console.log('[DHondt] No se encontró la provincia:', filters.province);
+          console.log('[DHondt] Provincias disponibles:', provincialSeats.map(s => s.provincia));
+          return [];
+        }
+      }
+    } else if (filters.autonomousCommunity) {
+      // Filtro por comunidad autónoma
+      console.log('[DHondt] Filtro por comunidad autónoma:', filters.autonomousCommunity);
+      
+      targetProvinces = provincialSeats
+        .filter(seat => PROVINCE_TO_CA[seat.provincia] === filters.autonomousCommunity)
+        .map(seat => seat.provincia);
+        
+      console.log('[DHondt] Provincias de la CA encontradas:', targetProvinces);
+    } else {
+      // Sin filtro geográfico - mostrar todas las provincias
+      targetProvinces = provincialSeats.map(seat => seat.provincia);
+      console.log('[DHondt] Sin filtro - mostrando todas las provincias:', targetProvinces.length);
+    }
+
+    if (targetProvinces.length === 0) {
+      console.log('[DHondt] No hay provincias objetivo para procesar');
+      return [];
+    }
+
+    // Procesar cada provincia objetivo
+    const results = targetProvinces.map(provincia => {
+      console.log(`[DHondt] Procesando provincia: ${provincia}`);
+      
       const provincialSeat = provincialSeats.find(seat => seat.provincia === provincia);
-      if (!provincialSeat) return null;
+      if (!provincialSeat) {
+        console.log(`[DHondt] No se encontraron escaños para ${provincia}`);
+        return null;
+      }
+
+      console.log(`[DHondt] ${provincia} tiene ${provincialSeat.seats} escaños`);
 
       const sourceResults: { [source: string]: any } = {};
       
-      // Procesar cada fuente de datos por separado
+      // Procesar cada tipo de fuente de datos
       filters.sourceTypes.forEach(sourceType => {
+        console.log(`[DHondt] Procesando fuente ${sourceType} para ${provincia}`);
+        
+        // Extraer votos de esta fuente para todos los partidos
         const sourceVotes = partyResults
-          .map(party => ({
-            name: party.party.siglas || party.party.name,
-            votes: party.sourceResults[sourceType]?.votes || 0
-          }))
+          .map(party => {
+            const votes = party.sourceResults[sourceType]?.votes || 0;
+            return {
+              name: party.party.siglas || party.party.name,
+              votes: votes
+            };
+          })
           .filter(party => party.votes > 0);
 
+        console.log(`[DHondt] ${sourceType} - ${provincia}: ${sourceVotes.length} partidos con votos`);
+
         const sourceTotal = sourceVotes.reduce((sum, party) => sum + party.votes, 0);
+        console.log(`[DHondt] ${sourceType} - ${provincia}: Total de votos = ${sourceTotal}`);
         
         if (sourceTotal === 0) {
+          console.log(`[DHondt] ${sourceType} - ${provincia}: No hay votos, creando resultado vacío`);
           sourceResults[sourceType] = {
             dhondtResults: [],
             excludedParties: [],
@@ -161,10 +234,16 @@ export const DHondtResults = ({ partyResults, totalVotes, filters }: DHondtResul
           party => (party.votes / sourceTotal) * 100 < THRESHOLD_PERCENTAGE
         );
 
+        console.log(`[DHondt] ${sourceType} - ${provincia}: ${partiesOverThreshold.length} partidos superan umbral, ${partiesUnderThreshold.length} no`);
+
         // Calcular D'Hondt solo para partidos que superan el umbral
-        const dhondtResults = calculateDHondt(partiesOverThreshold, provincialSeat.seats);
+        let dhondtResults: DHondtResult[] = [];
+        if (partiesOverThreshold.length > 0) {
+          dhondtResults = calculateDHondt(partiesOverThreshold, provincialSeat.seats);
+          console.log(`[DHondt] ${sourceType} - ${provincia}: Calculados ${dhondtResults.length} resultados D'Hondt`);
+        }
         
-        // Agregar información de votos y porcentajes
+        // Enriquecer resultados con información adicional
         const enrichedResults = dhondtResults.map(result => ({
           ...result,
           percentage: (result.votes / sourceTotal) * 100
@@ -185,13 +264,23 @@ export const DHondtResults = ({ partyResults, totalVotes, filters }: DHondtResul
         };
       });
 
-      return {
+      const result = {
         provincia,
         seats: provincialSeat.seats,
         threshold: THRESHOLD_PERCENTAGE,
         sourceResults
       };
+
+      console.log(`[DHondt] Resultado final para ${provincia}:`, {
+        seats: result.seats,
+        sources: Object.keys(result.sourceResults)
+      });
+
+      return result;
     }).filter(Boolean) as ProvincialDHondtResult[];
+
+    console.log(`[DHondt] Devolviendo ${results.length} resultados provinciales`);
+    return results;
   }, [partyResults, provincialSeats, filters]);
 
   const renderSemicircleChart = (dhondtResults: DHondtResult[], totalSeats: number, sourceType: string) => {
