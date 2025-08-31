@@ -123,30 +123,6 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false, is
     return parts.length > 0 ? parts.join(' • ') : 'Sin filtros aplicados';
   };
 
-  const renderSourceToggle = (value: string, label: string) => {
-    const tooltip = getSourceTooltip(value);
-    
-    if (tooltip) {
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <ToggleGroupItem value={value} variant="outline">
-              {label}
-            </ToggleGroupItem>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{tooltip}</p>
-          </TooltipContent>
-        </Tooltip>
-      );
-    }
-    
-    return (
-      <ToggleGroupItem value={value} variant="outline">
-        {label}
-      </ToggleGroupItem>
-    );
-  };
 
   // Versión compacta para cuando hay scroll
   if (isScrolled && !isExpanded) {
@@ -180,9 +156,18 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false, is
                       className="h-8"
                       size="sm"
                     >
-                      {renderSourceToggle("user", "Usuario")}
-                      {renderSourceToggle("escrutinio", "Escrutinio")}
-                      {renderSourceToggle("oficial", "Oficial")}
+                      <ToggleGroupItem value="user" aria-label="Actas de Usuario">
+                        Usuario
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="indra" aria-label="INDRA">
+                        INDRA
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="escrutinio" aria-label="Escrutinio General">
+                        Escrutinio
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="oficial" aria-label="Resultado Oficial">
+                        Oficial
+                      </ToggleGroupItem>
                     </ToggleGroup>
                   </div>
                 )}
@@ -392,9 +377,18 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false, is
               onValueChange={handleSourceTypesChange}
               className="justify-start mt-2 flex-wrap"
             >
-              {renderSourceToggle("user", "Actas de Usuario")}
-              {renderSourceToggle("escrutinio", "Escrutinio General")}
-              {renderSourceToggle("oficial", "Resultado Oficial")}
+              <ToggleGroupItem value="user" aria-label="Actas de Usuario">
+                Usuario
+              </ToggleGroupItem>
+              <ToggleGroupItem value="indra" aria-label="INDRA">
+                INDRA
+              </ToggleGroupItem>
+              <ToggleGroupItem value="escrutinio" aria-label="Escrutinio General">
+                Escrutinio
+              </ToggleGroupItem>
+              <ToggleGroupItem value="oficial" aria-label="Resultado Oficial">
+                Oficial
+              </ToggleGroupItem>
             </ToggleGroup>
           </div>
         </CardContent>
