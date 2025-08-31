@@ -82,6 +82,31 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false, is
     onFiltersChange(newFilters);
   };
 
+  // Auto-select active election or most recent when elections load
+  useEffect(() => {
+    if (!electionsLoading && elections.length > 0 && !filters.electionId) {
+      // First try to find an active election
+      const activeElection = elections.find(election => election.status === 'active');
+      
+      if (activeElection) {
+        console.log('🎯 Auto-selecting active election:', activeElection.name);
+        handleSelectChange('electionId', activeElection.id);
+      } else {
+        // If no active election, select the most recent one
+        const sortedElections = [...elections].sort((a, b) => {
+          // Assuming elections have a created_at or date field for sorting
+          // If not available, we'll just pick the first one
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        });
+        
+        if (sortedElections[0]) {
+          console.log('🎯 Auto-selecting most recent election:', sortedElections[0].name);
+          handleSelectChange('electionId', sortedElections[0].id);
+        }
+      }
+    }
+  }, [electionsLoading, elections, filters.electionId]);
+
   const handleSourceTypesChange = (value: string[]) => {
     console.log('🔄 Source types changed:', value);
     onFiltersChange({ ...filters, sourceTypes: value });
