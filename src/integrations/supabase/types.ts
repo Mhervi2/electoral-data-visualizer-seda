@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      act_error_reports: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          electoral_act_id: string
+          error_types: string[]
+          id: string
+          observations: string | null
+          reporter_email: string | null
+          reporter_name: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          electoral_act_id: string
+          error_types?: string[]
+          id?: string
+          observations?: string | null
+          reporter_email?: string | null
+          reporter_name?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          electoral_act_id?: string
+          error_types?: string[]
+          id?: string
+          observations?: string | null
+          reporter_email?: string | null
+          reporter_name?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       biometric_credentials: {
         Row: {
           counter: number

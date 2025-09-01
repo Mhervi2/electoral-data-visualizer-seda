@@ -139,6 +139,7 @@ export const SubmitActaForm = () => {
                 onMunicipalityChange={handleMunicipalityChange}
                 onInputChange={handleInputChange}
                 onBlur={checkExistingAct}
+                electionId={actaData.electionId}
               />
 
               <ImageUploadSection 

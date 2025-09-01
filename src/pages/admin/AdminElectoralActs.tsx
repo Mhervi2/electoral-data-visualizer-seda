@@ -7,10 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Edit, History, FileText } from 'lucide-react';
+import { Search, Edit, History, FileText, Flag } from 'lucide-react';
 import { useElectoralActsAdmin, ElectoralActAdmin, ActAuditLog } from '@/hooks/useElectoralActsAdmin';
 import { AdminActEditForm } from '@/components/admin/AdminActEditForm';
 import { AdminActAuditLog } from '@/components/admin/AdminActAuditLog';
+import { ActErrorReportsList } from '@/components/admin/ActErrorReportsList';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -94,6 +95,17 @@ const AdminElectoralActs = () => {
           </span>
         </div>
       </div>
+
+      <Tabs defaultValue="acts" className="w-full">
+        <TabsList>
+          <TabsTrigger value="acts">Actas</TabsTrigger>
+          <TabsTrigger value="error-reports" className="flex items-center gap-2">
+            <Flag className="h-4 w-4" />
+            Reportes de Errores
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="acts" className="space-y-6">
 
       <Card>
         <CardHeader>
@@ -221,6 +233,12 @@ const AdminElectoralActs = () => {
           )}
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        <TabsContent value="error-reports">
+          <ActErrorReportsList />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
