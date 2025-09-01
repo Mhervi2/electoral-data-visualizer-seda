@@ -44,7 +44,7 @@ export const MesaIdentification = ({
     setCheckingExistingAct(true);
     try {
       const { data, error } = await supabase
-        .from('electoral_acts_with_municipalities')
+        .from('electoral_acts')
         .select(`
           id,
           mesa_identifier,
@@ -54,18 +54,11 @@ export const MesaIdentification = ({
           null_votes,
           source_type,
           created_at,
-          municipio,
-          party_votes (
-            votes,
-            political_parties (
-              name,
-              siglas,
-              color
-            )
-          )
+          municipality_idm,
+          mpca!inner(municipio)
         `)
         .eq('election_id', electionId)
-        .or(`mesa_identifier_full.eq.${fullIdentifier},full_identifier.eq.${fullIdentifier}`)
+        .eq('full_identifier', fullIdentifier)
         .maybeSingle();
 
       if (error) {
@@ -83,8 +76,8 @@ export const MesaIdentification = ({
           null_votes: data.null_votes,
           source_type: data.source_type,
           created_at: data.created_at,
-          municipality: { name: data.municipio },
-          party_votes: data.party_votes || []
+          municipality: { name: data.mpca.municipio },
+          party_votes: []
         };
         
         setExistingAct(existingActData);
