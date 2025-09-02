@@ -203,7 +203,25 @@ const AdminElectoralActs = () => {
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
+        </TabsContent>
+
+        <TabsContent value="error-reports">
+          <ActErrorReportsList 
+            onEditAct={handleEditAct}
+            onShowErrorDetails={(report) => {
+              // Additional context for error reports will be shown in the edit form
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="duplicates">
+          <DuplicateActsList 
+            onEditAct={handleEditAct}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {/* Edit Dialog - Available for all tabs */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -222,7 +240,7 @@ const AdminElectoralActs = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Audit Dialog */}
+      {/* Audit Dialog - Available for all tabs */}
       <Dialog open={showAuditDialog} onOpenChange={setShowAuditDialog}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -238,23 +256,6 @@ const AdminElectoralActs = () => {
           )}
         </DialogContent>
       </Dialog>
-        </TabsContent>
-
-        <TabsContent value="error-reports">
-          <ActErrorReportsList 
-            onEditAct={handleEditAct}
-            onShowErrorDetails={(report) => {
-              // Additional context for error reports will be shown in the edit form
-            }}
-          />
-        </TabsContent>
-
-        <TabsContent value="duplicates">
-          <DuplicateActsList 
-            onEditAct={handleEditAct}
-          />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 };
