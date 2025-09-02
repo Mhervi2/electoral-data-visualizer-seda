@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Edit, FileText, AlertTriangle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -23,6 +24,7 @@ interface DuplicateActsListProps {
 export const DuplicateActsList = ({ onEditAct }: DuplicateActsListProps) => {
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedActs, setSelectedActs] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { deleteAct } = useElectoralActsAdmin();
 
@@ -91,6 +93,8 @@ export const DuplicateActsList = ({ onEditAct }: DuplicateActsListProps) => {
         .sort((a, b) => b.count - a.count);
 
       setDuplicateGroups(duplicates);
+      // Clear selected acts when refreshing
+      setSelectedActs(new Set());
     } catch (error) {
       console.error('Error:', error);
       toast({
@@ -146,6 +150,60 @@ export const DuplicateActsList = ({ onEditAct }: DuplicateActsListProps) => {
     }
   };
 
+  const getAllActIds = () => {
+    return duplicateGroups.flatMap(group => group.acts.map(act => act.id));
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedActs(new Set(getAllActIds()));
+    } else {
+      setSelectedActs(new Set());
+    }
+  };
+
+  const handleSelectAct = (actId: string, checked: boolean) => {
+    const newSelected = new Set(selectedActs);
+    if (checked) {
+      newSelected.add(actId);
+    } else {
+      newSelected.delete(actId);
+    }
+    setSelectedActs(newSelected);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedActs.size === 0) return;
+
+    try {
+      const actIds = Array.from(selectedActs);
+      
+      // Delete acts one by one using the hook function
+      for (const actId of actIds) {
+        await deleteAct(actId);
+      }
+
+      toast({
+        title: "Éxito",
+        description: `${actIds.length} actas eliminadas correctamente.`
+      });
+
+      // Clear selection and refresh
+      setSelectedActs(new Set());
+      await findDuplicateActs();
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Error al eliminar las actas seleccionadas."
+      });
+    }
+  };
+
+  const isAllSelected = selectedActs.size > 0 && selectedActs.size === getAllActIds().length;
+  const isIndeterminate = selectedActs.size > 0 && selectedActs.size < getAllActIds().length;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -175,6 +233,30 @@ export const DuplicateActsList = ({ onEditAct }: DuplicateActsListProps) => {
             <AlertTriangle className="h-5 w-5 text-warning" />
             Actas Duplicadas ({duplicateGroups.reduce((acc, group) => acc + group.count, 0)} actas en {duplicateGroups.length} grupos)
           </CardTitle>
+          {duplicateGroups.length > 0 && (
+            <div className="flex items-center gap-4 mt-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="select-all"
+                  checked={isAllSelected}
+                  onCheckedChange={handleSelectAll}
+                />
+                <label htmlFor="select-all" className="text-sm font-medium">
+                  Seleccionar todas
+                </label>
+              </div>
+              {selectedActs.size > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteSelected}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar seleccionadas ({selectedActs.size})
+                </Button>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
@@ -192,6 +274,16 @@ export const DuplicateActsList = ({ onEditAct }: DuplicateActsListProps) => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={group.acts.every(act => selectedActs.has(act.id))}
+                          onCheckedChange={(checked) => {
+                            group.acts.forEach(act => {
+                              handleSelectAct(act.id, checked as boolean);
+                            });
+                          }}
+                        />
+                      </TableHead>
                       <TableHead>Municipio</TableHead>
                       <TableHead>Fuente</TableHead>
                       <TableHead>Censo</TableHead>
@@ -203,39 +295,45 @@ export const DuplicateActsList = ({ onEditAct }: DuplicateActsListProps) => {
                   </TableHeader>
                   <TableBody>
                     {group.acts.map((act, index) => (
-                      <TableRow 
-                        key={act.id} 
-                        className={index === 0 ? 'bg-muted/50' : ''}
-                      >
-                        <TableCell>{act.municipio}</TableCell>
-                        <TableCell>{getSourceBadge(act.source_type)}</TableCell>
-                        <TableCell>{act.census_total}</TableCell>
-                        <TableCell>{act.total_voters}</TableCell>
-                        <TableCell>{getStatusBadge(act)}</TableCell>
-                        <TableCell>
-                          {format(new Date(act.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => onEditAct(act)}
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Editar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteAct(act.id)}
-                              className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                       <TableRow 
+                         key={act.id} 
+                         className={index === 0 ? 'bg-muted/50' : ''}
+                       >
+                         <TableCell>
+                           <Checkbox
+                             checked={selectedActs.has(act.id)}
+                             onCheckedChange={(checked) => handleSelectAct(act.id, checked as boolean)}
+                           />
+                         </TableCell>
+                         <TableCell>{act.municipio}</TableCell>
+                         <TableCell>{getSourceBadge(act.source_type)}</TableCell>
+                         <TableCell>{act.census_total}</TableCell>
+                         <TableCell>{act.total_voters}</TableCell>
+                         <TableCell>{getStatusBadge(act)}</TableCell>
+                         <TableCell>
+                           {format(new Date(act.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}
+                         </TableCell>
+                         <TableCell>
+                           <div className="flex gap-2">
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => onEditAct(act)}
+                             >
+                               <Edit className="h-4 w-4 mr-1" />
+                               Editar
+                             </Button>
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => handleDeleteAct(act.id)}
+                               className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
+                             >
+                               <Trash2 className="h-4 w-4" />
+                             </Button>
+                           </div>
+                         </TableCell>
+                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
