@@ -80,7 +80,7 @@ export const useElectoralActsAdmin = () => {
         .order('created_at', { ascending: false });
 
       if (searchTerm) {
-        query = query.or(`mesa_identifier.ilike.%${searchTerm}%,full_identifier.ilike.%${searchTerm}%`);
+        query = query.ilike('mesa_identifier', `%${searchTerm}%`);
       }
 
       if (municipalityFilter) {

@@ -6,16 +6,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Flag, Check, X, MessageSquare, Edit } from 'lucide-react';
+import { Flag, Check, X, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useActErrorReports, ActErrorReport } from '@/hooks/useActErrorReports';
 
-interface ActErrorReportsListProps {
-  onEditAct?: (errorReport: ActErrorReport) => void;
-}
-
-export const ActErrorReportsList = ({ onEditAct }: ActErrorReportsListProps = {}) => {
+export const ActErrorReportsList = () => {
   const { reports, loading, updateReportStatus } = useActErrorReports();
   const [selectedReport, setSelectedReport] = useState<ActErrorReport | null>(null);
   const [showResolveDialog, setShowResolveDialog] = useState(false);
@@ -61,12 +57,6 @@ export const ActErrorReportsList = ({ onEditAct }: ActErrorReportsListProps = {}
     }
   };
 
-  const handleEditAct = (report: ActErrorReport) => {
-    if (onEditAct) {
-      onEditAct(report);
-    }
-  };
-
   const pendingReports = reports.filter(r => r.status === 'pending');
   const resolvedReports = reports.filter(r => r.status !== 'pending');
 
@@ -93,7 +83,7 @@ export const ActErrorReportsList = ({ onEditAct }: ActErrorReportsListProps = {}
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Identificador Completo</TableHead>
+                  <TableHead>Mesa</TableHead>
                   <TableHead>Municipio</TableHead>
                   <TableHead>Tipo de Error</TableHead>
                   <TableHead>Reportador</TableHead>
@@ -104,8 +94,8 @@ export const ActErrorReportsList = ({ onEditAct }: ActErrorReportsListProps = {}
               <TableBody>
                 {pendingReports.map((report) => (
                   <TableRow key={report.id} className="bg-destructive/5">
-                    <TableCell className="font-medium font-mono text-sm">
-                      {report.electoral_act?.full_identifier || report.electoral_act?.mesa_identifier || 'N/A'}
+                    <TableCell className="font-medium">
+                      {report.electoral_act?.mesa_identifier}
                     </TableCell>
                     <TableCell>{report.electoral_act?.municipio}</TableCell>
                     <TableCell>
@@ -142,16 +132,6 @@ export const ActErrorReportsList = ({ onEditAct }: ActErrorReportsListProps = {}
                           <X className="h-4 w-4 mr-1" />
                           Descartar
                         </Button>
-                        {onEditAct && report.electoral_act && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditAct(report)}
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Editar Acta
-                          </Button>
-                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -175,7 +155,7 @@ export const ActErrorReportsList = ({ onEditAct }: ActErrorReportsListProps = {}
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Identificador Completo</TableHead>
+                  <TableHead>Mesa</TableHead>
                   <TableHead>Municipio</TableHead>
                   <TableHead>Tipo de Error</TableHead>
                   <TableHead>Estado</TableHead>
@@ -186,8 +166,8 @@ export const ActErrorReportsList = ({ onEditAct }: ActErrorReportsListProps = {}
               <TableBody>
                 {resolvedReports.map((report) => (
                   <TableRow key={report.id}>
-                    <TableCell className="font-medium font-mono text-sm">
-                      {report.electoral_act?.full_identifier || report.electoral_act?.mesa_identifier || 'N/A'}
+                    <TableCell className="font-medium">
+                      {report.electoral_act?.mesa_identifier}
                     </TableCell>
                     <TableCell>{report.electoral_act?.municipio}</TableCell>
                     <TableCell>
@@ -229,7 +209,7 @@ export const ActErrorReportsList = ({ onEditAct }: ActErrorReportsListProps = {}
               {resolveAction === 'resolved' ? 'Resolver' : 'Descartar'} Reporte de Error
             </DialogTitle>
             <DialogDescription>
-              Identificador: {selectedReport?.electoral_act?.full_identifier || selectedReport?.electoral_act?.mesa_identifier} - {selectedReport?.electoral_act?.municipio}
+              Mesa: {selectedReport?.electoral_act?.mesa_identifier} - {selectedReport?.electoral_act?.municipio}
             </DialogDescription>
           </DialogHeader>
           
