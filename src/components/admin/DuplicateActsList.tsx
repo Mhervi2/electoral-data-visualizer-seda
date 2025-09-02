@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Edit, FileText, AlertTriangle } from 'lucide-react';
+import { Edit, FileText, AlertTriangle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -124,6 +124,40 @@ export const DuplicateActsList = ({ onEditAct }: DuplicateActsListProps) => {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  const handleDeleteAct = async (actId: string) => {
+    try {
+      const { error } = await supabase
+        .from('electoral_acts')
+        .delete()
+        .eq('id', actId);
+
+      if (error) {
+        console.error('Error deleting act:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo eliminar el acta."
+        });
+        return;
+      }
+
+      toast({
+        title: "Éxito",
+        description: "Acta eliminada correctamente."
+      });
+
+      // Refresh the duplicate acts list
+      await findDuplicateActs();
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Error inesperado al eliminar el acta."
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -194,14 +228,24 @@ export const DuplicateActsList = ({ onEditAct }: DuplicateActsListProps) => {
                           {format(new Date(act.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onEditAct(act)}
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Editar
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onEditAct(act)}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Editar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteAct(act.id)}
+                              className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
