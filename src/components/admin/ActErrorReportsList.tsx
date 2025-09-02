@@ -11,6 +11,8 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useActErrorReports, ActErrorReport } from '@/hooks/useActErrorReports';
 import { ElectoralActAdmin } from '@/hooks/useElectoralActsAdmin';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ActErrorReportsListProps {
   onEditAct?: (act: ElectoralActAdmin) => void;
@@ -19,6 +21,7 @@ interface ActErrorReportsListProps {
 
 export const ActErrorReportsList = ({ onEditAct, onViewAudit }: ActErrorReportsListProps = {}) => {
   const { reports, loading, updateReportStatus } = useActErrorReports();
+  const { toast } = useToast();
   const [selectedReport, setSelectedReport] = useState<ActErrorReport | null>(null);
   const [showResolveDialog, setShowResolveDialog] = useState(false);
   const [adminNotes, setAdminNotes] = useState('');
@@ -50,6 +53,60 @@ export const ActErrorReportsList = ({ onEditAct, onViewAudit }: ActErrorReportsL
     setResolveAction(action);
     setAdminNotes('');
     setShowResolveDialog(true);
+  };
+
+  const handleEditActFromReport = async (report: ActErrorReport) => {
+    if (!onEditAct || !report.electoral_act_id) return;
+
+    try {
+      // Fetch the complete electoral act data
+      const { data: actData, error } = await supabase
+        .from('electoral_acts')
+        .select(`
+          *,
+          mpca(
+            municipio,
+            provincia,
+            ca
+          ),
+          party_votes:party_votes(
+            id,
+            votes,
+            party_id,
+            political_parties:political_parties(name, siglas, color)
+          ),
+          mail_votes:mail_votes(dni)
+        `)
+        .eq('id', report.electoral_act_id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching electoral act:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo cargar el acta electoral"
+        });
+        return;
+      }
+
+      // Map the data to match ElectoralActAdmin interface
+      const completeAct = {
+        ...actData,
+        municipio: actData.mpca?.municipio || 'Sin municipio',
+        provincia: actData.mpca?.provincia || 'Sin provincia',
+        comunidad_autonoma: actData.mpca?.ca || 'Sin comunidad autónoma'
+      };
+
+      onEditAct(completeAct);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Error inesperado al cargar el acta"
+      });
+    }
   };
 
   const handleConfirmResolve = async () => {
@@ -138,20 +195,16 @@ export const ActErrorReportsList = ({ onEditAct, onViewAudit }: ActErrorReportsL
                           <X className="h-4 w-4 mr-1" />
                           Descartar
                         </Button>
-                        {onEditAct && report.electoral_act && (
+                         {onEditAct && report.electoral_act && (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => onEditAct({
-                              ...report.electoral_act,
-                              party_votes: [],
-                              mail_votes: []
-                            } as ElectoralActAdmin)}
+                            onClick={() => handleEditActFromReport(report)}
                           >
                             <Edit className="h-4 w-4 mr-1" />
                             Editar Acta
                           </Button>
-                        )}
+                         )}
                       </div>
                     </TableCell>
                   </TableRow>
