@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ElectoralActAdmin } from '@/hooks/useElectoralActsAdmin';
+import { ElectoralActAdmin, useElectoralActsAdmin } from '@/hooks/useElectoralActsAdmin';
 
 interface DuplicateGroup {
   full_identifier: string;
@@ -24,6 +24,7 @@ export const DuplicateActsList = ({ onEditAct }: DuplicateActsListProps) => {
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { deleteAct } = useElectoralActsAdmin();
 
   const findDuplicateActs = async () => {
     try {
@@ -126,21 +127,8 @@ export const DuplicateActsList = ({ onEditAct }: DuplicateActsListProps) => {
 
   const handleDeleteAct = async (actId: string) => {
     try {
-      const { error } = await supabase
-        .from('electoral_acts')
-        .delete()
-        .eq('id', actId);
-
-      if (error) {
-        console.error('Error deleting act:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "No se pudo eliminar el acta."
-        });
-        return;
-      }
-
+      await deleteAct(actId);
+      
       toast({
         title: "Éxito",
         description: "Acta eliminada correctamente."
