@@ -6,12 +6,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Flag, Check, X, MessageSquare } from 'lucide-react';
+import { Flag, Check, X, MessageSquare, Edit } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useActErrorReports, ActErrorReport } from '@/hooks/useActErrorReports';
 
-export const ActErrorReportsList = () => {
+interface ActErrorReportsListProps {
+  onEditAct?: (act: any) => void;
+  onShowErrorDetails?: (report: ActErrorReport) => void;
+}
+
+export const ActErrorReportsList = ({ onEditAct, onShowErrorDetails }: ActErrorReportsListProps) => {
   const { reports, loading, updateReportStatus } = useActErrorReports();
   const [selectedReport, setSelectedReport] = useState<ActErrorReport | null>(null);
   const [showResolveDialog, setShowResolveDialog] = useState(false);
@@ -57,6 +63,51 @@ export const ActErrorReportsList = () => {
     }
   };
 
+  const handleEditAct = async (report: ActErrorReport) => {
+    if (!report.electoral_act_id || !onEditAct) return;
+
+    try {
+      // Fetch complete act data for editing
+      const { data, error } = await supabase
+        .from('electoral_acts')
+        .select(`
+          *,
+          mpca(
+            municipio,
+            provincia,
+            ca
+          ),
+          party_votes:party_votes(
+            id,
+            votes,
+            party_id,
+            political_parties:political_parties(name, siglas, color)
+          ),
+          mail_votes:mail_votes(dni)
+        `)
+        .eq('id', report.electoral_act_id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching act for editing:', error);
+        return;
+      }
+
+      // Map the data to include municipality information
+      const mappedAct = {
+        ...data,
+        municipio: data.mpca?.municipio || 'Sin municipio',
+        provincia: data.mpca?.provincia || 'Sin provincia',
+        comunidad_autonoma: data.mpca?.ca || 'Sin comunidad autónoma'
+      };
+
+      onEditAct(mappedAct);
+      onShowErrorDetails?.(report);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
   const pendingReports = reports.filter(r => r.status === 'pending');
   const resolvedReports = reports.filter(r => r.status !== 'pending');
 
@@ -83,7 +134,7 @@ export const ActErrorReportsList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Mesa</TableHead>
+                  <TableHead>Identificador completo</TableHead>
                   <TableHead>Municipio</TableHead>
                   <TableHead>Tipo de Error</TableHead>
                   <TableHead>Reportador</TableHead>
@@ -95,7 +146,7 @@ export const ActErrorReportsList = () => {
                 {pendingReports.map((report) => (
                   <TableRow key={report.id} className="bg-destructive/5">
                     <TableCell className="font-medium">
-                      {report.electoral_act?.mesa_identifier}
+                      {report.electoral_act?.full_identifier || report.electoral_act?.mesa_identifier}
                     </TableCell>
                     <TableCell>{report.electoral_act?.municipio}</TableCell>
                     <TableCell>
@@ -116,6 +167,16 @@ export const ActErrorReportsList = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        {onEditAct && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditAct(report)}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Editar Acta
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -155,7 +216,7 @@ export const ActErrorReportsList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Mesa</TableHead>
+                  <TableHead>Identificador completo</TableHead>
                   <TableHead>Municipio</TableHead>
                   <TableHead>Tipo de Error</TableHead>
                   <TableHead>Estado</TableHead>
@@ -167,7 +228,7 @@ export const ActErrorReportsList = () => {
                 {resolvedReports.map((report) => (
                   <TableRow key={report.id}>
                     <TableCell className="font-medium">
-                      {report.electoral_act?.mesa_identifier}
+                      {report.electoral_act?.full_identifier || report.electoral_act?.mesa_identifier}
                     </TableCell>
                     <TableCell>{report.electoral_act?.municipio}</TableCell>
                     <TableCell>

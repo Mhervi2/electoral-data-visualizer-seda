@@ -17,6 +17,7 @@ export interface ActErrorReport {
   // Related data
   electoral_act?: {
     mesa_identifier: string;
+    full_identifier?: string;
     municipio: string;
     census_total: number;
     total_voters: number;
@@ -51,8 +52,16 @@ export const useActErrorReports = () => {
       const reportsWithActs = await Promise.all(
         (data || []).map(async (report) => {
           const { data: actData, error: actError } = await supabase
-            .from('electoral_acts_with_municipalities')
-            .select('mesa_identifier, municipio, census_total, total_voters, blank_votes, null_votes')
+            .from('electoral_acts')
+            .select(`
+              mesa_identifier, 
+              full_identifier, 
+              census_total, 
+              total_voters, 
+              blank_votes, 
+              null_votes,
+              mpca(municipio)
+            `)
             .eq('id', report.electoral_act_id)
             .maybeSingle();
 
@@ -60,7 +69,8 @@ export const useActErrorReports = () => {
             ...report,
             electoral_act: actData ? {
               mesa_identifier: actData.mesa_identifier,
-              municipio: actData.municipio,
+              full_identifier: actData.full_identifier,
+              municipio: actData.mpca?.municipio || 'Sin municipio',
               census_total: actData.census_total,
               total_voters: actData.total_voters,
               blank_votes: actData.blank_votes,
