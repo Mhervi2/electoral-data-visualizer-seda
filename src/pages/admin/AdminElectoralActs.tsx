@@ -13,6 +13,9 @@ import { AdminActEditForm } from '@/components/admin/AdminActEditForm';
 import { AdminActAuditLog } from '@/components/admin/AdminActAuditLog';
 import { ActErrorReportsList } from '@/components/admin/ActErrorReportsList';
 import { DuplicateActsList } from '@/components/admin/DuplicateActsList';
+import { ActErrorReport } from '@/hooks/useActErrorReports';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -32,13 +35,79 @@ const AdminElectoralActs = () => {
   } = useElectoralActsAdmin();
 
   const [selectedAct, setSelectedAct] = useState<ElectoralActAdmin | null>(null);
+  const [selectedErrorReport, setSelectedErrorReport] = useState<ActErrorReport | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAuditDialog, setShowAuditDialog] = useState(false);
   const [auditLogs, setAuditLogs] = useState<ActAuditLog[]>([]);
+  const { toast } = useToast();
 
-  const handleEditAct = (act: ElectoralActAdmin) => {
+  const handleEditAct = (act: ElectoralActAdmin, errorReport?: ActErrorReport) => {
     setSelectedAct(act);
+    setSelectedErrorReport(errorReport || null);
     setShowEditDialog(true);
+  };
+
+  const handleEditActFromErrorReport = async (errorReport: ActErrorReport) => {
+    if (!errorReport.electoral_act_id) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se encontró el ID del acta electoral"
+      });
+      return;
+    }
+
+    try {
+      // Fetch the complete electoral act data
+      const { data: actData, error } = await supabase
+        .from('electoral_acts')
+        .select(`
+          *,
+          mpca(
+            municipio,
+            provincia,
+            ca
+          ),
+          party_votes:party_votes(
+            id,
+            votes,
+            party_id,
+            political_parties:political_parties(name, siglas, color)
+          ),
+          mail_votes:mail_votes(dni)
+        `)
+        .eq('id', errorReport.electoral_act_id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching electoral act:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo cargar el acta electoral"
+        });
+        return;
+      }
+
+      // Map the data to match ElectoralActAdmin interface
+      const completeAct: ElectoralActAdmin = {
+        ...actData,
+        municipio: actData.mpca?.municipio || 'Sin municipio',
+        provincia: actData.mpca?.provincia || 'Sin provincia',
+        comunidad_autonoma: actData.mpca?.ca || 'Sin comunidad autónoma'
+      };
+
+      setSelectedAct(completeAct);
+      setSelectedErrorReport(errorReport);
+      setShowEditDialog(true);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Error inesperado al cargar el acta"
+      });
+    }
   };
 
   const handleViewAudit = async (act: ElectoralActAdmin) => {
@@ -61,6 +130,7 @@ const AdminElectoralActs = () => {
       await updateMailVotes(selectedAct.id, mailVotes);
       setShowEditDialog(false);
       setSelectedAct(null);
+      setSelectedErrorReport(null);
       return true;
     }
     return false;
@@ -71,6 +141,7 @@ const AdminElectoralActs = () => {
     if (success) {
       setShowEditDialog(false);
       setSelectedAct(null);
+      setSelectedErrorReport(null);
       return true;
     }
     return false;
@@ -208,14 +279,44 @@ const AdminElectoralActs = () => {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Editar Acta - Mesa {selectedAct?.mesa_identifier}
+              Editar Acta - {selectedAct?.full_identifier || selectedAct?.mesa_identifier}
             </DialogTitle>
           </DialogHeader>
+          
+          {/* Show error report information if editing from error report */}
+          {selectedErrorReport && (
+            <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <h4 className="font-semibold text-destructive mb-2">Información del Reporte de Error</h4>
+              <div className="text-sm space-y-1">
+                <p><span className="font-medium">Tipos de error:</span> {selectedErrorReport.error_types.map(type => {
+                  const labels = {
+                    mesa_identification: 'ID Mesa',
+                    census_data: 'Censo/Votos',
+                    party_votes: 'Votos Partidos'
+                  };
+                  return labels[type as keyof typeof labels] || type;
+                }).join(', ')}</p>
+                {selectedErrorReport.observations && (
+                  <p><span className="font-medium">Observaciones:</span> {selectedErrorReport.observations}</p>
+                )}
+                {selectedErrorReport.reporter_name && (
+                  <p><span className="font-medium">Reportado por:</span> {selectedErrorReport.reporter_name}</p>
+                )}
+                {selectedErrorReport.reporter_email && (
+                  <p><span className="font-medium">Email:</span> {selectedErrorReport.reporter_email}</p>
+                )}
+              </div>
+            </div>
+          )}
+          
           {selectedAct && (
             <AdminActEditForm
               act={selectedAct}
               onSave={handleSaveAct}
-              onCancel={() => setShowEditDialog(false)}
+              onCancel={() => {
+                setShowEditDialog(false);
+                setSelectedErrorReport(null);
+              }}
               onDelete={handleDeleteAct}
             />
           )}
@@ -242,8 +343,7 @@ const AdminElectoralActs = () => {
 
         <TabsContent value="error-reports">
           <ActErrorReportsList 
-            onEditAct={handleEditAct}
-            onViewAudit={handleViewAudit}
+            onEditAct={handleEditActFromErrorReport}
           />
         </TabsContent>
 

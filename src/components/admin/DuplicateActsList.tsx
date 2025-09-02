@@ -16,7 +16,7 @@ interface DuplicateGroup {
 }
 
 interface DuplicateActsListProps {
-  onEditAct: (act: ElectoralActAdmin) => void;
+  onEditAct: (act: ElectoralActAdmin, errorReport?: any) => void;
   onViewAudit: (act: ElectoralActAdmin) => Promise<void>;
 }
 
@@ -120,6 +120,14 @@ export const DuplicateActsList = ({ onEditAct, onViewAudit }: DuplicateActsListP
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  const handleEditAct = (act: ElectoralActAdmin) => {
+    onEditAct(act);
+  };
+
+  const handleViewAudit = (act: ElectoralActAdmin) => {
+    onViewAudit(act);
+  };
+
   useEffect(() => {
     fetchDuplicates();
   }, []);
@@ -173,7 +181,7 @@ export const DuplicateActsList = ({ onEditAct, onViewAudit }: DuplicateActsListP
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onEditAct(act)}
+                            onClick={() => handleEditAct(act)}
                           >
                             <Edit className="h-4 w-4 mr-1" />
                             Editar
@@ -181,7 +189,7 @@ export const DuplicateActsList = ({ onEditAct, onViewAudit }: DuplicateActsListP
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onViewAudit(act)}
+                            onClick={() => handleViewAudit(act)}
                           >
                             <History className="h-4 w-4 mr-1" />
                             Historial
