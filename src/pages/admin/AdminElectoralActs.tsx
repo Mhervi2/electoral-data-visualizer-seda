@@ -12,6 +12,7 @@ import { useElectoralActsAdmin, ElectoralActAdmin, ActAuditLog } from '@/hooks/u
 import { AdminActEditForm } from '@/components/admin/AdminActEditForm';
 import { AdminActAuditLog } from '@/components/admin/AdminActAuditLog';
 import { ActErrorReportsList } from '@/components/admin/ActErrorReportsList';
+import { DuplicateActsList } from '@/components/admin/DuplicateActsList';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -103,6 +104,10 @@ const AdminElectoralActs = () => {
             <Flag className="h-4 w-4" />
             Reportes de Errores
           </TabsTrigger>
+          <TabsTrigger value="duplicates" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Actas Duplicadas
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="acts" className="space-y-6">
@@ -116,7 +121,7 @@ const AdminElectoralActs = () => {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por identificador de mesa..."
+                placeholder="Buscar por identificador de mesa o completo..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -146,7 +151,7 @@ const AdminElectoralActs = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Mesa</TableHead>
+                  <TableHead>Identificador completo</TableHead>
                   <TableHead>Municipio</TableHead>
                   <TableHead>Censo</TableHead>
                   <TableHead>Votantes</TableHead>
@@ -160,8 +165,8 @@ const AdminElectoralActs = () => {
                   .sort((a, b) => (a.municipio || '').localeCompare(b.municipio || ''))
                   .map((act) => (
                   <TableRow key={act.id}>
-                    <TableCell className="font-medium">
-                      {act.mesa_identifier}
+                    <TableCell className="font-medium font-mono text-sm">
+                      {act.full_identifier || 'N/A'}
                     </TableCell>
                     <TableCell>{act.municipio || 'Sin municipio'}</TableCell>
                     <TableCell>{act.census_total}</TableCell>
@@ -236,7 +241,17 @@ const AdminElectoralActs = () => {
         </TabsContent>
 
         <TabsContent value="error-reports">
-          <ActErrorReportsList />
+          <ActErrorReportsList 
+            onEditAct={handleEditAct}
+            onViewAudit={handleViewAudit}
+          />
+        </TabsContent>
+
+        <TabsContent value="duplicates">
+          <DuplicateActsList 
+            onEditAct={handleEditAct}
+            onViewAudit={handleViewAudit}
+          />
         </TabsContent>
       </Tabs>
     </div>
