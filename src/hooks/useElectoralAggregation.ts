@@ -312,14 +312,18 @@ export const useElectoralAggregation = () => {
       const sourceTotalVotes = sourceActs.reduce((sum, act) => sum + (act.total_voters || 0), 0);
       const sourceBlankVotes = sourceActs.reduce((sum, act) => sum + (act.blank_votes || 0), 0);
       const sourceNullVotes = sourceActs.reduce((sum, act) => sum + (act.null_votes || 0), 0);
-      const sourceValidVotes = sourceTotalVotes - sourceNullVotes;
+      const sourceValidVotes = sourceTotalVotes - sourceNullVotes - sourceBlankVotes;
       const sourceParticipation = sourceTotalCensus > 0 ? (sourceTotalVotes / sourceTotalCensus) * 100 : 0;
+      const sourceAbstention = sourceTotalCensus - sourceTotalVotes;
+      const sourceAbstentionPercentage = sourceTotalCensus > 0 ? (sourceAbstention / sourceTotalCensus) * 100 : 0;
 
       return {
         source: sourceType,
         totalCensus: sourceTotalCensus,
         totalVotes: sourceTotalVotes,
         participation: sourceParticipation,
+        abstention: sourceAbstention,
+        abstentionPercentage: sourceAbstentionPercentage,
         blankVotes: sourceBlankVotes,
         nullVotes: sourceNullVotes,
         validVotes: sourceValidVotes

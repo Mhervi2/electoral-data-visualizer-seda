@@ -9,6 +9,8 @@ interface SourceMetrics {
   totalCensus: number;
   totalVotes: number;
   participation: number;
+  abstention: number;
+  abstentionPercentage: number;
   blankVotes: number;
   nullVotes: number;
   validVotes: number;
@@ -30,6 +32,7 @@ export const ElectoralSummaryTable = ({ sourceMetrics }: ElectoralSummaryTablePr
     { key: 'totalCensus', label: 'Censo Total', format: (value: number) => value.toLocaleString() },
     { key: 'totalVotes', label: 'Total Votantes', format: (value: number) => value.toLocaleString() },
     { key: 'participation', label: 'Participación', format: (value: number) => `${value.toFixed(1)}%` },
+    { key: 'abstentionPercentage', label: 'Abstención', format: (value: number, source: SourceMetrics) => `${source.abstention.toLocaleString()} (${value.toFixed(1)}%)` },
     { key: 'validVotes', label: 'Votos Válidos', format: (value: number) => value.toLocaleString() },
     { key: 'blankVotes', label: 'Votos en Blanco', format: (value: number) => value.toLocaleString() },
     { key: 'nullVotes', label: 'Votos Nulos', format: (value: number) => value.toLocaleString() }
@@ -84,7 +87,10 @@ export const ElectoralSummaryTable = ({ sourceMetrics }: ElectoralSummaryTablePr
                     </TableCell>
                     {metrics.map((metric) => (
                       <TableCell key={metric.key} className="text-center">
-                        {metric.format(source[metric.key as keyof SourceMetrics] as number)}
+                        {metric.format.length > 1 
+                          ? (metric.format as (value: number, source: SourceMetrics) => string)(source[metric.key as keyof SourceMetrics] as number, source)
+                          : (metric.format as (value: number) => string)(source[metric.key as keyof SourceMetrics] as number)
+                        }
                       </TableCell>
                     ))}
                   </TableRow>
