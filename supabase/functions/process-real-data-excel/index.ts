@@ -210,7 +210,37 @@ serve(async (req) => {
     const headers = jsonData[0] as string[];
     console.log(`📋 Headers found:`, headers);
 
-    // System column filters (comprehensive list to avoid treating them as parties)
+    // New optimized format:
+    // Column A: Full mesa identifier (e.g., "08-05-001-01-001-U") 
+    // Column B: Municipality name (for reference only)
+    // Column C: Census
+    // Column D: Total Voters
+    // Column E: Null Votes  
+    // Column F: Blank Votes
+    // Column G+: Party identifier numbers (1, 2, 3, etc.)
+
+    const fullIdentifierIndex = 0; // Column A
+    const municipioRefIndex = 1;   // Column B (reference only)
+    const censoIndex = 2;          // Column C
+    const votantesIndex = 3;       // Column D
+    const nulosIndex = 4;          // Column E
+    const blancosIndex = 5;        // Column F
+
+    // Find party columns starting from column G (index 6)
+    // These should be party_identifier numbers (1, 2, 3, etc.)
+    const partyIdentifierIndices: { index: number; partyIdentifier: number }[] = []
+    for (let i = 6; i < headers.length; i++) {
+      const header = headers[i]?.toString().trim()
+      if (header && /^\d+$/.test(header)) {
+        const partyIdentifier = parseInt(header)
+        partyIdentifierIndices.push({ index: i, partyIdentifier })
+      }
+    }
+
+    console.log(`📊 Found ${partyIdentifierIndices.length} party identifier columns:`, 
+      partyIdentifierIndices.map(p => p.partyIdentifier));
+
+    // System column filters (keeping for backward compatibility)
     const systemColumns = [
       // Image/Photo columns
       'fotografía', 'foto', 'imagen', 'image', 'img', 'picture',
@@ -278,64 +308,20 @@ serve(async (req) => {
       return isSystem;
     };
 
-    // Find column indices using fuzzy matching for better recognition
-    const findColumnIndex = (headers: string[], searchTerms: string[]): number => {
-      const normalizeHeader = (header: string) => 
-        header.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      
-      for (let i = 0; i < headers.length; i++) {
-        const header = normalizeHeader(headers[i] || '');
-        for (const term of searchTerms) {
-          const normalizedTerm = normalizeHeader(term);
-          if (header.includes(normalizedTerm) || normalizedTerm.includes(header)) {
-            return i;
-          }
-        }
-      }
-      return -1;
-    };
-
-    const fotoIndex = findColumnIndex(headers, ['fotografía', 'foto', 'imagen', 'image']);
-    const municipioIndex = findColumnIndex(headers, ['municipio', 'municipality']);
-    const mesaIndex = findColumnIndex(headers, ['mesa', 'table', 'polling']);
-    const districtIndex = findColumnIndex(headers, ['distrito', 'district']);
-    const sectionIndex = findColumnIndex(headers, ['sección', 'seccion', 'section']);
-    const censoIndex = findColumnIndex(headers, ['censo', 'census', 'electores', 'número de electores censados', 'numero de electores censados']);
-    const votantesIndex = findColumnIndex(headers, ['votantes', 'total voters', 'número total de votantes', 'numero total de votantes']);
-    const blancosIndex = findColumnIndex(headers, ['blancos', 'blank', 'votos en blanco', 'blank votes']);
-    const nulosIndex = findColumnIndex(headers, ['nulos', 'null', 'invalid', 'votos nulos', 'null votes']);
-
-    console.log(`📍 Column indices found:`, {
-      foto: fotoIndex,
-      municipio: municipioIndex,
-      mesa: mesaIndex,
-      distrito: districtIndex,
-      seccion: sectionIndex,
+    // Column indices are now fixed based on the new format
+    const fotoIndex = -1; // Not used in new format
+    
+    console.log(`📍 Column indices (fixed format):`, {
+      fullIdentifier: fullIdentifierIndex,
+      municipioRef: municipioRefIndex,
       censo: censoIndex,
       votantes: votantesIndex,
+      nulos: nulosIndex,
       blancos: blancosIndex,
-      nulos: nulosIndex
+      partyColumns: partyIdentifierIndices.map(p => `${p.index}:${p.partyIdentifier}`)
     });
 
-    // Filter out system columns to find party columns (improved logic)
-    const systemColumnIndices = new Set([
-      fotoIndex, municipioIndex, mesaIndex, districtIndex, sectionIndex, censoIndex, 
-      votantesIndex, blancosIndex, nulosIndex
-    ].filter(index => index !== -1));
-
-    const partyColumnIndices: number[] = [];
-    headers.forEach((header, index) => {
-      // Only add if: not a system column index AND not a recognized system column name AND has content
-      if (!systemColumnIndices.has(index) && 
-          header && 
-          header.trim() && 
-          !isSystemColumn(header)) {
-        partyColumnIndices.push(index);
-      }
-    });
-
-    console.log(`🎯 Found ${partyColumnIndices.length} party columns:`, 
-      partyColumnIndices.map(index => headers[index]));
+    // Party columns are now handled by partyIdentifierIndices (already found above)
 
     // Load data efficiently - single queries for caching
     console.log('📥 Loading municipality and party data...');
@@ -351,19 +337,18 @@ serve(async (req) => {
 
     const { data: partiesData, error: partiesError } = await supabase
       .from('political_parties')
-      .select('id, name, siglas, color');
+      .select('id, name, siglas, color, party_identifier');
     
     if (partiesError) {
       console.error('❌ Error fetching political parties:', partiesError);
       throw new Error('Failed to load political parties data');
     }
 
-    // Create efficient lookups
-    const municipalityMap = new Map<string, MpcaData>();
-    const municipalityByIdMap = new Map<number, MpcaData>();
+    // Enhanced municipality lookup with support for the new identifier-based format
+    const municipalityByCodesMap = new Map<string, MpcaData>();
     (mpcaData || []).forEach(item => {
-      const normalizedName = normalizeText(item.municipio);
-      const municipalityData: MpcaData = {
+      const codesKey = `${item.idca}-${item.idp}-${item.idc}`;
+      municipalityByCodesMap.set(codesKey, {
         idm: item.idm,
         municipio: item.municipio,
         idp: item.idp,
@@ -371,12 +356,20 @@ serve(async (req) => {
         idca: item.idca,
         ca: item.ca,
         idc: item.idc,
-      };
-      municipalityMap.set(normalizedName, municipalityData);
-      municipalityByIdMap.set(item.idm, municipalityData);
+      });
+      municipalityByIdMap.set(item.idm, {
+        idm: item.idm,
+        municipio: item.municipio,
+        idp: item.idp,
+        provincia: item.provincia,
+        idca: item.idca,
+        ca: item.ca,
+        idc: item.idc,
+      });
     });
 
     const partyMap = new Map<string, any>();
+    const partyByIdentifierMap = new Map<number, any>();
     const allParties: any[] = [];
     (partiesData || []).forEach(party => {
       const normalizedName = normalizeText(party.name);
@@ -385,6 +378,8 @@ serve(async (req) => {
       if (normalizedSiglas) {
         partyMap.set(normalizedSiglas, party);
       }
+      // Add to identifier map for faster lookup
+      partyByIdentifierMap.set(party.party_identifier, party);
       allParties.push(party);
     });
 

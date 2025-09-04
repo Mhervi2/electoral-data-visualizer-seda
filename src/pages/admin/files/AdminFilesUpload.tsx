@@ -538,11 +538,31 @@ const AdminFilesUpload = () => {
             </div>
 
             <div className="p-4 bg-accent/20 rounded-lg">
-              <h4 className="font-medium mb-2">Formato del Archivo:</h4>
-              <p className="text-sm text-muted-foreground">
-                El archivo debe contener las columnas: Municipio, Mesa, Censo, Votantes, Blancos, Nulos
-                y una columna por cada partido político con sus respectivos votos.
-              </p>
+              <h4 className="font-medium mb-2">Formato del Archivo (Optimizado):</h4>
+              <div className="space-y-2 text-sm text-muted-foreground mb-4">
+                <p><strong>• Columna A:</strong> Identificador completo de mesa (ej: 08-05-001-01-001-U)</p>
+                <p><strong>• Columna B:</strong> Nombre del municipio (referencia)</p>
+                <p><strong>• Columna C:</strong> Censo total</p>
+                <p><strong>• Columna D:</strong> Total votantes</p>
+                <p><strong>• Columna E:</strong> Votos nulos</p>
+                <p><strong>• Columna F:</strong> Votos en blanco</p>
+                <p><strong>• Columna G+:</strong> Números identificadores de partidos (1, 2, 3, etc.)</p>
+              </div>
+              
+              <div className="bg-card border rounded p-3 mt-3">
+                <h5 className="text-xs font-medium mb-2 text-center">Ejemplo del nuevo formato:</h5>
+                <img 
+                  src="/excel-format-example.png" 
+                  alt="Ejemplo de formato Excel optimizado con identificadores completos" 
+                  className="w-full max-w-lg mx-auto rounded border"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Nuevo formato optimizado para carga más rápida y precisa
+                </p>
+              </div>
             </div>
 
             <Button 

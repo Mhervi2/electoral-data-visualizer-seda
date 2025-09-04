@@ -46,52 +46,51 @@ serve(async (req) => {
       )
     }
 
-    const headers = data[0].map(h => String(h || '').trim().toLowerCase())
+    const headers = data[0].map(h => String(h || '').trim())
     const rows = data.slice(1)
 
     console.log('Headers found:', headers)
 
-    // Find required column indices
-    const getColumnIndex = (possibleNames: string[]) => {
-      for (const name of possibleNames) {
-        const index = headers.findIndex(h => h.includes(name))
-        if (index !== -1) return index
-      }
-      return -1
-    }
+    // New format: 
+    // Column A: Full mesa identifier (e.g., "08-05-001-01-001-U")
+    // Column B: Municipality name (for reference only)
+    // Column C: Census
+    // Column D: Total Voters  
+    // Column E: Null Votes
+    // Column F: Blank Votes
+    // Column G+: Party identifier numbers (1, 2, 3, etc.)
 
-    const municipioIndex = getColumnIndex(['municipio', 'municipality'])
-    const mesaIndex = getColumnIndex(['mesa', 'table', 'distrito', 'seccion'])
-    const censoIndex = getColumnIndex(['censo', 'census'])
-    const votantesIndex = getColumnIndex(['votantes', 'voters', 'total'])
-    const blancosIndex = getColumnIndex(['blancos', 'blank'])
-    const nulosIndex = getColumnIndex(['nulos', 'null'])
+    const fullIdentifierIndex = 0; // Column A
+    const municipioRefIndex = 1;   // Column B (reference only)
+    const censoIndex = 2;          // Column C
+    const votantesIndex = 3;       // Column D  
+    const nulosIndex = 4;          // Column E
+    const blancosIndex = 5;        // Column F
 
-    if (municipioIndex === -1 || mesaIndex === -1 || censoIndex === -1 || votantesIndex === -1) {
+    if (headers.length < 6) {
       return new Response(
         JSON.stringify({ 
-          error: 'Required columns not found. Need: Municipio, Mesa, Censo, Votantes',
+          error: 'Excel file must have at least 6 columns: Full Identifier, Municipality, Census, Voters, Null Votes, Blank Votes',
           foundHeaders: headers 
         }),
         { status: 400, headers: corsHeaders }
       )
     }
 
-    // Find party columns (exclude known system columns)
-    const systemColumns = ['municipio', 'municipality', 'mesa', 'table', 'distrito', 'seccion', 
-                          'censo', 'census', 'votantes', 'voters', 'total', 'blancos', 'blank', 
-                          'nulos', 'null', 'provincia', 'province', 'ca', 'comunidad']
-    
-    const partyIndices: { index: number; name: string; siglas: string }[] = []
-    headers.forEach((header, index) => {
-      if (!systemColumns.some(sys => header.includes(sys)) && header.trim()) {
-        const name = header.trim()
-        const siglas = name.length > 10 ? name.substring(0, 10).toUpperCase() : name.toUpperCase()
-        partyIndices.push({ index, name, siglas })
+    // Find party columns starting from column G (index 6)
+    // These should be party_identifier numbers (1, 2, 3, etc.)
+    const partyIdentifierIndices: { index: number; partyIdentifier: number }[] = []
+    for (let i = 6; i < headers.length; i++) {
+      const header = headers[i]?.toString().trim()
+      if (header && /^\d+$/.test(header)) {
+        const partyIdentifier = parseInt(header)
+        partyIdentifierIndices.push({ index: i, partyIdentifier })
       }
-    })
+    }
 
-    console.log('Party columns found:', partyIndices.map(p => p.name))
+    console.log('Party identifier columns found:', partyIdentifierIndices)
+
+    console.log('Party columns found:', partyIdentifierIndices.map(p => p.partyIdentifier))
 
     let processedMesas = 0
     let createdMesas = 0
@@ -99,53 +98,82 @@ serve(async (req) => {
     let createdParties = 0
     const errors: string[] = []
 
-    // Get MPCA data for municipality matching
+    // Get MPCA data and political parties for matching
     const { data: mpcaData } = await supabaseClient
       .from('mpca')
-      .select('idm, municipio, provincia, ca')
+      .select('idm, municipio, provincia, ca, idp, idca, idc')
+
+    const { data: partiesData } = await supabaseClient
+      .from('political_parties')
+      .select('id, party_identifier')
+
+    // Create lookup map for parties by identifier
+    const partyByIdentifierMap = new Map<number, string>()
+    partiesData?.forEach(party => {
+      partyByIdentifierMap.set(party.party_identifier, party.id)
+    })
+
+    // Utility function to parse full mesa identifier
+    const parseFullMesaIdentifier = (fullIdentifier: string | null | undefined) => {
+      if (!fullIdentifier) return { isValid: false }
+      
+      const parts = fullIdentifier.trim().split('-')
+      if (parts.length !== 6) return { isValid: false }
+      
+      const [idca, idp, idc, distrito, seccion, mesa] = parts
+      return {
+        isValid: true,
+        idca: parseInt(idca),
+        idp: parseInt(idp), 
+        idc,
+        distrito,
+        seccion,
+        mesa,
+        shortIdentifier: `${distrito}-${seccion}-${mesa}`
+      }
+    }
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
       if (!row || row.length === 0) continue
 
       try {
-        const municipio = String(row[municipioIndex] || '').trim()
-        const mesaRaw = String(row[mesaIndex] || '').trim()
+        const fullIdentifier = String(row[fullIdentifierIndex] || '').trim()
+        const municipioRef = String(row[municipioRefIndex] || '').trim()
         const censo = parseInt(String(row[censoIndex] || '0'))
         const votantes = parseInt(String(row[votantesIndex] || '0'))
-        const blancos = blancosIndex !== -1 ? parseInt(String(row[blancosIndex] || '0')) : 0
-        const nulos = nulosIndex !== -1 ? parseInt(String(row[nulosIndex] || '0')) : 0
+        const nulos = parseInt(String(row[nulosIndex] || '0'))
+        const blancos = parseInt(String(row[blancosIndex] || '0'))
 
-        if (!municipio || !mesaRaw) {
-          errors.push(`Row ${i + 2}: Missing municipio or mesa`)
+        if (!fullIdentifier) {
+          errors.push(`Row ${i + 2}: Missing full mesa identifier`)
           continue
         }
 
-        // Find municipality in MPCA data
+        // Parse and validate full identifier
+        const parsed = parseFullMesaIdentifier(fullIdentifier)
+        if (!parsed.isValid) {
+          errors.push(`Row ${i + 2}: Invalid full identifier format: "${fullIdentifier}"`)
+          continue
+        }
+
+        // Find municipality by territorial codes from parsed identifier
         const mpcaRecord = mpcaData?.find(m => 
-          m.municipio.toLowerCase().trim() === municipio.toLowerCase().trim()
+          m.idca === parsed.idca && 
+          m.idp === parsed.idp && 
+          m.idc === parsed.idc
         )
 
         if (!mpcaRecord) {
-          errors.push(`Row ${i + 2}: Municipality "${municipio}" not found in MPCA data`)
+          errors.push(`Row ${i + 2}: Municipality not found for identifier codes ${parsed.idca}-${parsed.idp}-${parsed.idc}`)
           continue
         }
 
-        // Parse mesa identifier (could be "1-001-A" or just "A" etc)
-        let mesaIdentifier = mesaRaw
-        if (!mesaRaw.includes('-')) {
-          // If it's just a letter, we need to construct the full identifier
-          // For now, we'll assume default values. In real implementation, 
-          // you might need additional columns for distrito/seccion
-          mesaIdentifier = `1-001-${mesaRaw}`
-        }
-
-        // Check if electoral act already exists
+        // Check if electoral act already exists by full identifier
         const { data: existingAct } = await supabaseClient
           .from('electoral_acts')
           .select('id')
-          .eq('municipality_idm', mpcaRecord.idm)
-          .eq('mesa_identifier', mesaIdentifier)
+          .eq('full_identifier', fullIdentifier)
           .eq('source_type', sourceType)
           .single()
 
@@ -168,7 +196,7 @@ serve(async (req) => {
           if (updateError) throw updateError
           actId = updatedAct.id
           updatedMesas++
-          console.log(`🔄 Updated existing mesa: ${mesaIdentifier}`)
+          console.log(`🔄 Updated existing mesa: ${fullIdentifier}`)
 
           // Delete existing party votes
           await supabaseClient
@@ -183,7 +211,8 @@ serve(async (req) => {
             .insert({
               election_id: electionId,
               municipality_idm: mpcaRecord.idm,
-              mesa_identifier: mesaIdentifier,
+              mesa_identifier: parsed.shortIdentifier,
+              full_identifier: fullIdentifier,
               census_total: censo,
               total_voters: votantes,
               blank_votes: blancos,
@@ -196,40 +225,20 @@ serve(async (req) => {
           if (insertError) throw insertError
           actId = newAct.id
           createdMesas++
-          console.log(`✅ Created new mesa: ${mesaIdentifier}`)
+          console.log(`✅ Created new mesa: ${fullIdentifier}`)
         }
 
-        // Process party votes
-        for (const party of partyIndices) {
-          const votes = parseInt(String(row[party.index] || '0'))
+        // Process party votes using party_identifier
+        for (const partyColumn of partyIdentifierIndices) {
+          const votes = parseInt(String(row[partyColumn.index] || '0'))
           if (votes === 0) continue
 
-          // Create or get party
-          const { data: existingParty } = await supabaseClient
-            .from('political_parties')
-            .select('id')
-            .eq('siglas', party.siglas)
-            .single()
-
-          let partyId: string
-
-          if (existingParty) {
-            partyId = existingParty.id
-          } else {
-            const { data: newParty, error: partyError } = await supabaseClient
-              .from('political_parties')
-              .insert({
-                id: party.siglas,
-                name: party.name,
-                siglas: party.siglas,
-                color: `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`
-              })
-              .select('id')
-              .single()
-
-            if (partyError) throw partyError
-            partyId = newParty.id
-            createdParties++
+          // Get party ID by party_identifier
+          const partyId = partyByIdentifierMap.get(partyColumn.partyIdentifier)
+          
+          if (!partyId) {
+            errors.push(`Row ${i + 2}: Party with identifier ${partyColumn.partyIdentifier} not found`)
+            continue
           }
 
           // Insert party votes
