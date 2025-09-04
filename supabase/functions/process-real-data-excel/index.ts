@@ -210,14 +210,15 @@ serve(async (req) => {
     const headers = jsonData[0] as string[];
     console.log(`📋 Headers found:`, headers);
 
-    // New optimized format:
+    // New optimized format for "Usuarios" (real-data):
     // Column A: Full mesa identifier (e.g., "08-05-001-01-001-U") 
     // Column B: Municipality name (for reference only)
     // Column C: Census
     // Column D: Total Voters
     // Column E: Null Votes  
     // Column F: Blank Votes
-    // Column G+: Party identifier numbers (1, 2, 3, etc.)
+    // Column G: Observations
+    // Column H+: Party identifier numbers (1, 2, 3, etc.)
 
     const fullIdentifierIndex = 0; // Column A
     const municipioRefIndex = 1;   // Column B (reference only)
@@ -225,11 +226,12 @@ serve(async (req) => {
     const votantesIndex = 3;       // Column D
     const nulosIndex = 4;          // Column E
     const blancosIndex = 5;        // Column F
+    const observationsIndex = 6;   // Column G
 
-    // Find party columns starting from column G (index 6)
+    // Find party columns starting from column H (index 7) for "Usuarios" format
     // These should be party_identifier numbers (1, 2, 3, etc.)
     const partyIdentifierIndices: { index: number; partyIdentifier: number }[] = []
-    for (let i = 6; i < headers.length; i++) {
+    for (let i = 7; i < headers.length; i++) {
       const header = headers[i]?.toString().trim()
       if (header && /^\d+$/.test(header)) {
         const partyIdentifier = parseInt(header)
@@ -318,12 +320,19 @@ serve(async (req) => {
       votantes: votantesIndex,
       nulos: nulosIndex,
       blancos: blancosIndex,
+      observations: observationsIndex,
       partyColumns: partyIdentifierIndices.map(p => `${p.index}:${p.partyIdentifier}`)
     });
 
-    // Party columns are now handled by partyIdentifierIndices (already found above)
-
-    // Load data efficiently - single queries for caching
+    // Define index variables for compatibility with existing code
+    const municipioIndex = municipioRefIndex;
+    const mesaIndex = fullIdentifierIndex;
+    const districtIndex = -1; // Not used in new format
+    const sectionIndex = -1;  // Not used in new format
+    const fotoIndex = -1;     // Not used in new format
+    
+    // Extract party column indices for compatibility
+    const partyColumnIndices = partyIdentifierIndices.map(p => p.index);
     console.log('📥 Loading municipality and party data...');
     
     const { data: mpcaData, error: mpcaError } = await supabase
@@ -346,6 +355,9 @@ serve(async (req) => {
 
     // Enhanced municipality lookup with support for the new identifier-based format
     const municipalityByCodesMap = new Map<string, MpcaData>();
+    const municipalityByIdMap = new Map<number, MpcaData>();
+    const municipalityMap = new Map<string, MpcaData>();
+    
     (mpcaData || []).forEach(item => {
       const codesKey = `${item.idca}-${item.idp}-${item.idc}`;
       municipalityByCodesMap.set(codesKey, {
@@ -358,6 +370,17 @@ serve(async (req) => {
         idc: item.idc,
       });
       municipalityByIdMap.set(item.idm, {
+        idm: item.idm,
+        municipio: item.municipio,
+        idp: item.idp,
+        provincia: item.provincia,
+        idca: item.idca,
+        ca: item.ca,
+        idc: item.idc,
+      });
+      // Also add to name-based map for legacy compatibility
+      const normalizedName = normalizeText(item.municipio);
+      municipalityMap.set(normalizedName, {
         idm: item.idm,
         municipio: item.municipio,
         idp: item.idp,
@@ -736,6 +759,7 @@ serve(async (req) => {
         const votantes = parseInt(row[votantesIndex]?.toString() || '0') || 0;
         const blancos = parseInt(row[blancosIndex]?.toString() || '0') || 0;
         const nulos = parseInt(row[nulosIndex]?.toString() || '0') || 0;
+        const observations = row[observationsIndex]?.toString()?.trim() || null;
         const fotoUrlRaw = row[fotoIndex]?.toString()?.trim() || null;
         const fotoUrl = convertDriveLink(fotoUrlRaw);
 
@@ -773,6 +797,7 @@ serve(async (req) => {
               source_type: sourceType,
               image_url: fotoUrl,
               full_identifier: fullIdentifier,
+              observations: observations,
               updated_at: new Date().toISOString()
             })
             .eq('id', existingAct.id);
@@ -808,7 +833,8 @@ serve(async (req) => {
               null_votes: nulos,
               source_type: sourceType,
               image_url: fotoUrl,
-              full_identifier: fullIdentifier
+              full_identifier: fullIdentifier,
+              observations: observations
             })
             .select('id')
             .single();

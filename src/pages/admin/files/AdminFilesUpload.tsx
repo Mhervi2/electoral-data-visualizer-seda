@@ -488,12 +488,12 @@ const AdminFilesUpload = () => {
                   <SelectItem value="indra">INDRA</SelectItem>
                   <SelectItem value="escrutinio">Escrutinio General</SelectItem>
                   <SelectItem value="oficial">Resultado Oficial</SelectItem>
-                  <SelectItem value="real-data">Datos Reales Excel</SelectItem>
+                  <SelectItem value="real-data">Usuarios</SelectItem>
                 </SelectContent>
               </Select>
               {selectedSourceType === 'real-data' && (
                 <div className="space-y-2">
-                  <Label htmlFor="referenceMunicipality">Municipio de Referencia (Datos Reales Excel) *</Label>
+                  <Label htmlFor="referenceMunicipality">Municipio de Referencia (Usuarios) *</Label>
                   <ServerMunicipalityCombobox
                     selectedValue={selectedReferenceMunicipalityId}
                     onSelect={handleReferenceMunicipalitySelect}
@@ -546,7 +546,14 @@ const AdminFilesUpload = () => {
                 <p><strong>• Columna D:</strong> Total votantes</p>
                 <p><strong>• Columna E:</strong> Votos nulos</p>
                 <p><strong>• Columna F:</strong> Votos en blanco</p>
-                <p><strong>• Columna G+:</strong> Números identificadores de partidos (1, 2, 3, etc.)</p>
+                {selectedSourceType === 'real-data' ? (
+                  <>
+                    <p><strong>• Columna G:</strong> Observaciones</p>
+                    <p><strong>• Columna H+:</strong> Números identificadores de partidos (1, 2, 3, etc.)</p>
+                  </>
+                ) : (
+                  <p><strong>• Columna G+:</strong> Números identificadores de partidos (1, 2, 3, etc.)</p>
+                )}
               </div>
               
               <div className="bg-card border rounded p-3 mt-3">
