@@ -558,6 +558,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          party_identifier: number
           siglas: string
         }
         Insert: {
@@ -565,6 +566,7 @@ export type Database = {
           created_at?: string | null
           id: string
           name: string
+          party_identifier?: number
           siglas: string
         }
         Update: {
@@ -572,6 +574,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          party_identifier?: number
           siglas?: string
         }
         Relationships: []
@@ -779,6 +782,10 @@ export type Database = {
           p_mesa_identifier: string
         }
         Returns: string
+      }
+      get_next_party_identifier: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       initialize_provincial_seats_for_election: {
         Args: { p_election_id: string }

@@ -36,8 +36,8 @@ export const useAppData = () => {
           
           supabase
             .from('political_parties')
-            .select('id, name, siglas, color')
-            .order('siglas'),
+            .select('id, name, siglas, color, party_identifier')
+            .order('party_identifier'),
           
           supabase
             .from('elections')
@@ -62,7 +62,8 @@ export const useAppData = () => {
             id: party.id,
             name: party.name,
             siglas: party.siglas,
-            color: party.color || '#6B7280'
+            color: party.color || '#6B7280',
+            party_identifier: party.party_identifier
           }));
           console.log(`✅ Political parties loaded: ${politicalParties.length} parties`);
         } else {

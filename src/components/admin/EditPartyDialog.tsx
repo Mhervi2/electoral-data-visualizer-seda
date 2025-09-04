@@ -15,6 +15,7 @@ interface PoliticalParty {
   name: string;
   siglas: string;
   color: string;
+  party_identifier: number;
 }
 
 interface EditPartyDialogProps {

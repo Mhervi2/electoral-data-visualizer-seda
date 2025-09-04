@@ -91,10 +91,12 @@ const PoliticalParties = () => {
                   className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-sm"
                   style={{ backgroundColor: party.color || '#6B7280' }}
                 >
-                  {party.siglas}
+                  {party.party_identifier}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <CardTitle className="text-lg leading-tight">{party.siglas}</CardTitle>
+                  <CardTitle className="text-lg leading-tight">
+                    #{party.party_identifier} - {party.siglas}
+                  </CardTitle>
                   <CardDescription className="text-xs">
                     {party.name}
                   </CardDescription>

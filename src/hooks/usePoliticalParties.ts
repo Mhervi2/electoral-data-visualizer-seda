@@ -7,6 +7,7 @@ interface PoliticalParty {
   name: string;
   siglas: string;
   color: string;
+  party_identifier: number;
 }
 
 export const usePoliticalParties = () => {
@@ -22,8 +23,8 @@ export const usePoliticalParties = () => {
 
         const { data, error } = await supabase
           .from('political_parties')
-          .select('id, name, siglas, color')
-          .order('name', { ascending: true });
+          .select('id, name, siglas, color, party_identifier')
+          .order('party_identifier', { ascending: true });
 
         if (error) {
           console.error('❌ Error fetching political parties:', error);

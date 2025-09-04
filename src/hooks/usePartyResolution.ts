@@ -87,7 +87,7 @@ export const usePartyResolution = () => {
       // Get all political parties for comparison
       const { data: parties, error } = await supabase
         .from('political_parties')
-        .select('id, name, siglas, color');
+        .select('id, name, siglas, color, party_identifier');
 
       if (error) throw error;
 
@@ -148,7 +148,8 @@ export const usePartyResolution = () => {
               id: party.id,
               name: party.name,
               siglas: party.siglas,
-              color: party.color
+              color: party.color,
+              party_identifier: party.party_identifier
             },
             score,
             reason
@@ -198,7 +199,8 @@ export const usePartyResolution = () => {
         id: data.id,
         name: data.name,
         siglas: data.siglas,
-        color: data.color
+        color: data.color,
+        party_identifier: data.party_identifier
       };
     } catch (error) {
       console.error('Error creating party:', error);

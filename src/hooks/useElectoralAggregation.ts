@@ -47,6 +47,8 @@ interface SourceMetrics {
   totalCensus: number;
   totalVotes: number;
   participation: number;
+  abstention: number;
+  abstentionPercentage: number;
   blankVotes: number;
   nullVotes: number;
   validVotes: number;
