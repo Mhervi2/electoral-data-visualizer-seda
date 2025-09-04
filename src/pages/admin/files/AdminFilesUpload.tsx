@@ -552,9 +552,9 @@ const AdminFilesUpload = () => {
               <div className="bg-card border rounded p-3 mt-3">
                 <h5 className="text-xs font-medium mb-2 text-center">Ejemplo del nuevo formato:</h5>
                 <img 
-                  src="/excel-format-example.png" 
-                  alt="Ejemplo de formato Excel optimizado con identificadores completos" 
-                  className="w-full max-w-lg mx-auto rounded border"
+                  src="/lovable-uploads/ae8a910d-c8ab-4966-ba36-7446aef9f83a.png" 
+                  alt="Ejemplo real de formato Excel con identificadores completos de mesa y números de partidos" 
+                  className="w-full max-w-4xl mx-auto rounded border shadow-sm"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
