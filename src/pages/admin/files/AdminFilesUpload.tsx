@@ -51,12 +51,9 @@ const AdminFilesUpload = () => {
     electionId: string;
     sourceType: string;
     isRealData: boolean;
-    provinceIdp?: number;
   } | null>(null);
 
   const [selectedSourceType, setSelectedSourceType] = useState<string>('');
-  const [selectedReferenceMunicipalityId, setSelectedReferenceMunicipalityId] = useState<string>('');
-  const [referenceMunicipalityData, setReferenceMunicipalityData] = useState<MpcaData | null>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -96,10 +93,7 @@ const AdminFilesUpload = () => {
       const effectiveSourceType = sourceType === 'real-data' ? 'user' : sourceType;
       formData.append('sourceType', effectiveSourceType);
 
-      // Add province if available (derived from reference municipality)
-      if (referenceMunicipalityData?.idp && sourceType === 'real-data') {
-        formData.append('provinceIdp', String(referenceMunicipalityData.idp));
-      }
+      // No province filtering needed for Usuarios type
 
       // Add municipality resolutions if provided
       if (municipalityResolutions && municipalityResolutions.length > 0) {
@@ -120,7 +114,8 @@ const AdminFilesUpload = () => {
       }
 
       // Call the appropriate edge function based on data type
-      const functionName = isRealData ? 'process-real-data-excel' : 'process-electoral-excel';
+      // Usuarios uses process-real-data-excel, all others use process-electoral-excel
+      const functionName = sourceType === 'real-data' ? 'process-real-data-excel' : 'process-electoral-excel';
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: formData,
       });
@@ -164,25 +159,18 @@ const AdminFilesUpload = () => {
       return;
     }
 
-    if (sourceType === 'real-data' && !referenceMunicipalityData) {
-      toast({
-        variant: "destructive",
-        title: "Municipio de referencia requerido",
-        description: "Selecciona un municipio de referencia para los Datos Reales Excel.",
-      });
-      return;
-    }
+    // No validation needed for reference municipality anymore
 
     try {
       console.log('Processing Excel file:', selectedFile.name);
       
       const isRealData = sourceType === 'real-data';
       
-      // Use batch processing for real data, regular processing for others
+      // Use batch processing for real data (Usuarios), regular processing for others
       let processingResult: ProcessingResult;
       
       if (isRealData) {
-        processingResult = await processFileInBatches(selectedFile, electionId, sourceType, undefined, undefined, 100, referenceMunicipalityData?.idp);
+        processingResult = await processFileInBatches(selectedFile, electionId, sourceType, undefined, undefined, 100);
       } else {
         processingResult = await processExcelFile(selectedFile, electionId, sourceType, isRealData);
       }
@@ -191,7 +179,7 @@ const AdminFilesUpload = () => {
       if (processingResult.unresolvedParties && processingResult.unresolvedParties.length > 0) {
         console.log('Found unresolved parties:', processingResult.unresolvedParties);
         setUnresolvedParties(processingResult.unresolvedParties);
-        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData, provinceIdp: referenceMunicipalityData?.idp });
+        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData });
         setShowPartyResolutionDialog(true);
         return;
       }
@@ -200,7 +188,7 @@ const AdminFilesUpload = () => {
       if (processingResult.unresolvedMunicipalities && processingResult.unresolvedMunicipalities.length > 0) {
         console.log('Found unresolved municipalities:', processingResult.unresolvedMunicipalities);
         setUnresolvedMunicipalities(processingResult.unresolvedMunicipalities);
-        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData, provinceIdp: referenceMunicipalityData?.idp });
+        setPendingProcessing({ file: selectedFile, electionId, sourceType, isRealData });
         setShowResolutionDialog(true);
         return;
       }
@@ -230,8 +218,6 @@ const AdminFilesUpload = () => {
         setSelectedFile(null);
         (e.target as HTMLFormElement).reset();
         setSelectedSourceType('');
-        setSelectedReferenceMunicipalityId('');
-        setReferenceMunicipalityData(null);
       } else {
         toast({
           variant: "destructive",
@@ -267,8 +253,7 @@ const AdminFilesUpload = () => {
           pendingProcessing.sourceType,
           undefined, // no municipality resolutions yet
           resolutions,
-          100,
-          pendingProcessing.provinceIdp
+          100
         );
       } else {
         processingResult = await processExcelFile(
@@ -350,8 +335,7 @@ const AdminFilesUpload = () => {
           pendingProcessing.sourceType,
           resolutions,
           undefined,
-          100,
-          pendingProcessing.provinceIdp
+          100
         );
       } else {
         processingResult = await processExcelFile(
@@ -420,12 +404,7 @@ const AdminFilesUpload = () => {
     });
   };
 
-  // Handle reference municipality selection for real-data source
-  const handleReferenceMunicipalitySelect = (municipalityId: string, municipalityData?: MpcaData) => {
-    console.log('Selected reference municipality:', municipalityData);
-    setSelectedReferenceMunicipalityId(municipalityId);
-    setReferenceMunicipalityData(municipalityData || null);
-  };
+  // Reference municipality handler removed as it's no longer needed
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -491,27 +470,7 @@ const AdminFilesUpload = () => {
                   <SelectItem value="real-data">Usuarios</SelectItem>
                 </SelectContent>
               </Select>
-              {selectedSourceType === 'real-data' && (
-                <div className="space-y-2">
-                  <Label htmlFor="referenceMunicipality">Municipio de Referencia (Usuarios) *</Label>
-                  <ServerMunicipalityCombobox
-                    selectedValue={selectedReferenceMunicipalityId}
-                    onSelect={handleReferenceMunicipalitySelect}
-                    placeholder="Buscar municipio de referencia..."
-                  />
-                  {referenceMunicipalityData && (
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <p><strong>Municipio seleccionado:</strong> {referenceMunicipalityData.municipio}</p>
-                      <p><strong>Provincia:</strong> {referenceMunicipalityData.provincia} (ID: {referenceMunicipalityData.idp})</p>
-                      <p><strong>Comunidad Autónoma:</strong> {referenceMunicipalityData.ca} (ID: {referenceMunicipalityData.idca})</p>
-                      <p className="mt-2 font-medium">Los datos del Excel se filtrarán por la provincia "{referenceMunicipalityData.provincia}" para evitar asociaciones incorrectas.</p>
-                    </div>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Selecciona un municipio de la provincia de referencia. Usaremos su provincia para filtrar correctamente los datos del Excel.
-                  </p>
-                </div>
-              )}
+              {/* No reference municipality needed for Usuarios type */}
             </div>
 
             <div className="space-y-2">
@@ -538,7 +497,7 @@ const AdminFilesUpload = () => {
             </div>
 
             <div className="p-4 bg-accent/20 rounded-lg">
-              <h4 className="font-medium mb-2">Formato del Archivo (Optimizado):</h4>
+              <h4 className="font-medium mb-2">Formato del Archivo:</h4>
               <div className="space-y-2 text-sm text-muted-foreground mb-4">
                 <p><strong>• Columna A:</strong> Identificador completo de mesa (ej: 08-05-001-01-001-U)</p>
                 <p><strong>• Columna B:</strong> Nombre del municipio (referencia)</p>
@@ -550,9 +509,17 @@ const AdminFilesUpload = () => {
                   <>
                     <p><strong>• Columna G:</strong> Observaciones</p>
                     <p><strong>• Columna H+:</strong> Números identificadores de partidos (1, 2, 3, etc.)</p>
+                    <p className="text-xs text-amber-600 mt-2">
+                      <strong>Formato Usuarios:</strong> Incluye columna de observaciones
+                    </p>
                   </>
                 ) : (
-                  <p><strong>• Columna G+:</strong> Números identificadores de partidos (1, 2, 3, etc.)</p>
+                  <>
+                    <p><strong>• Columna G+:</strong> Números identificadores de partidos (1, 2, 3, etc.)</p>
+                    <p className="text-xs text-blue-600 mt-2">
+                      <strong>Formato INDRA/Escrutinio/Oficial:</strong> Sin columna de observaciones
+                    </p>
+                  </>
                 )}
               </div>
               

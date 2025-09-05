@@ -311,7 +311,6 @@ serve(async (req) => {
     };
 
     // Column indices are now fixed based on the new format
-    const fotoIndex = -1; // Not used in new format
     
     console.log(`📍 Column indices (fixed format):`, {
       fullIdentifier: fullIdentifierIndex,
