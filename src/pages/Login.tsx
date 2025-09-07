@@ -127,13 +127,6 @@ const Login = () => {
             </div>
           </div>
           
-          <div className="mt-6 p-4 bg-accent/20 rounded-md">
-            <p className="text-sm text-muted-foreground">
-              <strong>Para acceder como administrador:</strong><br />
-              Usuario: <strong>superadmin@seda.es</strong><br />
-              Contraseña: <strong>AdminFuerte#2024</strong>
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
