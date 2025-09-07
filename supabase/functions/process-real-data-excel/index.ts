@@ -640,27 +640,9 @@ serve(async (req) => {
         municipalityData = municipalityByCodesMap.get(codesKey) || null;
       }
 
-      if (!municipalityData && municipioName) {
-        // Check if we already have this unresolved municipality
-        const alreadyExists = unresolvedMunicipalities.some(
-          unresolved => normalizeMunicipalityCandidate(unresolved.originalName) === normalizedMunicipio
-        );
-        
-        if (!alreadyExists) {
-          unresolvedMunicipalities.push({
-            originalName: municipioName,
-            normalizedName: normalizedMunicipio,
-            rowIndex: i,
-            provincia: provinceContext?.provincia,
-            ca: provinceContext?.ca,
-          });
-        }
-        continue;
-      }
-
       if (!municipalityData) {
         if (errors.length < MAX_ERRORS) {
-          errors.push(`Fila ${i + 1}: No se encontró municipio para códigos: ${codesKey}`);
+          errors.push(`Fila ${i + 1}: No se encontró municipio para códigos territoriales: ${codesKey}. Verifique que los códigos existen en la base de datos.`);
         }
         continue;
       }
