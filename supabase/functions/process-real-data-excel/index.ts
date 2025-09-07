@@ -604,28 +604,43 @@ serve(async (req) => {
       ? (mpcaData || []).find((it: any) => Number(it.idp) === Number(selectedProvinceIdp))
       : undefined;
     
-    // First pass: identify all unresolved municipalities in current batch
+    // First pass: identify all unresolved municipalities in current batch using full identifier
     for (let i = startIndex; i < endIndex; i++) {
       const row = jsonData[i] as any[];
       
       if (!row || row.length === 0) continue;
 
-      const municipioName = row[municipioIndex]?.toString()?.trim();
-      if (!municipioName) continue;
+      const fullIdentifier = row[fullIdentifierIndex]?.toString()?.trim();
+      if (!fullIdentifier) continue;
 
-      const normalizedMunicipio = normalizeMunicipalityCandidate(municipioName);
+      // Parse full identifier to extract codes: XX-YY-IDC-DD-SSS-M
+      const parts = fullIdentifier.split('-');
+      if (parts.length !== 6) {
+        if (errors.length < MAX_ERRORS) {
+          errors.push(`Fila ${i + 1}: Formato de identificador completo inválido: ${fullIdentifier}`);
+        }
+        continue;
+      }
+
+      const [idca, idp, idc] = parts;
+      const codesKey = `${idca}-${idp}-${idc}`;
       
-      // Check if we have a resolution for this municipality
+      // Check if we have a resolution for this municipality by codes
       let municipalityData: MpcaData | null = null;
+      
+      // For resolutions, we still use the municipality name as fallback
+      const municipioName = row[municipioRefIndex]?.toString()?.trim();
+      const normalizedMunicipio = municipioName ? normalizeMunicipalityCandidate(municipioName) : '';
       
       if (municipalityResolutions.has(normalizedMunicipio)) {
         const resolvedIdm = municipalityResolutions.get(normalizedMunicipio)!;
         municipalityData = municipalityByIdMap.get(resolvedIdm) || null;
       } else {
-        municipalityData = findMunicipality(municipioName);
+        // Look up municipality by codes directly
+        municipalityData = municipalityByCodesMap.get(codesKey) || null;
       }
 
-      if (!municipalityData) {
+      if (!municipalityData && municipioName) {
         // Check if we already have this unresolved municipality
         const alreadyExists = unresolvedMunicipalities.some(
           unresolved => normalizeMunicipalityCandidate(unresolved.originalName) === normalizedMunicipio
@@ -643,43 +658,49 @@ serve(async (req) => {
         continue;
       }
 
+      if (!municipalityData) {
+        if (errors.length < MAX_ERRORS) {
+          errors.push(`Fila ${i + 1}: No se encontró municipio para códigos: ${codesKey}`);
+        }
+        continue;
+      }
+
       // Store for processing
       mesaDataList.push({
         rowIndex: i,
         row,
-        municipalityData
+        municipalityData,
+        fullIdentifier
       });
     }
 
-    // Check for unresolved parties in party columns using enhanced matching
-    for (const partyIndex of partyColumnIndices) {
-      const partyName = headers[partyIndex]?.toString()?.trim();
-      if (!partyName) continue;
-
-      const normalizedPartyName = normalizeText(partyName);
+    // Check for unresolved parties in party columns using numeric identifiers
+    for (const partyInfo of partyIdentifierIndices) {
+      const partyIdentifier = partyInfo.partyIdentifier;
       
-      // Check if we have a resolution for this party
+      // Check if we have a resolution for this party identifier
       let partyExists = false;
       
+      const normalizedPartyName = partyIdentifier.toString();
       if (partyResolutions.has(normalizedPartyName)) {
         partyExists = true;
       } else {
-        // Use enhanced party matching function
-        const foundParty = findParty(partyName);
+        // Look up party by identifier directly
+        const foundParty = partyByIdentifierMap.get(partyIdentifier);
         partyExists = foundParty !== null;
       }
 
       if (!partyExists) {
         // Check if we already have this unresolved party
         const alreadyExists = unresolvedParties.some(
-          unresolved => normalizeText(unresolved.originalName) === normalizedPartyName
+          unresolved => unresolved.originalName === partyIdentifier.toString()
         );
         
         if (!alreadyExists) {
           unresolvedParties.push({
-            originalName: partyName,
+            originalName: partyIdentifier.toString(),
             normalizedName: normalizedPartyName,
-            columnIndex: partyIndex
+            columnIndex: partyInfo.index
           });
         }
       }
@@ -743,35 +764,41 @@ serve(async (req) => {
     let createdParties = 0;
 
     for (const mesaData of mesaDataList) {
-      const { row, municipalityData, rowIndex } = mesaData;
+      const { row, municipalityData, rowIndex, fullIdentifier: rowFullIdentifier } = mesaData;
       
       try {
-        const mesaIdentifier = buildMesaIdentifier(row);
-        if (!mesaIdentifier) {
+        // Extract mesa identifier from full identifier: XX-YY-IDC-DD-SSS-M -> DD-SSS-M
+        const fullId = rowFullIdentifier || row[fullIdentifierIndex]?.toString()?.trim();
+        if (!fullId) {
           if (errors.length < MAX_ERRORS) {
-            errors.push(`Fila ${rowIndex + 1}: Identificador de mesa vacío o inválido`);
+            errors.push(`Fila ${rowIndex + 1}: Identificador completo vacío`);
           }
           continue;
         }
+
+        const parts = fullId.split('-');
+        if (parts.length !== 6) {
+          if (errors.length < MAX_ERRORS) {
+            errors.push(`Fila ${rowIndex + 1}: Formato de identificador inválido: ${fullId}`);
+          }
+          continue;
+        }
+
+        const mesaIdentifier = `${parts[3]}-${parts[4]}-${parts[5]}`;
 
         const censo = parseInt(row[censoIndex]?.toString() || '0') || 0;
         const votantes = parseInt(row[votantesIndex]?.toString() || '0') || 0;
         const blancos = parseInt(row[blancosIndex]?.toString() || '0') || 0;
         const nulos = parseInt(row[nulosIndex]?.toString() || '0') || 0;
         const observations = row[observationsIndex]?.toString()?.trim() || null;
-        const fotoUrlRaw = row[fotoIndex]?.toString()?.trim() || null;
-        const fotoUrl = convertDriveLink(fotoUrlRaw);
 
-        // Generate full identifier
-        const fullIdentifier = `${String(municipalityData.idca).padStart(2, '0')}-${String(municipalityData.idp).padStart(2, '0')}-${municipalityData.idc}-${mesaIdentifier}`;
-
-        // Check if electoral act exists
+        // Check if electoral act exists by full identifier
         const { data: existingAct, error: findError } = await supabase
           .from('electoral_acts')
           .select('id')
-          .eq('municipality_idm', municipalityData.idm)
-          .eq('mesa_identifier', mesaIdentifier)
+          .eq('full_identifier', fullId)
           .eq('election_id', electionId)
+          .eq('source_type', sourceType)
           .maybeSingle();
 
         if (findError) {
@@ -793,9 +820,6 @@ serve(async (req) => {
               total_voters: votantes,
               blank_votes: blancos,
               null_votes: nulos,
-              source_type: sourceType,
-              image_url: fotoUrl,
-              full_identifier: fullIdentifier,
               observations: observations,
               updated_at: new Date().toISOString()
             })
@@ -826,13 +850,13 @@ serve(async (req) => {
               election_id: electionId,
               municipality_idm: municipalityData.idm,
               mesa_identifier: mesaIdentifier,
+              mesa_identifier_full: fullId,
               census_total: censo,
               total_voters: votantes,
               blank_votes: blancos,
               null_votes: nulos,
               source_type: sourceType,
-              image_url: fotoUrl,
-              full_identifier: fullIdentifier,
+              full_identifier: fullId,
               observations: observations
             })
             .select('id')
@@ -850,22 +874,20 @@ serve(async (req) => {
           createdMesas++;
         }
 
-        // Process party votes for this act
+        // Process party votes for this act using numeric identifiers
         const partyVotesToInsert = [];
         
-        for (const partyIndex of partyColumnIndices) {
-          const partyName = headers[partyIndex]?.toString()?.trim();
-          if (!partyName) continue;
-
-          const normalizedPartyName = normalizeText(partyName);
-          const votes = parseInt(row[partyIndex]?.toString() || '0') || 0;
+        for (const partyInfo of partyIdentifierIndices) {
+          const partyIdentifier = partyInfo.partyIdentifier;
+          const votes = parseInt(row[partyInfo.index]?.toString() || '0') || 0;
           
           if (votes <= 0) continue;
 
-          // Use enhanced party finding with resolution support
+          // Look up party by identifier directly
           let party = null;
           
-          // Check if we have a resolution for this party
+          // Check if we have a resolution for this party identifier
+          const normalizedPartyName = partyIdentifier.toString();
           if (partyResolutions.has(normalizedPartyName)) {
             const resolvedPartyId = partyResolutions.get(normalizedPartyName)!;
             // Find party by resolved ID
@@ -876,13 +898,13 @@ serve(async (req) => {
               }
             }
           } else {
-            // Use enhanced party matching
-            party = findParty(partyName);
+            // Look up party by identifier directly
+            party = partyByIdentifierMap.get(partyIdentifier) || null;
           }
           
           if (!party) {
             // Skip this party - it should have been resolved in the resolution step
-            console.warn(`⚠️ Skipping unresolved party: ${partyName}`);
+            console.warn(`⚠️ Skipping unresolved party identifier: ${partyIdentifier}`);
             continue;
           }
 
