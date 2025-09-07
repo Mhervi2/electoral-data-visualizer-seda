@@ -16,6 +16,7 @@ import {
 } from '@/hooks/useMunicipalityResolution';
 import { MpcaData } from '@/types/acta';
 import { useToast } from '@/hooks/use-toast';
+import { useMunicipalitySearch } from '@/hooks/useMunicipalitySearch';
 
 interface MunicipalityResolutionDialogProps {
   isOpen: boolean;
@@ -46,6 +47,10 @@ const MunicipalityResolutionDialog: React.FC<MunicipalityResolutionDialogProps> 
   const [resolutions, setResolutions] = useState<MunicipalityResolution[]>([]);
   const [provinces, setProvinces] = useState<Array<{ idp: number; provincia: string; idca: number; ca: string }>>([]);
   
+  // Manual search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const { municipalities: searchResults, loading: searchLoading } = useMunicipalitySearch(searchTerm);
+  
   // New municipality form state
   const [newMunicipalityName, setNewMunicipalityName] = useState('');
   const [selectedProvinceId, setSelectedProvinceId] = useState<number | null>(null);
@@ -65,6 +70,7 @@ const MunicipalityResolutionDialog: React.FC<MunicipalityResolutionDialogProps> 
     if (currentMunicipality) {
       setNewMunicipalityName(currentMunicipality.originalName);
       setActiveTab('suggestions');
+      setSearchTerm(''); // Reset search when changing municipality
     }
   }, [currentMunicipality]);
 
@@ -248,56 +254,123 @@ const MunicipalityResolutionDialog: React.FC<MunicipalityResolutionDialogProps> 
             </TabsList>
 
             <TabsContent value="suggestions" className="space-y-4">
-              {loadingSuggestions ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : suggestions.length > 0 ? (
+              {/* Manual search input */}
+              <div className="space-y-2">
+                <Label htmlFor="searchTerm">Buscar municipio manualmente</Label>
+                <Input
+                  id="searchTerm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Escribe para buscar municipios..."
+                  className="w-full"
+                />
+              </div>
+
+              {/* Show search results if there's a search term */}
+              {searchTerm.trim() && (
                 <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Selecciona el municipio correcto de las siguientes opciones:
-                  </p>
-                  {suggestions.map((suggestion, index) => (
-                    <Card 
-                      key={index} 
-                      className="cursor-pointer hover:bg-accent transition-colors"
-                      onClick={() => handleSelectSuggestion(suggestion.municipality)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-medium">{suggestion.municipality.municipio}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {suggestion.municipality.provincia} • {suggestion.municipality.ca}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {suggestion.reason}
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge 
-                              variant="secondary"
-                              className={`text-white ${getScoreColor(suggestion.score)}`}
-                            >
-                              {getScoreText(suggestion.score)}
-                            </Badge>
-                            <CheckCircle className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                        </div>
+                  <div className="flex items-center space-x-2">
+                    <Search className="h-4 w-4" />
+                    <p className="text-sm font-medium">Resultados de búsqueda:</p>
+                  </div>
+                  
+                  {searchLoading ? (
+                    <div className="flex justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    <div className="space-y-2">
+                      {searchResults.map((municipality, index) => (
+                        <Card 
+                          key={index} 
+                          className="cursor-pointer hover:bg-accent transition-colors"
+                          onClick={() => handleSelectSuggestion(municipality)}
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-medium">{municipality.municipio}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  {municipality.provincia} • {municipality.ca}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  IDM: {municipality.idm} • {municipality.idca}-{municipality.idp}-{municipality.idc}
+                                </p>
+                              </div>
+                              <CheckCircle className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <p className="text-sm text-muted-foreground">
+                          No se encontraron municipios que coincidan con "{searchTerm}"
+                        </p>
                       </CardContent>
                     </Card>
-                  ))}
+                  )}
                 </div>
-              ) : (
-                <Card>
-                  <CardContent className="p-6 text-center">
-                    <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h4 className="font-medium mb-2">No se encontraron coincidencias</h4>
-                    <p className="text-sm text-muted-foreground">
-                      No hay municipios similares en la base de datos. Puedes crear uno nuevo.
-                    </p>
-                  </CardContent>
-                </Card>
+              )}
+
+              {/* Show suggestions if no search term or as fallback */}
+              {!searchTerm.trim() && (
+                <>
+                  {loadingSuggestions ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : suggestions.length > 0 ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        <p className="text-sm font-medium">Sugerencias automáticas:</p>
+                      </div>
+                      {suggestions.map((suggestion, index) => (
+                        <Card 
+                          key={index} 
+                          className="cursor-pointer hover:bg-accent transition-colors"
+                          onClick={() => handleSelectSuggestion(suggestion.municipality)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-medium">{suggestion.municipality.municipio}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  {suggestion.municipality.provincia} • {suggestion.municipality.ca}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {suggestion.reason}
+                                </p>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Badge 
+                                  variant="secondary"
+                                  className={`text-white ${getScoreColor(suggestion.score)}`}
+                                >
+                                  {getScoreText(suggestion.score)}
+                                </Badge>
+                                <CheckCircle className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-6 text-center">
+                        <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h4 className="font-medium mb-2">No se encontraron coincidencias automáticas</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Usa la búsqueda manual arriba o crea un nuevo municipio en la otra pestaña.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
               )}
             </TabsContent>
 
