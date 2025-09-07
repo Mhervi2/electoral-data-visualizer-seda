@@ -153,7 +153,7 @@ serve(async (req) => {
     let selectedJsonData: any[] = [];
     let maxDataRows = 0;
 
-    const normalize = (s: string) => s?.toLowerCase()?.trim()?.normalize('NFD')?.replace(/[\u0300-\u036f]/g, '') || '';
+    const normalize = (s: any) => (typeof s === 'string' ? s : String(s || ''))?.toLowerCase()?.trim()?.normalize('NFD')?.replace(/[\u0300-\u036f]/g, '') || '';
     const hasExpectedHeaders = (headers: string[]) => {
       const norm = headers.map(h => normalize(h));
       const hasMunicipio = norm.some(h => h.includes('municipio') || h.includes('municipality'));
