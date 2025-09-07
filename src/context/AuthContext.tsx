@@ -1,5 +1,7 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
 interface UserProfile {
   isAdmin: boolean;
@@ -25,7 +27,28 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
+
+  const checkAdminStatus = async (userId: string, email: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error checking admin status:', error);
+        return false;
+      }
+
+      return data?.is_admin || false;
+    } catch (error) {
+      console.error('Exception checking admin status:', error);
+      return false;
+    }
+  };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
@@ -33,26 +56,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Attempting login for:', email);
       
-      // Simple hardcoded authentication for admin panel
-      if (email === 'superadmin@seda.es' && password === 'AdminFuerte#2024') {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('Login error:', error.message);
+        setIsLoading(false);
+        return false;
+      }
+
+      if (data.user) {
+        const isAdmin = await checkAdminStatus(data.user.id, data.user.email!);
+        
         const userProfile: UserProfile = {
-          email: email,
-          isAdmin: true
+          email: data.user.email!,
+          isAdmin
         };
         
-        console.log('Login successful for:', email);
+        console.log('Login successful for:', email, 'Admin:', isAdmin);
         setUser(userProfile);
+        setSession(data.session);
         
         // Store in localStorage for persistence
         localStorage.setItem('admin_user', JSON.stringify(userProfile));
         
         setIsLoading(false);
         return true;
-      } else {
-        console.log('Invalid credentials for:', email);
-        setIsLoading(false);
-        return false;
       }
+
+      setIsLoading(false);
+      return false;
     } catch (error) {
       console.error('Login exception:', error);
       setIsLoading(false);
@@ -60,25 +95,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     console.log('Logging out...');
+    await supabase.auth.signOut();
     setUser(null);
+    setSession(null);
     localStorage.removeItem('admin_user');
   };
 
-  // Check for existing session on component mount
-  React.useEffect(() => {
-    const storedUser = localStorage.getItem('admin_user');
-    if (storedUser) {
-      try {
-        const userProfile = JSON.parse(storedUser);
-        console.log('Restored user session:', userProfile);
-        setUser(userProfile);
-      } catch (error) {
-        console.error('Error parsing stored user:', error);
-        localStorage.removeItem('admin_user');
+  // Set up auth state listener and check for existing session
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        setSession(session);
+        
+        if (session?.user) {
+          const isAdmin = await checkAdminStatus(session.user.id, session.user.email!);
+          const userProfile: UserProfile = {
+            email: session.user.email!,
+            isAdmin
+          };
+          setUser(userProfile);
+          localStorage.setItem('admin_user', JSON.stringify(userProfile));
+        } else {
+          setUser(null);
+          localStorage.removeItem('admin_user');
+        }
+        setIsLoading(false);
       }
-    }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        checkAdminStatus(session.user.id, session.user.email!).then((isAdmin) => {
+          const userProfile: UserProfile = {
+            email: session.user.email!,
+            isAdmin
+          };
+          setUser(userProfile);
+          setSession(session);
+          localStorage.setItem('admin_user', JSON.stringify(userProfile));
+          setIsLoading(false);
+        });
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
