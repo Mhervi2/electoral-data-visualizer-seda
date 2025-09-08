@@ -105,32 +105,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Set up auth state listener and check for existing session
   useEffect(() => {
+    let isMounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
+        
+        if (!isMounted) return;
+        
         setSession(session);
         
         if (session?.user) {
-          const isAdmin = await checkAdminStatus(session.user.id, session.user.email!);
-          const userProfile: UserProfile = {
-            email: session.user.email!,
-            isAdmin
-          };
-          setUser(userProfile);
-          localStorage.setItem('admin_user', JSON.stringify(userProfile));
+          // Defer async operations to avoid blocking the auth callback
+          setTimeout(async () => {
+            if (!isMounted) return;
+            
+            const isAdmin = await checkAdminStatus(session.user.id, session.user.email!);
+            const userProfile: UserProfile = {
+              email: session.user.email!,
+              isAdmin
+            };
+            setUser(userProfile);
+            localStorage.setItem('admin_user', JSON.stringify(userProfile));
+            setIsLoading(false);
+          }, 0);
         } else {
           setUser(null);
           localStorage.removeItem('admin_user');
+          setIsLoading(false);
         }
-        setIsLoading(false);
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      
       if (session?.user) {
         checkAdminStatus(session.user.id, session.user.email!).then((isAdmin) => {
+          if (!isMounted) return;
+          
           const userProfile: UserProfile = {
             email: session.user.email!,
             isAdmin
@@ -145,7 +160,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (

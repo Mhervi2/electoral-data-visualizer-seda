@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSecureFileUpload } from '@/hooks/useSecureFileUpload';
-import { useActaData } from '@/hooks/useActaData';
+import { useAppData } from '@/hooks/useAppData';
 import { useSubmitActa } from '@/hooks/useSubmitActa';
 import { useBulkImageUpload } from '@/hooks/useBulkImageUpload';
 import { validateImageOnlyActa } from '@/utils/imageOnlyValidation';
@@ -33,7 +33,7 @@ export const SubmitActaForm = () => {
   } = useActaFormState();
   
   const { uploadFile, uploading } = useSecureFileUpload();
-  const { politicalParties, elections } = useActaData();
+  const { politicalParties, elections } = useAppData();
   const { isSubmitting: bulkSubmitting, submitImageOnlyActs } = useBulkImageUpload();
   const {
     actaData,

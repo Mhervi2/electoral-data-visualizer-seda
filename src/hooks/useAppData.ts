@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MpcaData, PoliticalParty, Election } from '@/types/acta';
+import { useAuth } from '@/context/AuthContext';
 
 interface AppData {
   mpcaData: MpcaData[];
@@ -12,6 +13,7 @@ interface AppData {
 }
 
 export const useAppData = () => {
+  const { isLoading: authLoading } = useAuth();
   const [data, setData] = useState<AppData>({
     mpcaData: [],
     politicalParties: [],
@@ -21,6 +23,12 @@ export const useAppData = () => {
   });
 
   useEffect(() => {
+    // Don't fetch data until auth is ready
+    if (authLoading) {
+      console.log('⏳ Waiting for auth to complete...');
+      return;
+    }
+
     const fetchAllData = async () => {
       console.log('🔄 Fetching all data from new database structure...');
       
@@ -105,7 +113,7 @@ export const useAppData = () => {
     };
 
     fetchAllData();
-  }, []);
+  }, [authLoading]);
 
   return data;
 };
