@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
 
 interface PoliticalParty {
   id: string;
@@ -13,22 +12,14 @@ interface PoliticalParty {
 
 export const usePoliticalParties = () => {
   const { toast } = useToast();
-  const { isLoading: authLoading } = useAuth();
   const [parties, setParties] = useState<PoliticalParty[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) {
-      console.log('⏳ Waiting for auth to complete before fetching parties...');
-      return;
-    }
     const fetchParties = async () => {
       try {
         setLoading(true);
         console.log('🎭 Fetching political parties...');
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('Session for parties fetch:', session ? 'Active' : 'None');
 
         const { data, error } = await supabase
           .from('political_parties')
@@ -61,7 +52,7 @@ export const usePoliticalParties = () => {
     };
 
     fetchParties();
-  }, [toast, authLoading]);
+  }, [toast]);
 
   return { parties, loading };
 };

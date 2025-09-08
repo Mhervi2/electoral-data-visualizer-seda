@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
 
 interface Election {
   id: string;
@@ -13,22 +12,14 @@ interface Election {
 
 export const useElections = () => {
   const { toast } = useToast();
-  const { isLoading: authLoading } = useAuth();
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) {
-      console.log('⏳ Waiting for auth to complete before fetching elections...');
-      return;
-    }
     const fetchElections = async () => {
       try {
         setLoading(true);
         console.log('🗳️ Fetching available elections...');
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('Session for elections fetch:', session ? 'Active' : 'None');
 
         const { data, error } = await supabase
           .from('elections')
@@ -61,7 +52,7 @@ export const useElections = () => {
     };
 
     fetchElections();
-  }, [toast, authLoading]);
+  }, [toast]);
 
   const getActiveElection = () => {
     return elections.find(election => election.status === 'active');

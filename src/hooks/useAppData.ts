@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MpcaData, PoliticalParty, Election } from '@/types/acta';
-import { useAuth } from '@/context/AuthContext';
 
 interface AppData {
   mpcaData: MpcaData[];
@@ -13,7 +12,6 @@ interface AppData {
 }
 
 export const useAppData = () => {
-  const { isLoading: authLoading } = useAuth();
   const [data, setData] = useState<AppData>({
     mpcaData: [],
     politicalParties: [],
@@ -23,21 +21,11 @@ export const useAppData = () => {
   });
 
   useEffect(() => {
-    // Don't fetch data while auth is still loading
-    if (authLoading) {
-      console.log('⏳ Waiting for auth to complete...');
-      return;
-    }
     const fetchAllData = async () => {
-      console.log('🔄 Fetching all data from database...');
-      console.log('Auth state - isLoading:', authLoading);
+      console.log('🔄 Fetching all data from new database structure...');
       
       try {
         setData(prev => ({ ...prev, loading: true, error: null }));
-
-        // Check current session
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('Current session:', session ? 'Active' : 'None');
 
         // Fetch all data in parallel
         const [mpcaResult, partiesResult, electionsResult] = await Promise.allSettled([
@@ -117,7 +105,7 @@ export const useAppData = () => {
     };
 
     fetchAllData();
-  }, [authLoading]);
+  }, []);
 
   return data;
 };
