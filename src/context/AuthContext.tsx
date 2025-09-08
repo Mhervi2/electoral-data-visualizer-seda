@@ -105,14 +105,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Set up auth state listener and check for existing session
   useEffect(() => {
+    let mounted = true;
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+        
         console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         
         if (session?.user) {
           const isAdmin = await checkAdminStatus(session.user.id, session.user.email!);
+          if (!mounted) return;
+          
           const userProfile: UserProfile = {
             email: session.user.email!,
             isAdmin
@@ -123,29 +129,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
           localStorage.removeItem('admin_user');
         }
-        setIsLoading(false);
+        
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     );
 
-    // Check for existing session
+    // Check for existing session immediately
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        checkAdminStatus(session.user.id, session.user.email!).then((isAdmin) => {
-          const userProfile: UserProfile = {
-            email: session.user.email!,
-            isAdmin
-          };
-          setUser(userProfile);
-          setSession(session);
-          localStorage.setItem('admin_user', JSON.stringify(userProfile));
-          setIsLoading(false);
-        });
-      } else {
+      if (!mounted) return;
+      
+      if (!session) {
         setIsLoading(false);
       }
+      // If there's a session, let the auth state change handler deal with it
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
