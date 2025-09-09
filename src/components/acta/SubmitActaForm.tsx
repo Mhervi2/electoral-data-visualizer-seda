@@ -18,6 +18,7 @@ import { MailVotersSection } from './MailVotersSection';
 import { ExistingActDialog } from './ExistingActDialog';
 import { ValidationWarningDialog } from '@/components/ui/validation-warning-dialog';
 import { MunicipalitySelector } from './MunicipalitySelector';
+import { ActaInstructionsPanel } from './ActaInstructionsPanel';
 import { useSystemConfig } from '@/contexts/SystemConfigContext';
 
 export const SubmitActaForm = () => {
@@ -113,6 +114,20 @@ export const SubmitActaForm = () => {
         warnings={validationWarnings}
         onContinue={handleWarningDialogContinue}
         onCancel={handleWarningDialogCancel}
+      />
+
+      <ActaInstructionsPanel
+        electionId={actaData.electionId}
+        municipio={actaData.municipio}
+        mesaIdentifier={actaData.mesaIdentifier}
+        imageUrl={actaData.imageUrl || ''}
+        censo={actaData.censo}
+        votantes={actaData.votantes}
+        blancos={actaData.blancos}
+        nulos={actaData.nulos}
+        votos={actaData.votos}
+        mailVoters={actaData.mailVoters}
+        isMailVotingEnabled={isMailVotingEnabled()}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

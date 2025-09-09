@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PoliticalParty } from '@/types/acta';
 import { usePartyOrder } from '@/hooks/usePartyOrder';
+import { VotesSummaryDialog } from './VotesSummaryDialog';
 import { useState } from 'react';
 
 interface PartyVotesProps {
@@ -16,7 +17,7 @@ interface PartyVotesProps {
 
 export const PartyVotes = ({ politicalParties, votos, onVoteChange, provincia }: PartyVotesProps) => {
   const { orderedParties, loading } = usePartyOrder(provincia, politicalParties);
-  const [confirmedVotes, setConfirmedVotes] = useState(false);
+  const [showSummaryDialog, setShowSummaryDialog] = useState(false);
 
   if (!politicalParties || politicalParties.length === 0) {
     return (
@@ -48,30 +49,31 @@ export const PartyVotes = ({ politicalParties, votos, onVoteChange, provincia }:
     );
   }
 
-  const handleConfirmVotes = () => {
-    setConfirmedVotes(true);
-  };
-
-  const handleEditVotes = () => {
-    setConfirmedVotes(false);
-  };
-
   const totalVotesEntered = Object.values(votos).filter(v => v && v !== '0').length;
-  const allPartiesCompleted = orderedParties.every(party => votos[party.id] && votos[party.id] !== '');
 
   return (
-    <TooltipProvider>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Votos a Candidaturas</span>
-            {confirmedVotes && (
-              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                ✓ Votos confirmados
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
+    <>
+      <VotesSummaryDialog
+        open={showSummaryDialog}
+        onOpenChange={setShowSummaryDialog}
+        politicalParties={politicalParties}
+        votos={votos}
+        onVoteChange={onVoteChange}
+        provincia={provincia}
+      />
+      
+      <TooltipProvider>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Votos a Candidaturas</span>
+              {totalVotesEntered > 0 && (
+                <Badge variant="secondary" className="bg-blue-50 text-blue-800 border-blue-200">
+                  {totalVotesEntered} partido{totalVotesEntered !== 1 ? 's' : ''} con votos
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
         <CardContent className="space-y-6">
           {/* Grid de partidos con inputs integrados */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
@@ -83,7 +85,7 @@ export const PartyVotes = ({ politicalParties, votos, onVoteChange, provincia }:
                       votos[partido.id] && votos[partido.id] !== '0' 
                         ? 'ring-2 ring-green-500 bg-green-50' 
                         : 'hover:shadow-md'
-                    } ${confirmedVotes ? 'opacity-75' : ''}`}
+                    }`}
                     style={{ borderColor: partido.color }}
                   >
                     <div className="text-center space-y-2">
@@ -100,7 +102,6 @@ export const PartyVotes = ({ politicalParties, votos, onVoteChange, provincia }:
                         placeholder="Votos"
                         className="text-center h-8 text-sm"
                         min="0"
-                        disabled={confirmedVotes}
                       />
                     </div>
                   </div>
@@ -119,25 +120,16 @@ export const PartyVotes = ({ politicalParties, votos, onVoteChange, provincia }:
             ))}
           </div>
 
-          {/* Botones de acción */}
+          {/* Botón de resumen */}
           <div className="flex justify-center pt-4 border-t">
-            {!confirmedVotes ? (
-              <Button 
-                onClick={handleConfirmVotes}
-                disabled={totalVotesEntered === 0}
-                className="px-8"
-              >
-                Confirmar Votos ({totalVotesEntered} partidos)
-              </Button>
-            ) : (
-              <Button 
-                onClick={handleEditVotes}
-                variant="outline"
-                className="px-8"
-              >
-                Editar Votos
-              </Button>
-            )}
+            <Button 
+              onClick={() => setShowSummaryDialog(true)}
+              disabled={totalVotesEntered === 0}
+              variant="outline"
+              className="px-8"
+            >
+              Ver Resumen de Votos ({totalVotesEntered} partido{totalVotesEntered !== 1 ? 's' : ''})
+            </Button>
           </div>
 
           {/* Resumen de votos introducidos */}
@@ -165,5 +157,6 @@ export const PartyVotes = ({ politicalParties, votos, onVoteChange, provincia }:
         </CardContent>
       </Card>
     </TooltipProvider>
+    </>
   );
 };
