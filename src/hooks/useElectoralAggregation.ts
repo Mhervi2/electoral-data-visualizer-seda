@@ -120,6 +120,8 @@ export const useElectoralAggregation = () => {
   };
 
   const deduplicateActs = (acts: ElectoralAct[]): ElectoralAct[] => {
+    console.log('🔍 Starting deduplication process with', acts.length, 'acts');
+    
     // Group acts by full_identifier
     const duplicateGroups = new Map<string, ElectoralAct[]>();
     const nonDuplicates: ElectoralAct[] = [];
@@ -130,6 +132,7 @@ export const useElectoralAggregation = () => {
       if (!fullId) {
         // Acts without identifier are not considered duplicates
         nonDuplicates.push(act);
+        console.log('⚠️ Act without identifier found:', act.id);
         return;
       }
 
@@ -160,9 +163,7 @@ export const useElectoralAggregation = () => {
       }
     });
 
-    if (totalFiltered > 0) {
-      console.log(`📋 Deduplication complete: ${totalFiltered} duplicate acts filtered, ${deduplicatedActs.length} unique acts remaining`);
-    }
+    console.log(`📋 Deduplication complete: ${totalFiltered} duplicate acts filtered, ${deduplicatedActs.length} unique acts remaining from ${duplicateGroups.size} groups + ${nonDuplicates.length} non-duplicates`);
 
     return deduplicatedActs;
   };
@@ -290,7 +291,17 @@ export const useElectoralAggregation = () => {
       }
 
       // Deduplicate acts before aggregation
+      console.log('🔍 Before deduplication:', individualActas.length, 'acts');
+      console.log('📋 Sample acts for debugging:', individualActas.slice(0, 3).map(act => ({
+        id: act.id,
+        full_identifier: act.full_identifier,
+        mesa_identifier: act.mesa_identifier,
+        created_at: act.created_at,
+        municipio: act.mpca?.municipio
+      })));
+      
       const deduplicatedActas = deduplicateActs(individualActas);
+      console.log('✅ After deduplication:', deduplicatedActas.length, 'acts');
 
       // Get party votes for these deduplicated acts
       const actIds = deduplicatedActas.map(act => act.id);
