@@ -119,6 +119,54 @@ export const useElectoralAggregation = () => {
     };
   };
 
+  const deduplicateActs = (acts: ElectoralAct[]): ElectoralAct[] => {
+    // Group acts by full_identifier
+    const duplicateGroups = new Map<string, ElectoralAct[]>();
+    const nonDuplicates: ElectoralAct[] = [];
+
+    acts.forEach(act => {
+      const fullId = act.full_identifier || act.mesa_identifier;
+      
+      if (!fullId) {
+        // Acts without identifier are not considered duplicates
+        nonDuplicates.push(act);
+        return;
+      }
+
+      if (duplicateGroups.has(fullId)) {
+        duplicateGroups.get(fullId)!.push(act);
+      } else {
+        duplicateGroups.set(fullId, [act]);
+      }
+    });
+
+    // For each group, keep only the most recent act
+    const deduplicatedActs: ElectoralAct[] = [...nonDuplicates];
+    let totalFiltered = 0;
+
+    duplicateGroups.forEach((group, fullId) => {
+      if (group.length > 1) {
+        // Sort by created_at descending and take the first (most recent)
+        const sortedGroup = group.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        deduplicatedActs.push(sortedGroup[0]);
+        totalFiltered += group.length - 1;
+        
+        console.log(`🔄 Duplicate found for ${fullId}: keeping latest from ${sortedGroup[0].created_at}, filtering ${group.length - 1} older versions`);
+      } else {
+        // Single act, keep it
+        deduplicatedActs.push(group[0]);
+      }
+    });
+
+    if (totalFiltered > 0) {
+      console.log(`📋 Deduplication complete: ${totalFiltered} duplicate acts filtered, ${deduplicatedActs.length} unique acts remaining`);
+    }
+
+    return deduplicatedActs;
+  };
+
   const buildQuery = (baseQuery: any) => {
     let query = baseQuery;
 
@@ -241,8 +289,11 @@ export const useElectoralAggregation = () => {
         return;
       }
 
-      // Get party votes for these acts
-      const actIds = individualActas.map(act => act.id);
+      // Deduplicate acts before aggregation
+      const deduplicatedActas = deduplicateActs(individualActas);
+
+      // Get party votes for these deduplicated acts
+      const actIds = deduplicatedActas.map(act => act.id);
       
       const { data: partyVotes, error: partyVotesError } = await supabase
         .from('party_votes')
@@ -277,7 +328,7 @@ export const useElectoralAggregation = () => {
         .select('provincia, ca');
 
       // Aggregate the data
-      const aggregated = await aggregateElectoralData(individualActas, partyVotes || [], provincialSeats || [], mpcaData || []);
+      const aggregated = await aggregateElectoralData(deduplicatedActas, partyVotes || [], provincialSeats || [], mpcaData || []);
       setAggregatedResults(aggregated);
 
     } catch (error) {
