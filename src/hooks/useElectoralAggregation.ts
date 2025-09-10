@@ -122,7 +122,7 @@ export const useElectoralAggregation = () => {
   const deduplicateActs = (acts: ElectoralAct[]): ElectoralAct[] => {
     console.log('🔍 Starting deduplication process with', acts.length, 'acts');
     
-    // Group acts by full_identifier
+    // Group acts by full_identifier AND source_type to maintain one per source
     const duplicateGroups = new Map<string, ElectoralAct[]>();
     const nonDuplicates: ElectoralAct[] = [];
 
@@ -136,18 +136,23 @@ export const useElectoralAggregation = () => {
         return;
       }
 
-      if (duplicateGroups.has(fullId)) {
-        duplicateGroups.get(fullId)!.push(act);
+      // Create a unique key combining identifier and source type
+      const uniqueKey = `${fullId}:${act.source_type}`;
+
+      if (duplicateGroups.has(uniqueKey)) {
+        duplicateGroups.get(uniqueKey)!.push(act);
       } else {
-        duplicateGroups.set(fullId, [act]);
+        duplicateGroups.set(uniqueKey, [act]);
       }
     });
 
-    // For each group, keep only the most recent act
+    // For each group, keep only the most recent act per source
     const deduplicatedActs: ElectoralAct[] = [...nonDuplicates];
     let totalFiltered = 0;
 
-    duplicateGroups.forEach((group, fullId) => {
+    duplicateGroups.forEach((group, uniqueKey) => {
+      const [identifier, sourceType] = uniqueKey.split(':');
+      
       if (group.length > 1) {
         // Sort by created_at descending and take the first (most recent)
         const sortedGroup = group.sort((a, b) => 
@@ -156,14 +161,14 @@ export const useElectoralAggregation = () => {
         deduplicatedActs.push(sortedGroup[0]);
         totalFiltered += group.length - 1;
         
-        console.log(`🔄 Duplicate found for ${fullId}: keeping latest from ${sortedGroup[0].created_at}, filtering ${group.length - 1} older versions`);
+        console.log(`🔄 Duplicate found for ${identifier}:${sourceType}: keeping latest from ${sortedGroup[0].created_at}, filtering ${group.length - 1} older versions`);
       } else {
         // Single act, keep it
         deduplicatedActs.push(group[0]);
       }
     });
 
-    console.log(`📋 Deduplication complete: ${totalFiltered} duplicate acts filtered, ${deduplicatedActs.length} unique acts remaining from ${duplicateGroups.size} groups + ${nonDuplicates.length} non-duplicates`);
+    console.log(`📋 Deduplication complete: ${totalFiltered} duplicate acts filtered, ${deduplicatedActs.length} unique acts remaining from ${duplicateGroups.size} source-specific groups + ${nonDuplicates.length} non-duplicates`);
 
     return deduplicatedActs;
   };
