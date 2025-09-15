@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useElectoralAggregation } from '@/hooks/useElectoralAggregation';
+import { useElections } from '@/hooks/useElections';
 import { ResultsFilters } from '@/components/results/ResultsFilters';
 import { ElectoralSummaryTable } from '@/components/results/ElectoralSummaryTable';
 import { ElectoralCharts } from '@/components/results/ElectoralCharts';
@@ -11,12 +12,14 @@ import { ResultsDetailsTable } from '@/components/results/ResultsDetailsTable';
 import { IndividualActsList } from '@/components/results/IndividualActsList';
 import DiscrepancyDetector from '@/components/results/DiscrepancyDetector';
 import { DHondtResults } from '@/components/results/DHondtResults';
+import { Card, CardContent } from '@/components/ui/card';
 
 const Results = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const [isScrolled, setIsScrolled] = useState(false);
+  const { elections, loading: electionsLoading } = useElections();
   const {
     aggregatedResults,
     loading,
@@ -198,9 +201,25 @@ const Results = () => {
 
       {!aggregatedResults && !loading && (
         <div className="text-center py-8">
-          <p className="text-muted-foreground">
-            No se encontraron resultados electorales que coincidan con los filtros aplicados.
-          </p>
+          {!electionsLoading && elections.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center gap-2">
+                  <AlertCircle className="h-8 w-8 text-muted-foreground" />
+                  <div>
+                    <h3 className="font-semibold">No hay elecciones disponibles</h3>
+                    <p className="text-muted-foreground text-sm">
+                      No hay procesos electorales configurados como visibles.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <p className="text-muted-foreground">
+              No se encontraron resultados electorales que coincidan con los filtros aplicados.
+            </p>
+          )}
         </div>
       )}
     </div>

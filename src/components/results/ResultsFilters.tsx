@@ -82,8 +82,19 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false, is
     onFiltersChange(newFilters);
   };
 
-  // Auto-select active election or most recent when elections load
+  // Auto-select active election or most recent when elections load and validate current selection
   useEffect(() => {
+    // First validate current selection
+    if (filters.electionId && elections.length > 0) {
+      const currentElection = elections.find(e => e.id === filters.electionId);
+      if (!currentElection) {
+        console.warn('🚫 Currently selected election not visible, clearing selection');
+        handleSelectChange('electionId', '');
+        return;
+      }
+    }
+
+    // Auto-select if no election is selected and we have visible elections
     if (!electionsLoading && elections.length > 0 && !filters.electionId) {
       // First try to find an active election
       const activeElection = elections.find(election => election.status === 'active');
@@ -92,15 +103,13 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false, is
         console.log('🎯 Auto-selecting active election:', activeElection.name);
         handleSelectChange('electionId', activeElection.id);
       } else {
-        // If no active election, select the most recent one
+        // If no active election, select the most recent visible one
         const sortedElections = [...elections].sort((a, b) => {
-          // Assuming elections have a created_at or date field for sorting
-          // If not available, we'll just pick the first one
           return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
         });
         
         if (sortedElections[0]) {
-          console.log('🎯 Auto-selecting most recent election:', sortedElections[0].name);
+          console.log('🎯 Auto-selecting most recent visible election:', sortedElections[0].name);
           handleSelectChange('electionId', sortedElections[0].id);
         }
       }
@@ -255,21 +264,29 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false, is
                 <SelectValue placeholder="Seleccionar proceso electoral..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas las elecciones</SelectItem>
-                {elections.map((election) => (
-                  <SelectItem key={election.id} value={election.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{election.name}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded ${
-                        election.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {election.status === 'active' ? 'Activa' : 'Inactiva'}
-                      </span>
-                    </div>
+                {elections.length === 0 ? (
+                  <SelectItem value="none" disabled>
+                    No hay elecciones disponibles
                   </SelectItem>
-                ))}
+                ) : (
+                  <>
+                    <SelectItem value="all">Todas las elecciones</SelectItem>
+                    {elections.map((election) => (
+                      <SelectItem key={election.id} value={election.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{election.name}</span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${
+                            election.status === 'active' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {election.status === 'active' ? 'Activa' : 'Inactiva'}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>

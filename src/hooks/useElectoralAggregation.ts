@@ -173,15 +173,31 @@ export const useElectoralAggregation = () => {
     return deduplicatedActs;
   };
 
-  const buildQuery = (baseQuery: any) => {
+  const buildQuery = async (baseQuery: any) => {
     let query = baseQuery;
 
     console.log('🔧 Building query with filters:', filters);
 
-    // Filter by election first if specified
+    // Filter by election first if specified and validate visibility
     if (filters.electionId?.trim()) {
       const trimmedValue = filters.electionId.trim();
-      console.log('🎯 Applying Election filter:', trimmedValue);
+      
+      // Check if the election exists and is visible
+      const { data: election, error } = await supabase
+        .from('elections')
+        .select('id, name, is_visible')
+        .eq('id', trimmedValue)
+        .eq('is_visible', true)
+        .single();
+
+      if (error || !election) {
+        console.warn('⚠️ Election not found or not visible:', trimmedValue);
+        // Return a query that will return no results
+        query = query.eq('election_id', 'non-existent-election-id');
+        return query;
+      }
+
+      console.log('🎯 Applying Election filter:', trimmedValue, '(visible)');
       query = query.eq('election_id', trimmedValue);
     }
 
@@ -257,7 +273,7 @@ export const useElectoralAggregation = () => {
         `)
         .order('created_at', { ascending: false });
 
-      individualQuery = buildQuery(individualQuery);
+      individualQuery = await buildQuery(individualQuery);
 
       const { data: individualActas, error: individualError } = await individualQuery;
 
