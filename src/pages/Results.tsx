@@ -28,10 +28,33 @@ const Results = () => {
     refetch
   } = useElectoralAggregation();
 
-  // Initialize filters from URL params
+  // Initialize filters from URL params and validate election visibility
   useEffect(() => {
+    const urlElectionId = searchParams.get('electionId') || '';
+    
+    // If there's an election ID in URL, validate it's visible
+    if (urlElectionId && elections.length > 0 && !electionsLoading) {
+      const urlElection = elections.find(e => e.id === urlElectionId);
+      if (!urlElection) {
+        console.warn('🚫 Election from URL not visible, clearing from filters');
+        // Clear the electionId if it's not visible
+        const urlFilters = {
+          electionId: '',
+          autonomousCommunity: searchParams.get('autonomousCommunity') || '',
+          province: searchParams.get('province') || '',
+          municipality: searchParams.get('municipality') || '',
+          district: searchParams.get('district') || '',
+          section: searchParams.get('section') || '',
+          table: searchParams.get('table') || '',
+          sourceTypes: ['user', 'indra', 'escrutinio', 'oficial']
+        };
+        setFilters(urlFilters);
+        return;
+      }
+    }
+
     const urlFilters = {
-      electionId: searchParams.get('electionId') || '',
+      electionId: urlElectionId,
       autonomousCommunity: searchParams.get('autonomousCommunity') || '',
       province: searchParams.get('province') || '',
       municipality: searchParams.get('municipality') || '',
@@ -42,7 +65,7 @@ const Results = () => {
     };
     
     setFilters(urlFilters);
-  }, [searchParams, setFilters]);
+  }, [searchParams, setFilters, elections, electionsLoading]);
 
   // Show toast if we came from submit form with existing act
   useEffect(() => {

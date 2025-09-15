@@ -178,7 +178,7 @@ export const useElectoralAggregation = () => {
 
     console.log('🔧 Building query with filters:', filters);
 
-    // Filter by election first if specified and validate visibility
+    // Filter by election - always ensure only visible elections are included
     if (filters.electionId?.trim()) {
       const trimmedValue = filters.electionId.trim();
       
@@ -199,6 +199,31 @@ export const useElectoralAggregation = () => {
 
       console.log('🎯 Applying Election filter:', trimmedValue, '(visible)');
       query = query.eq('election_id', trimmedValue);
+    } else {
+      // When no specific election is selected, only load data from visible elections
+      console.log('🔍 No election selected, filtering for visible elections only');
+      const { data: visibleElections, error } = await supabase
+        .from('elections')
+        .select('id')
+        .eq('is_visible', true);
+
+      if (error) {
+        console.error('❌ Error fetching visible elections:', error);
+        // Return a query that will return no results if we can't validate elections
+        query = query.eq('election_id', 'non-existent-election-id');
+        return query;
+      }
+
+      if (!visibleElections || visibleElections.length === 0) {
+        console.warn('⚠️ No visible elections found');
+        // Return a query that will return no results
+        query = query.eq('election_id', 'non-existent-election-id');
+        return query;
+      }
+
+      const visibleElectionIds = visibleElections.map(e => e.id);
+      console.log('🎯 Filtering for visible elections:', visibleElectionIds.length, 'elections');
+      query = query.in('election_id', visibleElectionIds);
     }
 
     // Usar filtros exactos para los valores seleccionados (con trim para consistencia)

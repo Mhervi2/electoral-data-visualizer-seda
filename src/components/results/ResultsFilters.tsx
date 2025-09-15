@@ -84,7 +84,10 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false, is
 
   // Auto-select active election or most recent when elections load and validate current selection
   useEffect(() => {
-    // First validate current selection
+    // Skip if elections are still loading
+    if (electionsLoading) return;
+
+    // First validate current selection if we have one
     if (filters.electionId && elections.length > 0) {
       const currentElection = elections.find(e => e.id === filters.electionId);
       if (!currentElection) {
@@ -94,8 +97,17 @@ export const ResultsFilters = ({ filters, onFiltersChange, isLoading = false, is
       }
     }
 
+    // Handle case when no visible elections are available
+    if (elections.length === 0) {
+      console.warn('🚫 No visible elections available, clearing election selection');
+      if (filters.electionId) {
+        handleSelectChange('electionId', '');
+      }
+      return;
+    }
+
     // Auto-select if no election is selected and we have visible elections
-    if (!electionsLoading && elections.length > 0 && !filters.electionId) {
+    if (!filters.electionId) {
       // First try to find an active election
       const activeElection = elections.find(election => election.status === 'active');
       
