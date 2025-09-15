@@ -10,6 +10,7 @@ interface ElectionFormData {
   total_seats: number;
   minimum_threshold: number;
   selectedParties: string[];
+  is_visible?: boolean;
 }
 
 export const useElectionManagement = () => {
@@ -22,7 +23,7 @@ export const useElectionManagement = () => {
       console.log('🗳️ Creating election with data:', formData);
 
       // Create the election
-      const { data: election, error: electionError } = await supabase
+      const { data: electionData, error } = await supabase
         .from('elections')
         .insert({
           name: formData.name,
@@ -31,22 +32,22 @@ export const useElectionManagement = () => {
           scope: formData.scope,
           total_seats: formData.total_seats,
           minimum_threshold: formData.minimum_threshold,
-          status: 'active'
+          is_visible: formData.is_visible ?? true,
         })
         .select()
         .single();
 
-      if (electionError) {
-        console.error('❌ Error creating election:', electionError);
-        throw electionError;
+      if (error) {
+        console.error('❌ Error creating election:', error);
+        throw error;
       }
 
-      console.log('✅ Election created:', election);
+      console.log('✅ Election created:', electionData);
 
       // Create election-party relationships
       if (formData.selectedParties.length > 0) {
         const electionParties = formData.selectedParties.map(partyId => ({
-          election_id: election.id,
+          election_id: electionData.id,
           party_id: partyId
         }));
 
@@ -65,7 +66,7 @@ export const useElectionManagement = () => {
       // Initialize provincial seats for the new election
       try {
         const { error: seatsError } = await supabase.rpc('initialize_provincial_seats_for_election', {
-          p_election_id: election.id
+          p_election_id: electionData.id
         });
 
         if (seatsError) {
@@ -83,7 +84,7 @@ export const useElectionManagement = () => {
         description: `La elección "${formData.name}" ha sido creada exitosamente.`,
       });
 
-      return election;
+      return electionData;
 
     } catch (error) {
       console.error('💥 Fatal error creating election:', error);
@@ -104,7 +105,7 @@ export const useElectionManagement = () => {
       console.log('🗳️ Updating election with data:', formData);
 
       // Update the election
-      const { data: election, error: electionError } = await supabase
+      const { error } = await supabase
         .from('elections')
         .update({
           name: formData.name,
@@ -112,18 +113,15 @@ export const useElectionManagement = () => {
           election_type: formData.election_type,
           scope: formData.scope,
           total_seats: formData.total_seats,
-          minimum_threshold: formData.minimum_threshold
+          minimum_threshold: formData.minimum_threshold,
+          is_visible: formData.is_visible ?? true,
         })
-        .eq('id', electionId)
-        .select()
-        .single();
+        .eq('id', electionId);
 
-      if (electionError) {
-        console.error('❌ Error updating election:', electionError);
-        throw electionError;
+      if (error) {
+        console.error('❌ Error updating election:', error);
+        throw error;
       }
-
-      console.log('✅ Election updated:', election);
 
       // Remove existing party relationships
       const { error: deleteError } = await (supabase as any)
@@ -160,7 +158,7 @@ export const useElectionManagement = () => {
         description: `La elección "${formData.name}" ha sido actualizada exitosamente.`,
       });
 
-      return election;
+      return { success: true };
 
     } catch (error) {
       console.error('💥 Fatal error updating election:', error);

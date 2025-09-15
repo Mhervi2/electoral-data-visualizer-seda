@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CalendarIcon, ArrowLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { usePoliticalParties } from '@/hooks/usePoliticalParties';
 import { useElectionManagement } from '@/hooks/useElectionManagement';
@@ -32,6 +33,7 @@ const AdminElectionsEdit = () => {
   const [totalSeats, setTotalSeats] = useState('');
   const [minimumThreshold, setMinimumThreshold] = useState(3.0);
   const [selectedParties, setSelectedParties] = useState<string[]>([]);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     const loadElection = async () => {
@@ -52,6 +54,7 @@ const AdminElectionsEdit = () => {
         setTotalSeats((electionData as any).total_seats?.toString() || '');
         setMinimumThreshold((electionData as any).minimum_threshold || 3.0);
         setSelectedParties(electionData.selectedParties || []);
+        setIsVisible((electionData as any).is_visible ?? true);
         
       } catch (error) {
         console.error('Error loading election:', error);
@@ -91,7 +94,8 @@ const AdminElectionsEdit = () => {
       scope,
       total_seats: parseInt(totalSeats) || 0,
       minimum_threshold: minimumThreshold,
-      selectedParties
+      selectedParties,
+      is_visible: isVisible
     };
 
     try {
@@ -255,6 +259,24 @@ const AdminElectionsEdit = () => {
                     <p className="text-sm text-muted-foreground">
                       Porcentaje mínimo de votos por circunscripción para obtener representación
                     </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <Label htmlFor="election-visible" className="text-base font-medium">
+                          Visible en Resultados
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Controla si esta elección aparece en el dropdown de filtros en la pantalla de resultados electorales.
+                        </p>
+                      </div>
+                      <Switch
+                        id="election-visible"
+                        checked={isVisible}
+                        onCheckedChange={setIsVisible}
+                      />
+                    </div>
                   </div>
             </CardContent>
           </Card>

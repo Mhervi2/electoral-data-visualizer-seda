@@ -23,7 +23,8 @@ export const useElections = () => {
 
         const { data, error } = await supabase
           .from('elections')
-          .select('id, name, status, created_at')
+          .select('id, name, status, created_at, is_visible')
+          .eq('is_visible', true)
           .order('created_at', { ascending: false });
 
         if (error) {

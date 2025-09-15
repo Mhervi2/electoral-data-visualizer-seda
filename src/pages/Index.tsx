@@ -5,9 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { BarChart3, UploadCloud, Users, Calculator, Shield, Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
 
 const Index = () => {
   const { user } = useAuth();
+  const { getSetting } = useSystemSettings();
+
+  const isSubmitActaEnabled = getSetting('submit_acta_enabled', true);
 
   const quickAccessCards = [
     {
@@ -17,13 +21,13 @@ const Index = () => {
       href: '/results',
       variant: 'default' as const,
     },
-    {
+    ...(isSubmitActaEnabled ? [{
       title: 'Enviar Acta',
       description: 'Sube y procesa una nueva acta electoral.',
       icon: UploadCloud,
       href: '/submit-acta',
       variant: 'default' as const,
-    },
+    }] : []),
     {
       title: 'Partidos Políticos',
       description: 'Consulta la lista de partidos.',
