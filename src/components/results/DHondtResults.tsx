@@ -89,6 +89,15 @@ const getPartyColor = (partyName: string): string => {
   return colorMap[partyName] || `hsl(${Math.abs(partyName.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % 360}, 70%, 50%)`;
 };
 
+// Helper function to normalize strings for comparison (handles accents, case, and whitespace)
+const normalizeString = (str: string): string => {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+};
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
@@ -137,20 +146,25 @@ export const DHondtResults = ({ partyResults, totalVotes, filters }: DHondtResul
       // Filtro específico por provincia
       console.log('[DHondt] Filtro por provincia específica:', filters.province);
       
-      // Buscar la provincia exacta o por coincidencia parcial
-      const exactMatch = provincialSeats.find(seat => 
-        seat.provincia.toLowerCase() === filters.province.toLowerCase()
-      );
+      // Buscar la provincia exacta o por coincidencia parcial (con normalización de acentos)
+      const normalizedProvince = normalizeString(filters.province);
+      console.log('[DHondt] Provincia filtrada normalizada:', filters.province, '->', normalizedProvince);
+      
+      const exactMatch = provincialSeats.find(seat => {
+        const normalized = normalizeString(seat.provincia);
+        console.log('[DHondt] Comparando:', seat.provincia, '->', normalized, 'con', normalizedProvince);
+        return normalized === normalizedProvince;
+      });
       
       if (exactMatch) {
         targetProvinces = [exactMatch.provincia];
         console.log('[DHondt] Provincia encontrada (coincidencia exacta):', exactMatch.provincia);
       } else {
-        // Buscar coincidencia parcial
-        const partialMatch = provincialSeats.find(seat => 
-          seat.provincia.toLowerCase().includes(filters.province.toLowerCase()) ||
-          filters.province.toLowerCase().includes(seat.provincia.toLowerCase())
-        );
+        // Buscar coincidencia parcial (con normalización de acentos)
+        const partialMatch = provincialSeats.find(seat => {
+          const normalized = normalizeString(seat.provincia);
+          return normalized.includes(normalizedProvince) || normalizedProvince.includes(normalized);
+        });
         
         if (partialMatch) {
           targetProvinces = [partialMatch.provincia];
