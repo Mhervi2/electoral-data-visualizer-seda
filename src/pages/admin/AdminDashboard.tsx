@@ -5,11 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { BarChart3, Upload, Users, FileText, Settings, Eye, Calculator, Shield, Download, Github, MapPin, BarChart2 } from 'lucide-react';
 import { useDataExport } from '@/hooks/useDataExport';
+import { useDeleteRecentActs } from '@/hooks/useDeleteRecentActs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SystemSettingsManager } from '@/components/admin/SystemSettingsManager';
 
 const AdminDashboard = () => {
   const { exportData, isExporting } = useDataExport();
+  const { deleteRecentActs, isDeleting } = useDeleteRecentActs();
 
   return (
     <div className="space-y-6">
@@ -164,7 +166,7 @@ const AdminDashboard = () => {
           <h2 className="text-2xl font-bold font-space-grotesk">Seguridad y Backup</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Data Export Card */}
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
@@ -220,6 +222,66 @@ const AdminDashboard = () => {
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
                       Confirmar Exportación
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardContent>
+          </Card>
+
+          {/* Delete Recent Acts Card */}
+          <Card className="hover:shadow-lg transition-shadow border-destructive">
+            <CardHeader className="pb-3">
+              <div className="flex items-center space-x-2">
+                <FileText className="h-5 w-5 text-destructive" />
+                <CardTitle className="text-lg">Eliminar Actas Recientes</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="mb-4">
+                Eliminar las 500 actas electorales más recientes y sus datos relacionados
+              </CardDescription>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="destructive" 
+                    className="w-full" 
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Eliminando...
+                      </>
+                    ) : (
+                      "Eliminar 500 Actas Recientes"
+                    )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>⚠️ ADVERTENCIA: Operación Irreversible</AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-2">
+                      <p className="text-red-600 font-bold">Esta operación NO puede deshacerse.</p>
+                      <p>Se eliminarán permanentemente:</p>
+                      <ul className="list-disc list-inside text-sm space-y-1 ml-4">
+                        <li>Las 500 actas electorales más recientes</li>
+                        <li>Todos sus votos por partido</li>
+                        <li>Todos sus votos por correo</li>
+                        <li>Todos los registros de auditoría</li>
+                      </ul>
+                      <p className="text-red-600 font-medium mt-3">
+                        ¿Estás seguro de que deseas continuar?
+                      </p>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={deleteRecentActs}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Confirmar Eliminación
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
