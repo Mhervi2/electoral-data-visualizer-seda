@@ -315,6 +315,37 @@ export const useElectoralActsAdmin = () => {
 
   const deleteAct = async (actId: string) => {
     try {
+      // First, get the act to check if it has an image
+      const { data: act, error: fetchError } = await supabase
+        .from('electoral_acts')
+        .select('image_url')
+        .eq('id', actId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching act:', fetchError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo obtener el acta."
+        });
+        return false;
+      }
+
+      // Delete image from storage if it exists
+      if (act?.image_url) {
+        const urlParts = act.image_url.split('/');
+        const filename = urlParts[urlParts.length - 1];
+        
+        const { error: storageError } = await supabase.storage
+          .from('electoral-acts')
+          .remove([filename]);
+
+        if (storageError) {
+          console.error('Error deleting image from storage:', storageError);
+        }
+      }
+
       // Delete in transaction order: mail_votes -> party_votes -> audit_log -> electoral_acts
       
       // 1. Delete mail votes

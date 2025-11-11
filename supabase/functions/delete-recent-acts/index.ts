@@ -79,7 +79,41 @@ Deno.serve(async (req) => {
     const actIds = actsToDelete.map(act => act.id);
     console.log(`[delete-recent-acts] Found ${actIds.length} acts to delete`);
 
-    // Delete related data first (to avoid foreign key constraints)
+    // Get all acts with their image URLs to delete from storage
+    const { data: actsWithImages, error: imagesError } = await supabaseAdmin
+      .from('electoral_acts')
+      .select('id, image_url')
+      .in('id', actIds)
+      .not('image_url', 'is', null);
+
+    if (imagesError) {
+      console.error('[delete-recent-acts] Error fetching images:', imagesError);
+    }
+
+    // Delete images from storage first
+    if (actsWithImages && actsWithImages.length > 0) {
+      const imageFilenames = actsWithImages
+        .map(act => {
+          if (!act.image_url) return null;
+          const urlParts = act.image_url.split('/');
+          return urlParts[urlParts.length - 1];
+        })
+        .filter(Boolean);
+
+      if (imageFilenames.length > 0) {
+        const { error: storageError } = await supabaseAdmin.storage
+          .from('electoral-acts')
+          .remove(imageFilenames);
+
+        if (storageError) {
+          console.error('[delete-recent-acts] Error deleting images from storage:', storageError);
+        } else {
+          console.log(`[delete-recent-acts] Deleted ${imageFilenames.length} images from storage`);
+        }
+      }
+    }
+
+    // Delete related data (to avoid foreign key constraints)
     
     // 1. Delete mail_votes
     const { error: mailVotesError } = await supabaseAdmin

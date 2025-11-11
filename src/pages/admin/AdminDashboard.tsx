@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { BarChart3, Upload, Users, FileText, Settings, Eye, Calculator, Shield, Download, Github, MapPin, BarChart2 } from 'lucide-react';
 import { useDataExport } from '@/hooks/useDataExport';
 import { useDeleteRecentActs } from '@/hooks/useDeleteRecentActs';
+import { useCleanOrphanedImages } from '@/hooks/useCleanOrphanedImages';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SystemSettingsManager } from '@/components/admin/SystemSettingsManager';
 
 const AdminDashboard = () => {
   const { exportData, isExporting } = useDataExport();
   const { deleteRecentActs, isDeleting } = useDeleteRecentActs();
+  const { cleanOrphanedImages, isCleaning } = useCleanOrphanedImages();
 
   return (
     <div className="space-y-6">
@@ -269,6 +271,7 @@ const AdminDashboard = () => {
                         <li>Todos sus votos por partido</li>
                         <li>Todos sus votos por correo</li>
                         <li>Todos los registros de auditoría</li>
+                        <li>Las imágenes asociadas del storage</li>
                       </ul>
                       <p className="text-red-600 font-medium mt-3">
                         ¿Estás seguro de que deseas continuar?
@@ -282,6 +285,63 @@ const AdminDashboard = () => {
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
                       Confirmar Eliminación
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardContent>
+          </Card>
+
+          {/* Clean Orphaned Images Card */}
+          <Card className="hover:shadow-lg transition-shadow border-orange-500">
+            <CardHeader className="pb-3">
+              <div className="flex items-center space-x-2">
+                <Download className="h-5 w-5 text-orange-500" />
+                <CardTitle className="text-lg">Limpiar Imágenes Huérfanas</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="mb-4">
+                Eliminar imágenes del storage que no tienen un acta asociada en la base de datos
+              </CardDescription>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white" 
+                    disabled={isCleaning}
+                  >
+                    {isCleaning ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                        Limpiando...
+                      </>
+                    ) : (
+                      "Limpiar Imágenes Huérfanas"
+                    )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>🧹 Confirmar Limpieza de Storage</AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-2">
+                      <p>Esta operación analizará el storage y eliminará:</p>
+                      <ul className="list-disc list-inside text-sm space-y-1 ml-4">
+                        <li>Imágenes que no tienen un acta asociada</li>
+                        <li>Archivos huérfanos de eliminaciones previas</li>
+                      </ul>
+                      <p className="text-orange-600 font-medium mt-3">
+                        Esto liberará espacio en el storage. ¿Continuar?
+                      </p>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={cleanOrphanedImages}
+                      className="bg-orange-500 text-white hover:bg-orange-600"
+                    >
+                      Confirmar Limpieza
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

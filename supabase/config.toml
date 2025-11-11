@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.delete-recent-acts]
 verify_jwt = false
+
+[functions.clean-orphaned-images]
+verify_jwt = false
