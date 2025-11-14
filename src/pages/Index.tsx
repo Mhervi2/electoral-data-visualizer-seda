@@ -73,7 +73,7 @@ const Index = () => {
       {/* Quick Access Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {quickAccessCards.map((card, index) => (
-          <Card key={index} variant="glass" className="hover:scale-105 transition-all">
+          <Card key={index} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-center space-x-3">
                 <div className={`p-2 rounded-lg ${card.icon === Shield ? 'bg-primary' : 'bg-accent'}`}>
