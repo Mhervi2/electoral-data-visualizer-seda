@@ -97,7 +97,7 @@ export type Database = {
           file_checksum: string | null
           file_size: number | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           success: boolean
           tables_included: string[]
           user_agent: string | null
@@ -110,7 +110,7 @@ export type Database = {
           file_checksum?: string | null
           file_size?: number | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           success?: boolean
           tables_included: string[]
           user_agent?: string | null
@@ -123,7 +123,7 @@ export type Database = {
           file_checksum?: string | null
           file_size?: number | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           success?: boolean
           tables_included?: string[]
           user_agent?: string | null
@@ -229,7 +229,7 @@ export type Database = {
           total_voters: number | null
           updated_at: string | null
           updated_by: string | null
-          version: number
+          version: number | null
         }
         Insert: {
           blank_votes?: number
@@ -250,7 +250,7 @@ export type Database = {
           total_voters?: number | null
           updated_at?: string | null
           updated_by?: string | null
-          version?: number
+          version?: number | null
         }
         Update: {
           blank_votes?: number
@@ -271,7 +271,7 @@ export type Database = {
           total_voters?: number | null
           updated_at?: string | null
           updated_by?: string | null
-          version?: number
+          version?: number | null
         }
         Relationships: [
           {
@@ -302,34 +302,34 @@ export type Database = {
           action: string
           changed_at: string
           changed_by: string
-          electoral_act_id: string
+          electoral_act_id: string | null
           field_name: string
           id: string
           new_value: string | null
           old_value: string | null
-          version: number
+          version: number | null
         }
         Insert: {
           action: string
           changed_at?: string
           changed_by: string
-          electoral_act_id: string
+          electoral_act_id?: string | null
           field_name: string
           id?: string
           new_value?: string | null
           old_value?: string | null
-          version: number
+          version?: number | null
         }
         Update: {
           action?: string
           changed_at?: string
           changed_by?: string
-          electoral_act_id?: string
+          electoral_act_id?: string | null
           field_name?: string
           id?: string
           new_value?: string | null
           old_value?: string | null
-          version?: number
+          version?: number | null
         }
         Relationships: [
           {
@@ -757,7 +757,7 @@ export type Database = {
           idp: number | null
           municipio: string | null
           provincia: string | null
-          search_vector: unknown | null
+          search_vector: unknown
         }
         Relationships: []
       }
@@ -786,10 +786,7 @@ export type Database = {
         }
         Returns: string
       }
-      get_next_party_identifier: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      get_next_party_identifier: { Args: never; Returns: number }
       initialize_provincial_seats_for_election: {
         Args: { p_election_id: string }
         Returns: number
