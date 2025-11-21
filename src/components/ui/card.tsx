@@ -11,8 +11,8 @@ const Card = React.forwardRef<
     className={cn(
       "rounded-lg text-card-foreground",
       variant === "glass" 
-        ? glass-container glass-specular glass-content"
-        :glass-filter glass-overlay"
+        ? "glass-effect border-0" 
+        : "border bg-card shadow-sm",
       className
     )}
     {...props}
